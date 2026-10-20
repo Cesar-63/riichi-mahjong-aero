@@ -27,8 +27,13 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 ## Cómo se juega
 
 1. Escribe un nombre y un código de sala (por defecto `publica`) y pulsa
-   **Buscar partida**. Cuando hay 4 en la cola de esa sala, empieza la partida
-   con asientos al azar.
+   **Entrar a la sala**. En la sala de espera (máximo 4):
+   - elige **Equipo Norte** o **Equipo Sur** (2 jugadores por equipo);
+   - marca **Estoy listo** (cambiar de equipo quita el listo);
+   - el **host** (el primero que entró; si se va, el siguiente) pulsa
+     **Comenzar partida** cuando hay 2 + 2 y los 4 están listos.
+   Los compañeros se sientan uno al lado del otro (se sortea qué equipo
+   empieza en 東 y el orden dentro de cada equipo).
 2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **☰ Menú** (esquina superior izquierda, siempre visible):
@@ -65,15 +70,32 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
+## Juego por equipos
+
+- Cada jugador ve la **mano de su compañero** en un panel fuera del tablero:
+  acoplado al margen del lado donde se sienta el compañero si la pantalla
+  tiene espacio, o como franja desplegable arriba en pantallas angostas. Se
+  puede plegar con su botón.
+- **Pedir descarte**: clic en una ficha del compañero. A él se le resalta en
+  naranja en su mano con el aviso "X te pide ▢". Es una sugerencia, no
+  obliga; otro clic la cancela y caduca cuando la ficha sale de su mano o
+  termina la mano.
+- El servidor solo envía la mano del compañero (nunca la de los rivales), y
+  las peticiones solo las ve el equipo.
+- Los puntos y el uma siguen siendo individuales; al final se suma el
+  resultado de cada equipo y gana el que tenga más.
+
 ## Modo test (contra bots)
 
-En el lobby, **Modo test: jugar contra 3 bots** crea una sala privada
-(`bots-…`) con tu jugador y tres bots, y empieza al instante. Los bots:
+En el lobby, **Modo test** crea una sala privada (`bots-…`) donde tú y
+**Bot 1** son el Equipo Norte contra Bot 2 y Bot 3, y empieza al instante.
+Los bots:
 
 - descartan siempre la ficha que acaban de robar (tras una llamada, la última
   ficha legal de la mano);
 - hacen pon o chi siempre que pueden;
-- nunca declaran ron, tsumo, riichi ni kan.
+- nunca declaran ron, tsumo, riichi ni kan;
+- tu compañero bot descarta la ficha que le pidas (en su turno, si es legal).
 
 Sirve para probar la interfaz y las reglas sin juntar a 4 personas. Cualquier
 sala cuyo código empiece por `bots-` funciona así.

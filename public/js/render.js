@@ -160,6 +160,7 @@ function skeleton(board) {
       <div class="np"><div class="np-in"></div><div class="np-name"></div>${r === 0 ? '<div class="np-status"><span class="furiten-slot"></span><span class="timer"></span></div>' : ''}</div>
     </div>`).join('')}
     <div class="myhand"></div>
+    <div class="ask"></div>
     <div class="actions"></div>
     <div class="callouts">${ROT.map((_, r) => `<div class="callout c${r}"></div>`).join('')}</div>`;
   const q = (sel, root = board) => root.querySelector(sel);
@@ -182,6 +183,7 @@ function skeleton(board) {
       };
     }),
     hand: q('.myhand'),
+    ask: q('.ask'),
     furiten: q('.furiten-slot'),
     actions: q('.actions'),
   };
@@ -357,7 +359,10 @@ export function renderBoard(board, v, ui) {
     const id = Number(el.dataset.id);
     el.classList.toggle('can', legal.has(id));
     el.classList.toggle('no', !!myTurn && !legal.has(id));
+    el.classList.toggle('asked', id === v.partnerRequest);
   }
+  const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
+  setHTML(sk.ask, askedBy ? `<span>${esc(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
   setHTML(sk.furiten, v.furiten ? '<span class="furiten">振聴</span>' : '');
   setHTML(sk.actions, actionsHTML(v, ui));
   animateDiscard(sk, discardFrom, rel);
@@ -475,9 +480,56 @@ export function resultHTML(v) {
   return h;
 }
 
+// Teammate's hand, outside the board: docked in the side margin next to the
+// teammate's seat when there is room, else a collapsible strip on top.
+export function renderPartner(v, ui) {
+  const panel = document.getElementById('partner');
+  const p = v.partner;
+  if (!p || v.phase === 'end') {
+    panel.classList.add('hidden');
+    return;
+  }
+  const board = Math.min(innerWidth, innerHeight - 4);
+  const margin = (innerWidth - board) / 2;
+  const docked = margin >= 190;
+  const side = (p.seat - v.seat + 4) % 4 === 1 ? 'right' : 'left';
+  const open = ui.partnerOpen;
+  panel.className = `${docked ? 'docked' : 'floating'} ${side}${open ? ' open' : ''}`;
+  const width = docked ? margin - 24 : Math.min(innerWidth - 24, 640);
+  const perRow = docked ? 7 : 14;
+  const tw = Math.max(18, Math.min(46, Math.floor((width - 20) / (perRow + 0.6)) - 3));
+  panel.style.width = `${width}px`;
+  panel.style.setProperty('--pt', `${tw}px`);
+  const name = v.players[p.seat].name;
+  setHTML(document.getElementById('partner-toggle'), `${open ? '▾' : '▸'} Mano de ${esc(name)} <span class="hint">(compañero)</span>`);
+  document.getElementById('partner-toggle').setAttribute('aria-expanded', String(open));
+  const items = p.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
+  if (p.drawn !== null) {
+    items.push({ key: 'gap', html: '<span class="gap"></span>' });
+    items.push({ key: String(p.drawn), html: tile(p.drawn, { attrs: `data-id="${p.drawn}"` }) });
+  }
+  const hand = document.getElementById('partner-hand');
+  reconcile(hand, items);
+  for (const el of hand.querySelectorAll('.tile')) el.classList.toggle('asked', Number(el.dataset.id) === p.myRequest);
+}
+
 export function finalHTML(v) {
   const rows = v.final.map((f) => `<tr><td>${f.rank}º</td><td>${esc(f.name)}${f.seat === v.seat ? ' (tú)' : ''}</td><td>${f.score}</td><td class="${f.points >= 0 ? 'pos' : 'neg'}">${f.points > 0 ? '+' : ''}${f.points.toFixed(1)}</td></tr>`).join('');
+  let teams = '';
+  if (v.players.every((p) => p.team)) {
+    const sum = { N: 0, S: 0 };
+    for (const f of v.final) sum[v.players[f.seat].team] += f.points;
+    const fmt = (x) => `${x > 0 ? '+' : ''}${(Math.round(x * 10) / 10).toFixed(1)}`;
+    const myTeam = v.players[v.seat].team;
+    const win = sum.N === sum.S ? null : sum.N > sum.S ? 'N' : 'S';
+    const label = { N: 'Equipo Norte', S: 'Equipo Sur' };
+    teams = `<div class="teamres">${['N', 'S'].map((t) => `<div class="${t === win ? 'won' : ''} ${t === myTeam ? 'mine' : ''}">
+        <b>${label[t]}</b><span>${v.players.filter((p) => p.team === t).map((p) => esc(p.name)).join(' · ')}</span>
+        <span class="${sum[t] >= 0 ? 'pos' : 'neg'}">${fmt(sum[t])}</span></div>`).join('')}</div>
+      <p class="pts">${win ? `¡Gana el ${label[win]}!${win === myTeam ? ' 🎉' : ''}` : 'Empate entre equipos'}</p>`;
+  }
   return `<h2>Fin de la partida</h2>
+    ${teams}
     <table class="deltas final"><tr><th></th><th>Jugador</th><th>Puntos</th><th>Resultado</th></tr>${rows}</table>
     <div class="modal-actions"><button class="act" data-ui="lobby">Volver al lobby</button></div>`;
 }

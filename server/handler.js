@@ -56,7 +56,7 @@ export async function handle(body, store, now = Date.now()) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (op === 'join' || op === 'leave' || op === 'act' || op === 'abandon') {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'request'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -124,15 +124,62 @@ function apply(room, op, token, body, now, seen) {
     if (room.status === 'playing') throw new Error('Hay una partida en curso en esta sala');
     const name = cleanName(body.name);
     if (isBotRoom(room.code)) {
-      // Test mode: the joining player plus three bots, starts right away.
-      room.queue = [{ token, name }, ...[1, 2, 3].map((n) => ({ token: `bot-${n}`, name: `Bot ${n}`, bot: true }))];
+      // Test mode: the player and Bot 1 are team North against two bots; starts right away.
+      room.queue = [
+        { token, name, team: 'N' },
+        { token: 'bot-1', name: 'Bot 1', bot: true, team: 'N' },
+        { token: 'bot-2', name: 'Bot 2', bot: true, team: 'S' },
+        { token: 'bot-3', name: 'Bot 3', bot: true, team: 'S' },
+      ];
       startGame(room, now, seen);
       return true;
     }
     const existing = room.queue.find((q) => q.token === token);
     if (existing) existing.name = name;
-    else room.queue.push({ token, name });
-    if (room.queue.length === 4) startGame(room, now, seen);
+    else {
+      if (room.queue.length >= 4) throw new Error('La sala está llena (4/4)');
+      room.queue.push({ token, name, team: null, ready: false });
+    }
+    return true;
+  }
+  if (op === 'team' || op === 'ready' || op === 'start') {
+    if (room.status !== 'lobby') return false;
+    const me = room.queue.find((q) => q.token === token);
+    if (!me) throw new Error('No estás en esta sala');
+    if (op === 'team') {
+      const team = body.team === 'N' || body.team === 'S' ? body.team : null;
+      if (team && room.queue.filter((q) => q !== me && q.team === team).length >= 2) {
+        throw new Error('Ese equipo ya está completo');
+      }
+      me.team = team;
+      me.ready = false;
+      return true;
+    }
+    if (op === 'ready') {
+      if (!me.team) throw new Error('Elige un equipo primero');
+      me.ready = !!body.ready;
+      return true;
+    }
+    if (room.queue[0] !== me) throw new Error('Solo el host puede comenzar la partida');
+    const n = room.queue.filter((q) => q.team === 'N').length;
+    if (room.queue.length !== 4 || n !== 2) throw new Error('Hacen falta 2 jugadores en cada equipo');
+    if (!room.queue.every((q) => q.ready)) throw new Error('Todos tienen que estar listos');
+    startGame(room, now, seen);
+    return true;
+  }
+  if (op === 'request') {
+    // Ask the teammate to discard one of their tiles (a hint, not enforced).
+    if (room.status !== 'playing') return false;
+    const seat = room.seats.findIndex((x) => x.token === token);
+    const mate = partnerOf(room, seat);
+    if (seat < 0 || mate < 0) throw new Error('No tienes compañero en esta partida');
+    room.requests = room.requests || {};
+    const tile = Number.isInteger(body.tile) ? body.tile : null;
+    if (tile === null) delete room.requests[seat];
+    else {
+      if (!room.game.k.hands[mate].includes(tile)) throw new Error('Esa ficha ya no está en la mano de tu compañero');
+      room.requests[seat] = { tile };
+    }
     return true;
   }
   if (op === 'leave') {
@@ -171,13 +218,21 @@ function apply(room, op, token, body, now, seen) {
   return true;
 }
 
-function startGame(room, now, seen) {
-  const players = room.queue.slice();
-  for (let i = players.length - 1; i > 0; i--) {
+const shuffled = (list) => {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [players[i], players[j]] = [players[j], players[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
+  return a;
+};
+
+// Teammates sit next to each other: one team takes seats 0-1, the other 2-3.
+function startGame(room, now, seen) {
+  const teams = shuffled(['N', 'S']).map((t) => shuffled(room.queue.filter((q) => q.team === t)));
+  const players = teams.flat().map(({ ready, ...p }) => p);
   room.seats = players;
+  room.requests = {};
   room.queue = [];
   room.status = 'playing';
   room.game = Game.create(players.map((p) => p.name)).s;
@@ -192,12 +247,25 @@ function afterChange(room, g) {
   if (room.clock.kyokuKey !== key && s.phase !== 'result') {
     room.clock.kyokuKey = key;
     room.clock.bank = [0, 0, 0, 0].map(() => TIMING.bankMs);
+    room.requests = {}; // tile ids are reused every hand
   }
   if (s.phase === 'end') {
     room.status = 'finished';
     room.clock.decisions = {};
     room.deadline = null;
   }
+}
+
+export function partnerOf(room, seat) {
+  if (seat < 0 || !room.seats[seat].team) return -1;
+  return room.seats.findIndex((x, i) => i !== seat && x.team === room.seats[seat].team);
+}
+
+// A teammate's pending discard request, if the tile is still in this seat's hand.
+function requestFor(room, seat) {
+  const mate = partnerOf(room, seat);
+  const r = mate >= 0 && room.requests && room.requests[mate];
+  return r && room.game.k.hands[seat].includes(r.tile) ? r.tile : null;
 }
 
 // Rooms named "bots-…" are single-player test rooms filled with bots.
@@ -249,7 +317,7 @@ export function processTimeouts(room, now, seen) {
     const [seatStr, d] = due[0];
     const seat = Number(seatStr);
     if (d.bot) {
-      g.act(seat, botAction(g, seat));
+      g.act(seat, botAction(g, seat, requestFor(room, seat)));
     } else {
       if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
       g.defaultAction(seat);
@@ -265,7 +333,7 @@ function viewFor(room, token, seen, now) {
   if (room.status === 'lobby') {
     return {
       ...base,
-      queue: room.queue.map((q) => q.name),
+      queue: room.queue.map((q, i) => ({ name: q.name, team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
       inQueue: room.queue.some((q) => q.token === token),
     };
   }
@@ -278,7 +346,19 @@ function viewFor(room, token, seen, now) {
     p.online = !isOffline(room, i, seen, now) || room.seats[i].token === token;
     p.bot = !!room.seats[i].bot;
     p.abandoned = !!room.seats[i].abandoned;
+    p.team = room.seats[i].team || null;
   });
+  const mate = partnerOf(room, seat);
+  if (mate >= 0) {
+    const mine = room.requests && room.requests[seat];
+    view.partner = {
+      seat: mate,
+      ...g.handOf(mate),
+      // what I asked my teammate to discard / what my teammate asks of me
+      myRequest: mine && room.game.k.hands[mate].includes(mine.tile) ? mine.tile : null,
+    };
+    view.partnerRequest = requestFor(room, seat);
+  }
   const dec = room.clock && room.clock.decisions[seat];
   view.clock = dec
     ? {

@@ -5,22 +5,30 @@ import { createStore } from '../server/store.js';
 
 const tokens = ['a', 'b', 'c', 'd'].map((c) => c.repeat(32));
 
+// Four players join a waiting room, pick teams (0,1 North; 2,3 South), get
+// ready and the host (first to join) starts. Returns the host's start view.
+async function startTeams(store, room, now) {
+  const call = async (body) => (await handle({ room, ...body }, store, now)).body;
+  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+  for (let i = 0; i < 4; i++) {
+    await call({ op: 'team', token: tokens[i], team: i < 2 ? 'N' : 'S' });
+    await call({ op: 'ready', token: tokens[i], ready: true });
+  }
+  return call({ op: 'start', token: tokens[0] });
+}
+
 test('four players join, play via actions and timeouts until the game ends', async () => {
   globalThis.__mjStore = new Map();
   const store = createStore({});
   let now = 1_000_000;
   const call = async (body) => (await handle({ room: 't1', ...body }, store, now)).body;
 
-  for (let i = 0; i < 3; i++) {
-    const r = await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
-    assert.equal(r.status, 'lobby');
-    assert.equal(r.queue.length, i + 1);
-  }
-  const r4 = await call({ op: 'join', token: tokens[3], name: 'P3', hb: true });
+  const r4 = await startTeams(store, 't1', now);
   assert.equal(r4.status, 'playing');
   assert.equal(r4.game.players.length, 4);
-  // Other players' hands are never sent.
+  // Only the teammate's hand is sent, never the opponents'.
   assert.equal(JSON.stringify(r4).includes('"hands"'), false);
+  assert.ok(r4.game.partner);
 
   const spectator = await call({ op: 'poll', token: 'e'.repeat(32) });
   assert.equal(spectator.spectator, true);
@@ -59,14 +67,14 @@ test('four players join, play via actions and timeouts until the game ends', asy
   // Joining again resets the room to a fresh lobby.
   const again = await call({ op: 'join', token: tokens[0], name: 'P0' });
   assert.equal(again.status, 'lobby');
-  assert.deepEqual(again.queue, ['P0']);
+  assert.deepEqual(again.queue.map((q) => q.name), ['P0']);
 });
 
 test('illegal action is reported, not applied', async () => {
   globalThis.__mjStore = new Map();
   const store = createStore({});
   const now = 5_000_000;
-  for (let i = 0; i < 4; i++) await handle({ op: 'join', room: 't2', token: tokens[i], name: `P${i}`, hb: true }, store, now);
+await startTeams(store, 't2', now);
   const r = (await handle({ op: 'act', room: 't2', token: tokens[0], action: { type: 'discard', tile: 999 } }, store, now)).body;
   assert.ok(r.error);
 });
@@ -123,7 +131,7 @@ test('abandon: seat goes on autopilot, can rejoin; last human frees the room', a
   const store = createStore({});
   let now = 20_000_000;
   const call = async (body, room = 't3') => (await handle({ room, ...body }, store, now)).body;
-  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+  await startTeams(store, 't3', now);
   const left = await call({ op: 'abandon', token: tokens[1] });
   assert.equal(left.abandoned, true);
   const other = await call({ op: 'poll', token: tokens[0] });
@@ -139,4 +147,95 @@ test('abandon: seat goes on autopilot, can rejoin; last human frees the room', a
   assert.equal(gone.status, 'lobby');
   now += 1000;
   assert.equal((await call({ op: 'poll', token: tokens[0] }, 'bots-x')).status, 'lobby');
+});
+
+test('waiting room: teams of two, ready and host start', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 30_000_000;
+  const call = async (body) => (await handle({ room: 'w1', ...body }, store, now)).body;
+  for (let i = 0; i < 4; i++) {
+    const r = await call({ op: 'join', token: tokens[i], name: `P${i}` });
+    assert.equal(r.status, 'lobby', 'four players do not start a game by themselves');
+  }
+  assert.ok((await call({ op: 'join', token: 'e'.repeat(32), name: 'Extra' })).error, 'room holds 4');
+  assert.ok((await call({ op: 'ready', token: tokens[0], ready: true })).error, 'ready needs a team');
+  await call({ op: 'team', token: tokens[0], team: 'N' });
+  await call({ op: 'team', token: tokens[1], team: 'N' });
+  assert.ok((await call({ op: 'team', token: tokens[2], team: 'N' })).error, 'a team holds 2');
+  await call({ op: 'team', token: tokens[2], team: 'S' });
+  await call({ op: 'team', token: tokens[3], team: 'S' });
+  for (let i = 0; i < 3; i++) await call({ op: 'ready', token: tokens[i], ready: true });
+  assert.ok((await call({ op: 'start', token: tokens[0] })).error, 'everyone must be ready');
+  await call({ op: 'ready', token: tokens[3], ready: true });
+  assert.ok((await call({ op: 'start', token: tokens[1] })).error, 'only the host starts');
+  const lobby = await call({ op: 'poll', token: tokens[1] });
+  assert.deepEqual(lobby.queue.map((q) => [q.team, q.ready, q.host]), [['N', true, true], ['N', true, false], ['S', true, false], ['S', true, false]]);
+  // switching team clears ready
+  await call({ op: 'team', token: tokens[3], team: null });
+  await call({ op: 'team', token: tokens[3], team: 'S' });
+  assert.ok((await call({ op: 'start', token: tokens[0] })).error);
+  await call({ op: 'ready', token: tokens[3], ready: true });
+  const started = await call({ op: 'start', token: tokens[0] });
+  assert.equal(started.status, 'playing');
+
+  // teammates sit next to each other and see each other's hand
+  const views = [];
+  for (let i = 0; i < 4; i++) views.push((await call({ op: 'poll', token: tokens[i] })).game);
+  const seatOf = (i) => views[i].seat;
+  for (const [a, b] of [[0, 1], [2, 3]]) {
+    assert.equal(Math.abs(seatOf(a) - seatOf(b)) % 2, 1, 'adjacent seats');
+    assert.equal(views[a].partner.seat, seatOf(b));
+    assert.equal(views[a].partner.hand.length + (views[a].partner.drawn === null ? 0 : 1), views[b].hand.length + (views[b].drawn === null ? 0 : 1));
+    assert.deepEqual(views[a].partner.hand, views[b].hand);
+  }
+  assert.equal(views[0].players[seatOf(0)].team, 'N');
+  assert.equal(views[0].players[seatOf(2)].team, 'S');
+});
+
+test('discard request: shown to the teammate, validated, cleared when the tile leaves', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 40_000_000;
+  const call = async (body) => (await handle({ room: 'w2', ...body }, store, now)).body;
+  await startTeams(store, 'w2', now);
+  const v0 = (await call({ op: 'poll', token: tokens[0] })).game;
+  const wanted = v0.partner.hand[0];
+  assert.ok((await call({ op: 'request', token: tokens[0], tile: 999 })).error);
+  const after = (await call({ op: 'request', token: tokens[0], tile: wanted })).game;
+  assert.equal(after.partner.myRequest, wanted);
+  const mate = (await call({ op: 'poll', token: tokens[1] })).game;
+  assert.equal(mate.partnerRequest, wanted);
+  const rival = (await call({ op: 'poll', token: tokens[2] })).game;
+  assert.equal(rival.partnerRequest, null, 'opponents do not see it');
+  assert.equal(rival.partner.myRequest, null);
+  await call({ op: 'request', token: tokens[0], tile: null });
+  assert.equal((await call({ op: 'poll', token: tokens[1] })).game.partnerRequest, null);
+});
+
+test('bot partner honours a discard request', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  let now = 50_000_000;
+  const call = async (body) => (await handle({ room: 'bots-req', ...body }, store, now)).body;
+  let v = (await call({ op: 'join', token: tokens[0], name: 'Yo', hb: true })).game;
+  assert.equal(v.players[v.partner.seat].name, 'Bot 1');
+  const mate = v.partner.seat;
+  let honoured = false;
+  let asked = null;
+  for (let step = 0; step < 400 && !honoured; step++) {
+    now += 700;
+    v = (await call({ op: 'poll', token: tokens[0], hb: step % 5 === 0 })).game;
+    if (!v || v.phase === 'result' || v.phase === 'end') break;
+    const ev = [...v.events].reverse().find((e) => e.type === 'discard' && e.seat === mate);
+    if (asked !== null && ev && ev.tile === asked) honoured = true;
+    if (v.partner.myRequest === null && v.partner.hand.length) {
+      // ask for a tile that is not the one it just drew, so tsumogiri would not explain it
+      asked = v.partner.hand[v.partner.hand.length - 1];
+      await call({ op: 'request', token: tokens[0], tile: asked });
+    }
+    if (v.options && v.options.kind === 'turn') await call({ op: 'act', token: tokens[0], action: { type: 'discard', tile: v.drawn ?? v.options.discard[0] } });
+    else if (v.options) await call({ op: 'act', token: tokens[0], action: { type: 'pass' } });
+  }
+  assert.ok(honoured, 'bot discarded the requested tile');
 });
