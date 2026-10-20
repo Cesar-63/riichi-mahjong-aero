@@ -131,7 +131,7 @@ export function renderBoard(board, v, ui) {
           ${p.riichi ? '<span class="stick"></span>' : ''}
         </div>
       </div>
-      <div class="name"><span>${esc(p.name)}${p.online ? '' : ' (desconectado)'}</span></div>
+      <div class="name"><span>${esc(p.name)}${p.bot ? ' 🤖' : ''}${p.online ? '' : ' (desconectado)'}</span></div>
       <div class="callout" data-seat="${abs}"></div>
     </div>`;
   });

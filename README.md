@@ -36,6 +36,19 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 4. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
+## Modo test (contra bots)
+
+En el lobby, **Modo test: jugar contra 3 bots** crea una sala privada
+(`bots-…`) con tu jugador y tres bots, y empieza al instante. Los bots:
+
+- descartan siempre la ficha que acaban de robar (tras una llamada, la última
+  ficha legal de la mano);
+- hacen pon o chi siempre que pueden;
+- nunca declaran ron, tsumo, riichi ni kan.
+
+Sirve para probar la interfaz y las reglas sin juntar a 4 personas. Cualquier
+sala cuyo código empiece por `bots-` funciona así.
+
 ## Desplegar en Vercel
 
 1. Importa este repositorio en Vercel (*Add New → Project*). No necesita

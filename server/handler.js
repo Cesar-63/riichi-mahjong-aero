@@ -1,6 +1,7 @@
 // Stateless request handler: every call loads the room from the store,
 // applies the request plus any expired timers, and saves it back.
 import { Game } from './engine/game.js';
+import { botAction } from './engine/bot.js';
 
 const env = (typeof process !== 'undefined' && process.env) || {};
 export const TIMING = {
@@ -9,6 +10,7 @@ export const TIMING = {
   graceMs: 1200, // network/polling latency allowance
   resultMs: Number(env.RESULT_SECONDS || 12) * 1000,
   autoMs: 700, // forced riichi tsumogiri
+  botMs: 600, // test-mode bot thinking time
   offlineMs: 1500, // decision time for disconnected players
   offlineAfterMs: 10000,
 };
@@ -113,6 +115,12 @@ function apply(room, op, token, body, now, seen) {
     if (room.status === 'finished') Object.assign(room, newRoom(room.code), { version: room.version });
     if (room.status === 'playing') throw new Error('Hay una partida en curso en esta sala');
     const name = cleanName(body.name);
+    if (isBotRoom(room.code)) {
+      // Test mode: the joining player plus three bots, starts right away.
+      room.queue = [{ token, name }, ...[1, 2, 3].map((n) => ({ token: `bot-${n}`, name: `Bot ${n}`, bot: true }))];
+      startGame(room, now, seen);
+      return true;
+    }
     const existing = room.queue.find((q) => q.token === token);
     if (existing) existing.name = name;
     else room.queue.push({ token, name });
@@ -170,8 +178,11 @@ function afterChange(room, g) {
   }
 }
 
+// Rooms named "bots-…" are single-player test rooms filled with bots.
+export const isBotRoom = (code) => code.startsWith('bots-');
+
 const isOffline = (room, seat, seen, now) =>
-  now - Number(seen[room.seats[seat].token] || 0) > TIMING.offlineAfterMs;
+  !room.seats[seat].bot && now - Number(seen[room.seats[seat].token] || 0) > TIMING.offlineAfterMs;
 
 function schedule(room, now, seen) {
   if (room.status !== 'playing') return;
@@ -182,6 +193,11 @@ function schedule(room, now, seen) {
   for (const seat of g.pendingSeats()) {
     if (old[seat] && old[seat].key === key) {
       next[seat] = old[seat];
+      continue;
+    }
+    if (room.seats[seat].bot) {
+      const delay = g.s.phase === 'result' ? 0 : TIMING.botMs;
+      next[seat] = { key, start: now, deadline: now + delay, auto: true, bot: true };
       continue;
     }
     const offline = isOffline(room, seat, seen, now);
@@ -209,8 +225,12 @@ export function processTimeouts(room, now, seen) {
     const g = new Game(room.game);
     const [seatStr, d] = due[0];
     const seat = Number(seatStr);
-    if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
-    g.defaultAction(seat);
+    if (d.bot) {
+      g.act(seat, botAction(g, seat));
+    } else {
+      if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
+      g.defaultAction(seat);
+    }
     afterChange(room, g);
     changed = true;
   }
@@ -232,6 +252,7 @@ function viewFor(room, token, seen, now) {
   const view = g.view(seat);
   view.players.forEach((p, i) => {
     p.online = !isOffline(room, i, seen, now) || room.seats[i].token === token;
+    p.bot = !!room.seats[i].bot;
   });
   const dec = room.clock && room.clock.decisions[seat];
   view.clock = dec

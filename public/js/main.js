@@ -239,6 +239,22 @@ $('#join').addEventListener('click', async () => {
 
 $('#leave').addEventListener('click', () => api('leave'));
 
+$('#bots').addEventListener('click', async () => {
+  const name = $('#name').value.trim();
+  if (!name) {
+    toast('Escribe un nombre');
+    return;
+  }
+  state.name = name;
+  state.room = `bots-${token.slice(0, 12)}`;
+  store.set('mj.name', name);
+  store.set('mj.room', state.room);
+  $('#room').value = state.room;
+  state.lastHb = 0;
+  await api('join', { name });
+  pollLoop();
+});
+
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
 });
