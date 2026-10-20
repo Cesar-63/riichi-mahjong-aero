@@ -33,7 +33,7 @@ export async function detectTileset() {
 // tiles never appear blank while their face image loads.
 const preloaded = [];
 async function preloadTiles() {
-  const names = new Set(['Back', ...(tileset.layered ? ['Front'] : [])]);
+  const names = new Set([tileset.layered ? 'Front' : 'Back']);
   for (let t = 0; t < 34; t++) names.add(imageName(t * 4 + 1));
   for (const id of [16, 52, 88]) names.add(imageName(id));
   await Promise.all([...names].map((n) => {
@@ -48,7 +48,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 function face(id) {
   if (id === null || id === undefined || id < 0) {
-    if (tileset.mode === 'img') return `<span class="tf back"><img src="${tileset.dir}Back.${tileset.ext}" alt="" decoding="sync"></span>`;
+    // Layered sets (FluffyStuff) ship a flat-colour Back; the themed CSS back looks better.
+    if (tileset.mode === 'img' && !tileset.layered) return `<span class="tf back"><img src="${tileset.dir}Back.${tileset.ext}" alt="" decoding="sync"></span>`;
     return '<span class="tf back"></span>';
   }
   const t = tileType(id);
