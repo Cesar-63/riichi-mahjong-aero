@@ -1,4 +1,4 @@
-import { renderBoard, showCallouts, resultHTML, finalHTML, detectTileset } from './render.js';
+import { renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset } from './render.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -21,6 +21,7 @@ store.set('mj.token', token);
 
 const state = {
   room: store.get('mj.room') || 'publica',
+  mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -29,7 +30,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -66,7 +67,7 @@ function apply(data) {
   if (data.status !== 'finished') state.leftFinished = false;
   if (data.abandoned) {
     showLobby({ queue: [], inQueue: false, room: data.room });
-    $('#queue').innerHTML = `Abandonaste la partida en la sala <b>${escapeHTML(data.room)}</b>; sigue en automático. Pulsa <b>Buscar partida</b> con esa sala para volver a tu asiento.`;
+    $('#queue').innerHTML = `Abandonaste la partida en la sala <b>${escapeHTML(data.room)}</b>; sigue en automático. Pulsa <b>Entrar a la sala</b> con esa sala para volver a tu asiento.`;
     return;
   }
   if (data.status === 'lobby' || data.spectator) {
@@ -80,27 +81,62 @@ function apply(data) {
   if (data.status === 'finished') state.polling = false;
 }
 
+const TEAM_NAME = { N: 'Norte', S: 'Sur' };
+
 function showLobby(data) {
   state.view = null;
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
   hideModal();
   const q = $('#queue');
+  const inRoom = !!data.inQueue;
+  $('#entry').classList.toggle('hidden', inRoom);
+  $('#waiting').classList.toggle('hidden', !inRoom);
   if (data.spectator) {
-    q.innerHTML = `Hay una partida en curso en la sala <b>${data.room}</b> (${data.names.join(', ')}). Prueba otro código de sala.`;
-    $('#leave').classList.add('hidden');
-    $('#join').classList.remove('hidden');
+    q.innerHTML = `Hay una partida en curso en la sala <b>${escapeHTML(data.room)}</b> (${data.names.map(escapeHTML).join(', ')}). Prueba otro código de sala.`;
     return;
   }
-  if (data.inQueue) {
-    q.innerHTML = `En cola en <b>${data.room}</b>: ${data.queue.length}/4 — ${data.queue.map(escapeHTML).join(', ')}`;
-    $('#join').classList.add('hidden');
-    $('#leave').classList.remove('hidden');
-  } else {
-    q.textContent = data.queue && data.queue.length ? `${data.queue.length}/4 esperando en "${data.room}"` : '';
-    $('#join').classList.remove('hidden');
-    $('#leave').classList.add('hidden');
+  if (!inRoom) {
+    q.textContent = data.queue && data.queue.length ? `${data.queue.length}/4 en la sala "${data.room}"` : '';
+    return;
   }
+  q.textContent = '';
+  const players = data.queue;
+  const me = players.find((p) => p.you);
+  const teams = data.mode === 'teams';
+  $('#w-room').textContent = data.room;
+  $('#w-mode').textContent = teams ? '· Por equipos' : '· Clásico';
+  $('#waiting .teams').classList.toggle('hidden', !teams);
+  $('#ready').classList.toggle('hidden', !teams);
+  if (!teams) {
+    $('#start').classList.add('hidden');
+    $('#unassigned').innerHTML = `En la sala (${players.length}/4): ${players.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}`;
+    $('#w-hint').textContent = 'La partida empieza sola al llegar a 4 jugadores; los asientos se sortean.';
+    return;
+  }
+  const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' (tú)' : ''}${p.host ? ' <span class="badge">host</span>' : ''}<span class="tick">${p.ready ? '✔ listo' : '…'}</span></li>`;
+  for (const team of ['N', 'S']) {
+    const box = document.querySelector(`.team[data-team="${team}"]`);
+    const members = players.filter((p) => p.team === team);
+    box.querySelector('ul').innerHTML = members.map(row).join('') + '<li class="empty">libre</li>'.repeat(2 - members.length);
+    const btn = box.querySelector('button');
+    btn.classList.toggle('hidden', me.team === team || members.length >= 2);
+    box.classList.toggle('mine', me.team === team);
+  }
+  const loose = players.filter((p) => !p.team);
+  $('#unassigned').innerHTML = loose.length ? `Sin equipo: ${loose.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}` : '';
+  const ready = $('#ready');
+  ready.textContent = me.ready ? 'No estoy listo' : 'Estoy listo';
+  ready.disabled = !me.team;
+  const all = players.length === 4 && players.filter((p) => p.team === 'N').length === 2 && players.every((p) => p.ready);
+  $('#start').classList.toggle('hidden', !me.host);
+  $('#start').disabled = !all;
+  let hint;
+  if (!me.team) hint = 'Elige un equipo.';
+  else if (players.length < 4) hint = `Esperando jugadores (${players.length}/4).`;
+  else if (!all) hint = 'Esperando a que los 4 estén listos en 2 equipos.';
+  else hint = me.host ? '¡Todo listo! Pulsa Comenzar partida.' : 'Esperando a que el host comience la partida.';
+  $('#w-hint').textContent = hint;
 }
 
 function escapeHTML(s) {
@@ -118,6 +154,7 @@ function showGame(v) {
   }
   const board = $('#board');
   renderBoard(board, v, ui);
+  renderPartner(v, ui);
   showCallouts(board, v, ui);
   if (v.phase === 'result' && v.result) showModal(resultHTML(v));
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v));
@@ -190,7 +227,10 @@ function layout() {
   const size = Math.min(window.innerWidth, window.innerHeight - 4);
   document.documentElement.style.setProperty('--u', `${size / 100}px`);
 }
-window.addEventListener('resize', layout);
+window.addEventListener('resize', () => {
+  layout();
+  if (state.view) renderPartner(state.view, state.ui);
+});
 layout();
 
 // ---------------------------------------------------------------- events
@@ -238,11 +278,29 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.name', name);
   store.set('mj.room', room);
   state.lastHb = 0;
-  await api('join', { name });
+  await api('join', { name, mode: state.mode });
   pollLoop();
 });
 
 $('#leave').addEventListener('click', () => api('leave'));
+
+document.querySelectorAll('[data-join-team]').forEach((b) => b.addEventListener('click', () => api('team', { team: b.dataset.joinTeam })));
+$('#ready').addEventListener('click', () => api('ready', { ready: $('#ready').textContent === 'Estoy listo' }));
+$('#start').addEventListener('click', () => api('start'));
+
+// Teammate's hand: click a tile to ask for it (click again to cancel).
+$('#partner-hand').addEventListener('click', (e) => {
+  const t = e.target.closest('.tile[data-id]');
+  const v = state.view;
+  if (!t || !v || !v.partner) return;
+  const id = Number(t.dataset.id);
+  api('request', { tile: v.partner.myRequest === id ? null : id });
+});
+$('#partner-toggle').addEventListener('click', () => {
+  state.ui.partnerOpen = !state.ui.partnerOpen;
+  store.set('mj.partnerOpen', state.ui.partnerOpen ? '1' : '0');
+  if (state.view) renderPartner(state.view, state.ui);
+});
 
 $('#bots').addEventListener('click', async () => {
   const name = $('#name').value.trim();
@@ -251,12 +309,12 @@ $('#bots').addEventListener('click', async () => {
     return;
   }
   state.name = name;
-  state.room = `bots-${token.slice(0, 12)}`;
+  state.room = `bots-${state.mode === 'teams' ? 't' : 'c'}-${token.slice(0, 10)}`;
   store.set('mj.name', name);
   store.set('mj.room', state.room);
   $('#room').value = state.room;
   state.lastHb = 0;
-  await api('join', { name });
+  await api('join', { name, mode: state.mode });
   pollLoop();
 });
 
@@ -315,6 +373,14 @@ $('#m-abandon').addEventListener('click', async () => {
   if (!$('#lobby').classList.contains('hidden')) return;
   showLobby({ queue: [], inQueue: false, room: state.room });
   pollLoop();
+});
+
+document.querySelectorAll('input[name="mode"]').forEach((r) => {
+  r.checked = r.value === state.mode;
+  r.addEventListener('change', () => {
+    state.mode = r.value;
+    store.set('mj.mode', state.mode);
+  });
 });
 
 $('#name').value = state.name;

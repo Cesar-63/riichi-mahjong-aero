@@ -734,3 +734,145 @@ details li { margin: 4px 0; }
 @media (max-width: 520px) {
   .yaku { columns: 1; }
 }
+
+/* ------------------------------------------------------------ waiting room */
+#waiting h2 { margin: 6px 0 12px; font-size: 1.2rem; color: #0a5c9e; }
+#waiting h2 span { font-family: ui-monospace, monospace; }
+.teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team {
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, .85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(210, 238, 255, .45));
+  box-shadow: inset 0 1px 0 #fff;
+}
+.team[data-team="N"] h3 { color: #0a6fc2; }
+.team[data-team="S"] h3 { color: #1f9b3e; }
+.team.mine { box-shadow: inset 0 1px 0 #fff, 0 0 0 2px rgba(47, 159, 234, .7), 0 0 14px rgba(127, 220, 255, .7); }
+.team h3 { margin: 0 0 6px; font-size: 1rem; }
+.team ul { list-style: none; margin: 0 0 8px; padding: 0; min-height: 3.2em; }
+.team li { display: flex; justify-content: space-between; gap: 6px; padding: 3px 0; font-weight: 600; }
+.team li.empty { color: var(--muted); font-weight: 400; font-style: italic; }
+.team li .tick { color: var(--muted); font-weight: 500; font-size: .85em; }
+.team li.ready .tick { color: var(--ok); font-weight: 700; }
+.team button { width: 100%; padding: 6px 10px; font-size: .9rem; }
+.badge {
+  display: inline-block;
+  font-size: .7em;
+  padding: 0 6px;
+  margin-left: 4px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(180deg, #ffd27a, #f08a12);
+  vertical-align: middle;
+}
+#unassigned { color: var(--muted); font-size: .9rem; min-height: 1.2em; margin: 8px 0 0; }
+#waiting .row { flex-wrap: wrap; }
+button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
+button.pass {
+  color: #20435a;
+  background: linear-gradient(180deg, #ffffff 0%, #dde8ef 49%, #c3d3de 50%, #eef5f9 100%);
+}
+@media (max-width: 420px) { .teams { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------------ teammate's hand */
+#partner {
+  position: fixed;
+  z-index: 12;
+  padding: 8px 10px;
+  border-radius: 16px;
+  color: #0b3550;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .8), rgba(225, 246, 255, .6));
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, .85);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(0, 50, 90, .35);
+}
+#partner.docked { top: 50%; transform: translateY(-50%); }
+#partner.docked.left { left: 12px; }
+#partner.docked.right { right: 12px; }
+#partner.floating { top: 54px; left: 50%; transform: translateX(-50%); }
+#partner-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 4px 10px;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 10px;
+}
+#partner-toggle .hint { color: #3f6d88; font-weight: 500; }
+#partner-body { display: none; padding-top: 8px; }
+#partner.open #partner-body { display: block; }
+#partner-hand { display: flex; flex-wrap: wrap; row-gap: 8px; align-items: flex-end; }
+#partner-hand .tile { --w: var(--pt, 36px); margin: 0 2px 0 0; cursor: pointer; transition: transform .1s; }
+#partner-hand .tile:hover { transform: translateY(-4px); filter: drop-shadow(0 0 6px var(--glow)); }
+#partner .hint { margin: 6px 0 0; font-size: 12px; color: #3f6d88; }
+
+/* a requested tile glows orange, in the teammate's panel and in the asked player's hand */
+.tile.asked .tf { outline: 3px solid #ffb02e; outline-offset: 1px; }
+.tile.asked { filter: drop-shadow(0 0 7px #ffb02e); }
+.myhand .tile.asked { animation: asked 1.1s ease-in-out infinite alternate; }
+@keyframes asked { to { transform: translateY(calc(var(--u) * -.8)); } }
+@media (prefers-reduced-motion: reduce) { .myhand .tile.asked { animation: none; } }
+.ask {
+  position: absolute;
+  left: calc(var(--u) * 8);
+  bottom: calc(var(--u) * 11.4);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * .8);
+  font-weight: 700;
+  font-size: calc(max(12px, var(--u) * 1.6));
+}
+.ask:not(:empty) {
+  padding: calc(var(--u) * .4) calc(var(--u) * 1.2);
+  border-radius: 999px;
+  color: #5a3200;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  background: linear-gradient(180deg, #ffe7b0, #ffb02e);
+  border: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: 0 0 calc(var(--u) * 1.4) rgba(255, 176, 46, .8);
+}
+.ask .tile { --w: calc(var(--u) * 2.6); }
+
+/* ------------------------------------------------------------ team result */
+.teamres { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.teamres > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .5);
+  border: 1px solid rgba(255, 255, 255, .8);
+}
+.teamres > div.won { box-shadow: 0 0 0 2px #2fae2c, 0 0 16px rgba(140, 255, 120, .7); }
+.teamres > div.mine b::after { content: " (tu equipo)"; font-weight: 500; color: var(--muted); }
+.teamres span:last-child { font-size: 1.4rem; font-weight: 800; }
+
+/* ------------------------------------------------------------ mode picker */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 4px; }
+.modes label { margin: 0; cursor: pointer; }
+.modes input { position: absolute; opacity: 0; pointer-events: none; }
+.modes span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  height: 100%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: #0b3550;
+  border: 1px solid rgba(255, 255, 255, .85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(210, 238, 255, .45));
+  box-shadow: inset 0 1px 0 #fff;
+  transition: box-shadow .15s, transform .1s;
+}
+.modes b { font-size: 1rem; }
+.modes small { font-weight: 500; color: #3f6d88; line-height: 1.25; }
+.modes input:checked + span {
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #2f9fea, 0 0 14px rgba(127, 220, 255, .8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(190, 230, 255, .7));
+}
+.modes input:focus-visible + span { outline: 2px solid #0a82d6; outline-offset: 2px; }
+#w-mode { font-size: .8em; color: var(--muted); font-weight: 600; }

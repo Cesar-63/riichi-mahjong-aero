@@ -744,6 +744,13 @@ export class Game {
 
   // ----------------------------------------------------------------- view
 
+  // A seat's concealed hand split like the owner sees it (drawn tile apart).
+  handOf(seat) {
+    const k = this.k;
+    const drawn = k.turn === seat && k.drawn !== null ? k.drawn : null;
+    return { hand: sortTiles(k.hands[seat].filter((x) => x !== drawn)), drawn };
+  }
+
   view(seat) {
     const s = this.s;
     const k = s.k;
