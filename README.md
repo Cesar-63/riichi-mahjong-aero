@@ -58,6 +58,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
   en la pila junto al corte.
 - Cada robo anima una ficha desde su hueco del muro (o del muro muerto, tras
   un kan) hasta la mano de quien roba.
+- Cada descarte vuela boca arriba desde la mano hasta la pila de descartes:
+  desde la posición de la ficha robada si es **tsumogiri**, o desde dentro de
+  la mano si es **tedashi**. En la pila, los descartes tsumogiri se ven más
+  oscuros.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
