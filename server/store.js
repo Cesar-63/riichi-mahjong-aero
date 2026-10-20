@@ -1,10 +1,19 @@
-// Tiny key-value store: Upstash Redis over REST in production (Vercel
-// Marketplace sets KV_REST_API_URL/KV_REST_API_TOKEN or
-// UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN), in-memory otherwise.
+// Tiny key-value store: Upstash Redis over REST in production, in-memory
+// otherwise. The Vercel Marketplace may add a custom prefix to the variable
+// names (e.g. STORAGE_KV_REST_API_URL), so any prefix is accepted.
+
+const URL_RE = /(^|_)(KV_REST_API_URL|UPSTASH_REDIS_REST_URL)$/;
+const TOKEN_RE = /(^|_)(KV_REST_API_TOKEN|UPSTASH_REDIS_REST_TOKEN)$/;
+
+export function findRedisEnv(env = process.env) {
+  const names = Object.keys(env).sort((a, b) => a.length - b.length);
+  const urlName = names.find((n) => URL_RE.test(n) && env[n]);
+  const tokenName = names.find((n) => TOKEN_RE.test(n) && env[n]);
+  return { urlName, tokenName, url: urlName && env[urlName], token: tokenName && env[tokenName] };
+}
 
 export function createStore(env = process.env) {
-  const url = env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL;
-  const token = env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN;
+  const { url, token } = findRedisEnv(env);
   if (url && token) return upstashStore(url.replace(/\/$/, ''), token);
   if (env.VERCEL) {
     console.warn('No Redis configured: falling back to memory, rooms will not survive between instances');

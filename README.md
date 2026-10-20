@@ -44,8 +44,12 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    gratuito) y conéctala al proyecto. Eso crea las variables
    `KV_REST_API_URL` y `KV_REST_API_TOKEN` (también se aceptan
    `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
+   Si al conectar eliges un prefijo (p. ej. `STORAGE`), también sirve:
+   se aceptan las variables con cualquier prefijo.
 3. Vuelve a desplegar (*Deployments → Redeploy*) para que la función tome las
    variables.
+4. Abre `https://<tu-proyecto>.vercel.app/api/health`: debe responder
+   `"store": "upstash"` y `"ok": true`.
 
 Sin Redis la función usa memoria, que **no funciona** en Vercel (cada
 invocación puede caer en una instancia distinta): Redis es obligatorio en

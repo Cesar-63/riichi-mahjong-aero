@@ -70,3 +70,17 @@ test('illegal action is reported, not applied', async () => {
   const r = (await handle({ op: 'act', room: 't2', token: tokens[0], action: { type: 'discard', tile: 999 } }, store, now)).body;
   assert.ok(r.error);
 });
+
+test('redis env vars are found with any prefix', async () => {
+  const { findRedisEnv } = await import('../server/store.js');
+  const env = {
+    STORAGE_KV_REST_API_URL: 'https://x.upstash.io',
+    STORAGE_KV_REST_API_TOKEN: 'tok',
+    STORAGE_KV_REST_API_READ_ONLY_TOKEN: 'ro',
+  };
+  const r = findRedisEnv(env);
+  assert.equal(r.url, 'https://x.upstash.io');
+  assert.equal(r.token, 'tok');
+  assert.equal(findRedisEnv({ KV_REST_API_URL: 'u', KV_REST_API_TOKEN: 't' }).token, 't');
+  assert.equal(findRedisEnv({ REDIS_URL: 'redis://x' }).url, undefined);
+});

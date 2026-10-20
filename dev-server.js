@@ -5,6 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { POST } from './api/game.js';
+import { GET as health } from './api/health.js';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), 'public');
 const types = {
@@ -23,6 +24,12 @@ const server = http.createServer(async (req, res) => {
     const chunks = [];
     for await (const c of req) chunks.push(c);
     const response = await POST(new Request(url, { method: 'POST', body: Buffer.concat(chunks) }));
+    res.writeHead(response.status, { 'Content-Type': 'application/json' });
+    res.end(await response.text());
+    return;
+  }
+  if (url.pathname === '/api/health') {
+    const response = await health();
     res.writeHead(response.status, { 'Content-Type': 'application/json' });
     res.end(await response.text());
     return;
