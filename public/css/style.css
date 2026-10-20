@@ -910,3 +910,42 @@ button.pass {
 }
 .modes input:focus-visible + span { outline: 2px solid #0a82d6; outline-offset: 2px; }
 #w-mode { font-size: .8em; color: var(--muted); font-weight: 600; }
+
+/* ------------------------------------------------------------ 3D view */
+#stage3d { position: fixed; inset: 0; z-index: 1; }
+#stage3d canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+#hud3d { position: fixed; inset: 0; z-index: 4; pointer-events: none; --u: 9px; }
+#hud3d .actions, #hud3d .ask { pointer-events: auto; }
+#hud3d .actions { position: absolute; right: 24px; bottom: 22%; left: auto; display: flex; gap: 10px; }
+#hud3d .act { font-size: 18px; padding: 10px 24px; }
+#hud3d .act.choice .tile { --w: 30px; }
+#hud3d .status3d {
+  position: absolute;
+  left: 24px;
+  bottom: 22%;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+#hud3d .timer { font-size: 20px; }
+#hud3d .ask { left: 24px; bottom: calc(22% + 56px); font-size: 16px; }
+#hud3d .ask .tile { --w: 26px; }
+#hud3d .callouts { position: absolute; inset: 0; }
+#hud3d .callout span { font-size: clamp(36px, 6vw, 72px); }
+/* the player's own hand faces the screen at the bottom (Tenhou 3D style) */
+#hud3d .myhand {
+  --tx: 0;
+  --ty: -1;
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  pointer-events: auto;
+  filter: drop-shadow(0 10px 18px rgba(0, 40, 80, .35));
+}
+#hud3d .myhand .tile { --w: clamp(26px, min(5.2vw, 8.4vh), 70px); }
+#hud3d .myhand .gap { width: clamp(8px, 1.2vw, 18px); }
+#hud3d .actions, #hud3d .status3d { bottom: calc(clamp(26px, min(5.2vw, 8.4vh), 70px) * 1.6 + 40px); }
+#hud3d .ask { bottom: calc(clamp(26px, min(5.2vw, 8.4vh), 70px) * 1.6 + 92px); }

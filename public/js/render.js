@@ -309,6 +309,26 @@ function animateDiscard(sk, info, rel) {
   };
 }
 
+// The player's own hand: same nodes for the same tiles, legality only toggles
+// classes. Used by the 2D board and by the 3D view's overlay.
+export function renderHand(el, v, ui) {
+  const o = v.options;
+  const items = v.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
+  if (v.drawn !== null) {
+    items.push({ key: 'gap', html: '<span class="gap"></span>' });
+    items.push({ key: String(v.drawn), html: tile(v.drawn, { attrs: `data-id="${v.drawn}"` }) });
+  }
+  reconcile(el, items);
+  const myTurn = o && o.kind === 'turn';
+  const legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
+  for (const t of el.querySelectorAll('.tile')) {
+    const id = Number(t.dataset.id);
+    t.classList.toggle('can', legal.has(id));
+    t.classList.toggle('no', !!myTurn && !legal.has(id));
+    t.classList.toggle('asked', id === v.partnerRequest);
+  }
+}
+
 export function renderBoard(board, v, ui) {
   const sk = skeleton(board);
   const me = v.seat;
@@ -346,21 +366,7 @@ export function renderBoard(board, v, ui) {
   board.querySelectorAll('.pond .tile.last').forEach((el) => el.classList.remove('last'));
   if (lastDiscard !== null) board.querySelector(`.pond [data-tile="${lastDiscard}"]`)?.classList.add('last');
 
-  // own hand: same nodes for the same tiles, legality only toggles classes
-  const items = v.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
-  if (v.drawn !== null) {
-    items.push({ key: 'gap', html: '<span class="gap"></span>' });
-    items.push({ key: String(v.drawn), html: tile(v.drawn, { attrs: `data-id="${v.drawn}"` }) });
-  }
-  reconcile(sk.hand, items);
-  const myTurn = o && o.kind === 'turn';
-  const legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
-  for (const el of sk.hand.querySelectorAll('.tile')) {
-    const id = Number(el.dataset.id);
-    el.classList.toggle('can', legal.has(id));
-    el.classList.toggle('no', !!myTurn && !legal.has(id));
-    el.classList.toggle('asked', id === v.partnerRequest);
-  }
+  renderHand(sk.hand, v, ui);
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
   setHTML(sk.ask, askedBy ? `<span>${esc(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
   setHTML(sk.furiten, v.furiten ? '<span class="furiten">振聴</span>' : '');
@@ -373,7 +379,7 @@ function btn(label, action, cls = '') {
   return `<button class="act ${cls}" data-action='${esc(JSON.stringify(action))}'>${label}</button>`;
 }
 
-function actionsHTML(v, ui) {
+export function actionsHTML(v, ui) {
   const o = v.options;
   if (!o) return '';
   if (o.kind === 'turn') {
@@ -490,7 +496,8 @@ export function renderPartner(v, ui) {
     return;
   }
   const board = Math.min(innerWidth, innerHeight - 4);
-  const margin = (innerWidth - board) / 2;
+  // 3D view fills the screen: dock on wide screens over the scenery at the side
+  const margin = ui.view3d ? (innerWidth >= 1100 ? 260 : 0) : (innerWidth - board) / 2;
   const docked = margin >= 190;
   const side = (p.seat - v.seat + 4) % 4 === 1 ? 'right' : 'left';
   const open = ui.partnerOpen;
