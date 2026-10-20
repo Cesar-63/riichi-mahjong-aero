@@ -6,6 +6,18 @@
 
 export const AKA_IDS = [16, 52, 88];
 
+// Physical wall model (public information only). Slots 0..121 are the live
+// wall in draw order, 122..135 the dead wall; slot s sits in stack s >> 1
+// (top tile = even slot) counted clockwise from the break. Dead-wall stack d
+// (0..6, 6 is next to the break) holds slots 122 + 2d (top) and 123 + 2d.
+// k.dead[0..3] are rinshan tiles, k.dead[4..8] dora indicators, k.dead[9..13] ura.
+export const deadSlot = (i) => {
+  if (i < 4) return 122 + 2 * (6 - (i >> 1)) + (i & 1);
+  if (i < 9) return 122 + 2 * (4 - (i - 4));
+  return 123 + 2 * (4 - (i - 9));
+};
+
+
 export const tileType = (id) => id >> 2;
 export const isAka = (id) => id === 16 || id === 52 || id === 88;
 export const isHonor = (t) => t >= 27;

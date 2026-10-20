@@ -56,7 +56,7 @@ export async function handle(body, store, now = Date.now()) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (op === 'join' || op === 'leave' || op === 'act') {
+  if (op === 'join' || op === 'leave' || op === 'act' || op === 'abandon') {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -111,7 +111,15 @@ async function withRoom(store, code, now, fn, { wait = true } = {}) {
 
 function apply(room, op, token, body, now, seen) {
   if (op === 'join') {
-    if (room.status === 'playing' && room.seats.some((s) => s.token === token)) return false;
+    const mine = room.status === 'playing' && room.seats.find((s) => s.token === token);
+    if (mine) {
+      // Rejoining after abandoning takes the seat back from the autopilot.
+      if (!mine.abandoned) return false;
+      mine.abandoned = false;
+      delete room.clock.decisions[room.seats.indexOf(mine)];
+      schedule(room, now, seen);
+      return true;
+    }
     if (room.status === 'finished') Object.assign(room, newRoom(room.code), { version: room.version });
     if (room.status === 'playing') throw new Error('Hay una partida en curso en esta sala');
     const name = cleanName(body.name);
@@ -132,6 +140,20 @@ function apply(room, op, token, body, now, seen) {
     const before = room.queue.length;
     room.queue = room.queue.filter((q) => q.token !== token);
     return room.queue.length !== before;
+  }
+  if (op === 'abandon') {
+    if (room.status !== 'playing') return false;
+    const seat = room.seats.findIndex((s) => s.token === token);
+    if (seat < 0 || room.seats[seat].abandoned) return false;
+    room.seats[seat].abandoned = true;
+    // Nobody left to play for: free the room instead of letting bots/autopilot run on.
+    if (room.seats.every((s) => s.bot || s.abandoned)) {
+      Object.assign(room, newRoom(room.code), { version: room.version });
+      return true;
+    }
+    delete room.clock.decisions[seat];
+    schedule(room, now, seen);
+    return true;
   }
   // act
   if (room.status !== 'playing') throw new Error('No hay partida en curso');
@@ -182,7 +204,8 @@ function afterChange(room, g) {
 export const isBotRoom = (code) => code.startsWith('bots-');
 
 const isOffline = (room, seat, seen, now) =>
-  !room.seats[seat].bot && now - Number(seen[room.seats[seat].token] || 0) > TIMING.offlineAfterMs;
+  !room.seats[seat].bot
+  && (room.seats[seat].abandoned || now - Number(seen[room.seats[seat].token] || 0) > TIMING.offlineAfterMs);
 
 function schedule(room, now, seen) {
   if (room.status !== 'playing') return;
@@ -248,11 +271,13 @@ function viewFor(room, token, seen, now) {
   }
   const seat = room.seats.findIndex((s) => s.token === token);
   if (seat < 0) return { ...base, spectator: true, names: room.seats.map((s) => s.name) };
+  if (room.seats[seat].abandoned) return { ...base, abandoned: true };
   const g = new Game(room.game);
   const view = g.view(seat);
   view.players.forEach((p, i) => {
     p.online = !isOffline(room, i, seen, now) || room.seats[i].token === token;
     p.bot = !!room.seats[i].bot;
+    p.abandoned = !!room.seats[i].abandoned;
   });
   const dec = room.clock && room.clock.decisions[seat];
   view.clock = dec

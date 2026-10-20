@@ -31,10 +31,35 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    con asientos al azar.
 2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
-3. **No llamar** (esquina superior izquierda) pasa automáticamente en
-   chi/pon/kan; el ron se sigue ofreciendo.
+3. **☰ Menú** (esquina superior izquierda, siempre visible):
+   - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
+     ofreciendo.
+   - **Reglas** y **Pantalla completa**.
+   - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
+     el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
+     otra vez a la misma sala. Contra bots, abandonar termina la partida; si
+     todos los humanos abandonan, la sala se libera.
 4. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
+
+## Mesa 2.5D y muro
+
+- Las fichas son imágenes planas del mismo tamaño en toda la mesa (proyección
+  oblicua, sin perspectiva, como Tenhou). El volumen sale de dibujar el canto
+  de cada ficha (cuerpo marfil + capa del reverso) siempre hacia abajo en
+  pantalla; cada asiento rotado compensa la dirección con variables CSS
+  (`--tx`, `--ty`).
+- El muro son 4 lados de 17 pilas de 2 fichas en molinete. Al empezar cada
+  mano se tiran dos dados (se ven en el centro): la suma elige el muro
+  (contando al oya como 1, en sentido antihorario) y cuántas pilas contar
+  desde su extremo derecho para el corte. Desde el corte se roba en sentido
+  horario; las 7 pilas al otro lado son el muro muerto (algo más apagado), con
+  el indicador de dora boca arriba en la tercera pila y las fichas de rinshan
+  en la pila junto al corte.
+- Cada robo anima una ficha desde su hueco del muro (o del muro muerto, tras
+  un kan) hasta la mano de quien roba.
+- El servidor solo envía qué huecos están vacíos y de dónde salió el último
+  robo, nunca qué ficha hay en cada posición.
 
 ## Modo test (contra bots)
 

@@ -38,10 +38,23 @@
 
   <div id="game" class="screen hidden">
     <div id="board"></div>
-    <label class="toggle"><input type="checkbox" id="nocalls"> No llamar</label>
+    <div id="menu">
+      <button id="menu-btn" aria-expanded="false" aria-controls="menu-panel">☰ Menú</button>
+      <div id="menu-panel" class="hidden">
+        <label><input type="checkbox" id="nocalls"> No llamar (pasar chi/pon/kan)</label>
+        <button id="m-rules">Reglas</button>
+        <button id="m-full">Pantalla completa</button>
+        <button id="m-abandon" class="danger">Abandonar partida</button>
+      </div>
+    </div>
   </div>
 
   <div id="modal" class="hidden"></div>
+  <dialog id="rules-dialog">
+    <h2>Reglas</h2>
+    <ul></ul>
+    <form method="dialog"><button>Cerrar</button></form>
+  </dialog>
   <div id="toast"></div>
   <script type="module" src="js/main.js"></script>
 </body>

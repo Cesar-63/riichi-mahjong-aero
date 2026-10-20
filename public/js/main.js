@@ -64,6 +64,11 @@ function apply(data) {
     return;
   }
   if (data.status !== 'finished') state.leftFinished = false;
+  if (data.abandoned) {
+    showLobby({ queue: [], inQueue: false, room: data.room });
+    $('#queue').innerHTML = `Abandonaste la partida en la sala <b>${escapeHTML(data.room)}</b>; sigue en automático. Pulsa <b>Buscar partida</b> con esa sala para volver a tu asiento.`;
+    return;
+  }
   if (data.status === 'lobby' || data.spectator) {
     if (state.view && state.view.final) return; // keep the final screen until dismissed
     showLobby(data);
@@ -257,6 +262,59 @@ $('#bots').addEventListener('click', async () => {
 
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
+});
+
+// ------------------------------------------------------------------ menu
+
+function setMenu(open) {
+  $('#menu-panel').classList.toggle('hidden', !open);
+  $('#menu-btn').setAttribute('aria-expanded', String(open));
+}
+$('#menu-btn').addEventListener('click', () => setMenu($('#menu-panel').classList.contains('hidden')));
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#menu')) setMenu(false);
+});
+
+$('#rules-dialog ul').innerHTML = $('#lobby details ul').innerHTML;
+$('#m-rules').addEventListener('click', () => {
+  setMenu(false);
+  $('#rules-dialog').showModal();
+});
+
+const canFullscreen = !!document.documentElement.requestFullscreen;
+if (!canFullscreen) $('#m-full').classList.add('hidden');
+$('#m-full').addEventListener('click', () => {
+  setMenu(false);
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener('fullscreenchange', () => {
+  $('#m-full').textContent = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+});
+
+$('#m-abandon').addEventListener('click', async () => {
+  setMenu(false);
+  const v = state.view;
+  const botRoom = state.room.startsWith('bots-');
+  if (v && v.phase !== 'end') {
+    const msg = botRoom
+      ? '¿Abandonar la partida contra los bots? La partida se termina.'
+      : '¿Abandonar la partida? Tu asiento seguirá jugando en automático (tsumogiri) hasta el final. Puedes volver uniéndote otra vez a la misma sala.';
+    if (!confirm(msg)) return;
+    await api('abandon');
+  }
+  state.view = null;
+  state.version = -1;
+  state.leftFinished = v && v.phase === 'end';
+  hideModal();
+  if (botRoom) {
+    state.room = 'publica';
+    store.set('mj.room', state.room);
+    $('#room').value = state.room;
+  }
+  if (!$('#lobby').classList.contains('hidden')) return;
+  showLobby({ queue: [], inQueue: false, room: state.room });
+  pollLoop();
 });
 
 $('#name').value = state.name;

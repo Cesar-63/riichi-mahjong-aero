@@ -117,3 +117,26 @@ test('bot room: one player against three bots that call and tsumogiri', async ()
   assert.ok(calls > 0, 'bots made calls');
   assert.equal(botWins, 0, 'bots never win');
 });
+
+test('abandon: seat goes on autopilot, can rejoin; last human frees the room', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  let now = 20_000_000;
+  const call = async (body, room = 't3') => (await handle({ room, ...body }, store, now)).body;
+  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+  const left = await call({ op: 'abandon', token: tokens[1] });
+  assert.equal(left.abandoned, true);
+  const other = await call({ op: 'poll', token: tokens[0] });
+  assert.equal(other.game.players[other.game.players.findIndex((p) => p.name === 'P1')].abandoned, true);
+  // Autopilot acts for the abandoned seat after the short offline delay.
+  const back = await call({ op: 'join', token: tokens[1], name: 'P1' });
+  assert.equal(back.status, 'playing');
+  assert.ok(back.game);
+
+  const solo = await call({ op: 'join', token: tokens[0], name: 'Yo' }, 'bots-x');
+  assert.equal(solo.status, 'playing');
+  const gone = await call({ op: 'abandon', token: tokens[0] }, 'bots-x');
+  assert.equal(gone.status, 'lobby');
+  now += 1000;
+  assert.equal((await call({ op: 'poll', token: tokens[0] }, 'bots-x')).status, 'lobby');
+});
