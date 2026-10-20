@@ -149,7 +149,16 @@ details li { margin: 4px 0; }
   background: linear-gradient(var(--back), var(--back-edge));
   box-shadow: inset 0 0 0 calc(var(--w) * .06) #f4b066, 0 1px 2px rgba(0, 0, 0, .4);
 }
-.tf.img.back, .tf.back:has(img) { background: none; box-shadow: none; }
+.tf.back:has(img) { background: none; box-shadow: none; }
+.tf.back img { border-radius: inherit; }
+.tf.back:has(img)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 calc(var(--w) * .06) rgba(255, 255, 255, .35), inset 0 calc(var(--w) * -.1) 0 rgba(0, 0, 0, .22);
+}
+.ohand .tile + .tile, .meld .tile + .tile { margin-left: 1px; }
 
 /* center */
 .center {

@@ -1,7 +1,11 @@
 # Imágenes de fichas
 
-Deja aquí las imágenes y el juego las usará automáticamente (si no hay, dibuja
-las fichas con CSS).
+Este directorio incluye el set `Regular` de
+[FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles),
+publicado en dominio público ([CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)).
+
+Para usar otro set, reemplaza los archivos manteniendo los nombres. Si borras
+todas las imágenes, el juego dibuja las fichas con CSS.
 
 ## Opción A: set por capas (por defecto)
 
@@ -22,7 +26,8 @@ Nombres esperados (`.svg`):
 
 ## Opción B: set plano (cada imagen es la ficha completa)
 
-Mismos nombres, en el formato que quieras, y crea `tileset.json`:
+Mismos nombres, en el formato que quieras. Borra `Front.svg` (si existe se
+asume el set por capas) y crea `tileset.json`:
 
 ```json
 { "ext": "png", "layered": false }

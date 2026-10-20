@@ -9,21 +9,23 @@ import {
 export const tileset = { mode: 'text', ext: 'svg', layered: true, dir: 'tiles/' };
 
 export async function detectTileset() {
+  const probe = (src) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+  if (await probe('tiles/Front.svg')) {
+    Object.assign(tileset, { mode: 'img', ext: 'svg', layered: true });
+    return;
+  }
   try {
     const res = await fetch('tiles/tileset.json', { cache: 'no-cache' });
     if (res.ok) {
       const cfg = await res.json();
       Object.assign(tileset, { mode: 'img', ext: cfg.ext || 'svg', layered: cfg.layered !== false });
-      return;
     }
-  } catch { /* no manifest */ }
-  const ok = await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.src = 'tiles/Front.svg';
-  });
-  if (ok) Object.assign(tileset, { mode: 'img', ext: 'svg', layered: true });
+  } catch { /* no manifest: CSS tiles */ }
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

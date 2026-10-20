@@ -76,10 +76,11 @@ sesión vive en `localStorage`) y únete a la misma sala.
 
 ## Fichas
 
-Si `public/tiles/` está vacío, las fichas se dibujan con CSS. Para usar
-imágenes, mira [`public/tiles/README.md`](public/tiles/README.md): el set
+Las imágenes vienen del set `Regular` de
 [FluffyStuff/riichi-mahjong-tiles](https://github.com/FluffyStuff/riichi-mahjong-tiles)
-funciona copiando los `.svg` tal cual.
+(dominio público, CC0) y están en `public/tiles/`. Para cambiar de set, mira
+[`public/tiles/README.md`](public/tiles/README.md). Si la carpeta queda sin
+imágenes, las fichas se dibujan con CSS.
 
 ## Estructura
 
