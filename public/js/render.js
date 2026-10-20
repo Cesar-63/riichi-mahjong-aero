@@ -158,10 +158,10 @@ function skeleton(board) {
       <div class="ohand"></div>
       <div class="melds ${r === 0 ? 'mine' : ''}"></div>
       <div class="np"><div class="np-in"></div><div class="np-name"></div>${r === 0 ? '<div class="np-status"><span class="furiten-slot"></span><span class="timer"></span></div>' : ''}</div>
-      <div class="callout"></div>
     </div>`).join('')}
     <div class="myhand"></div>
-    <div class="actions"></div>`;
+    <div class="actions"></div>
+    <div class="callouts">${ROT.map((_, r) => `<div class="callout c${r}"></div>`).join('')}</div>`;
   const q = (sel, root = board) => root.querySelector(sel);
   board._sk = {
     round: q('.center .round'),
@@ -178,7 +178,7 @@ function skeleton(board) {
         np: q('.np', l),
         npIn: q('.np-in', l),
         name: q('.np-name', l),
-        callout: q('.callout', l),
+        callout: q(`.callouts .c${r}`),
       };
     }),
     hand: q('.myhand'),
@@ -245,10 +245,73 @@ function animateDraw(sk, v, ui, rel) {
   };
 }
 
+const EDGE_DIR = [[0, 1], [-1, 0], [0, -1], [1, 0]]; // --tx/--ty per seat layer
+
+// Where the latest discard leaves from, measured before the hand is
+// re-rendered: the drawn-tile slot for tsumogiri, a tile inside the hand for
+// tedashi (opponents' hidden tiles: a deterministic spot among their backs).
+function discardSource(sk, v, ui, rel) {
+  const ev = [...v.events].reverse().find((e) => e.type === 'discard' || e.type === 'riichi');
+  const id = ev ? ev.id : 0;
+  const first = ui.lastDiscardEv === undefined;
+  if (id === ui.lastDiscardEv) return null;
+  ui.lastDiscardEv = id;
+  if (first || !ev || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  const d = v.players[ev.seat].discards.find((x) => x.tile === ev.tile);
+  if (!d || d.called) return null;
+  let src;
+  if (ev.seat === v.seat) src = sk.hand.querySelector(`[data-id="${ev.tile}"]`);
+  else {
+    const oh = sk.layers[rel(ev.seat)].ohand;
+    const backs = [...oh.querySelectorAll('[data-k^="b"]')];
+    src = d.tsumogiri
+      ? oh.querySelector('[data-k="drawn"]') || backs[backs.length - 1]
+      : backs[ev.tile % Math.max(1, backs.length)];
+  }
+  return src ? { rect: src.getBoundingClientRect(), seat: ev.seat, tile: ev.tile } : null;
+}
+
+// Flies the discarded tile, face up, from its hand position into the pond.
+function animateDiscard(sk, info, rel) {
+  if (!info) return;
+  const r = rel(info.seat);
+  const target = sk.layers[r].rows.map((row) => row.querySelector(`[data-tile="${info.tile}"]`)).find(Boolean);
+  if (!target) return;
+  const a = info.rect;
+  const b = target.getBoundingClientRect();
+  const w = target.offsetWidth;
+  const h = target.offsetHeight;
+  const fly = document.createElement('div');
+  fly.className = 'pond flydiscard';
+  fly.innerHTML = target.outerHTML;
+  Object.assign(fly.style, {
+    left: `${b.left + b.width / 2 - w / 2}px`,
+    top: `${b.top + b.height / 2 - h / 2}px`,
+    width: `${w}px`,
+    height: `${h}px`,
+  });
+  fly.style.setProperty('--tx', EDGE_DIR[r][0]);
+  fly.style.setProperty('--ty', EDGE_DIR[r][1]);
+  document.body.appendChild(fly);
+  target.style.visibility = 'hidden';
+  const dx = a.left + a.width / 2 - (b.left + b.width / 2);
+  const dy = a.top + a.height / 2 - (b.top + b.height / 2);
+  const s0 = Math.max(a.width, a.height) / Math.max(b.width, b.height);
+  const anim = fly.animate([
+    { transform: `translate(${dx}px, ${dy}px) rotate(${ROT[r]}deg) scale(${s0})` },
+    { transform: `translate(0, 0) rotate(${ROT[r]}deg) scale(1)` },
+  ], { duration: 280, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+  anim.onfinish = () => {
+    fly.remove();
+    target.style.visibility = '';
+  };
+}
+
 export function renderBoard(board, v, ui) {
   const sk = skeleton(board);
   const me = v.seat;
   const rel = (abs) => (abs - me + 4) % 4;
+  const discardFrom = discardSource(sk, v, ui, rel);
   const o = v.options;
   const lastDiscard = (() => {
     const ev = [...v.events].reverse().find((e) => e.type === 'discard' || e.type === 'riichi');
@@ -297,6 +360,7 @@ export function renderBoard(board, v, ui) {
   }
   setHTML(sk.furiten, v.furiten ? '<span class="furiten">振聴</span>' : '');
   setHTML(sk.actions, actionsHTML(v, ui));
+  animateDiscard(sk, discardFrom, rel);
   animateDraw(sk, v, ui, rel);
 }
 
@@ -387,7 +451,7 @@ export function resultHTML(v) {
       h += `<div class="win">
         <h3>${esc(p.name)} — ${how}</h3>
         ${handRow(w.hand, w.winTile, w.melds, w.seat)}
-        <div class="inds"><span>Dora</span>${r.dora.map((x) => tile(x)).join('')}${w.ura.length ? `<span>Ura</span>${w.ura.map((x) => tile(x)).join('')}` : ''}</div>
+        <div class="inds"><span class="lbl">Dora</span>${r.dora.map((x) => tile(x)).join('')}${w.ura.length ? `<span class="lbl">Ura</span>${w.ura.map((x) => tile(x)).join('')}` : ''}</div>
         <ul class="yaku">${yaku}</ul>
         <div class="pts">${pts} · ${w.points} pts${w.pao !== null ? ` · Pao: ${esc(v.players[w.pao].name)}` : ''}</div>
       </div>`;

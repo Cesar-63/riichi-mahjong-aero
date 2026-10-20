@@ -405,6 +405,13 @@ details li { margin: 4px 0; }
 .wst.up::after { z-index: 1; }
 .wst .tf { box-shadow: none; }
 .wst .tf.img.layered, .wst .tf.txt { background: none; }
+.flydiscard {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+.flydiscard .tile { visibility: visible !important; }
 .flytile {
   position: fixed;
   z-index: 30;
@@ -467,7 +474,7 @@ details li { margin: 4px 0; }
 }
 .pond .tile { --w: calc(var(--u) * 4.1); }
 .prow { display: flex; align-items: flex-end; height: calc(var(--u) * 4.1 * (4 / 3 + .13)); }
-.pond .tile.tg .tf { filter: brightness(.9) saturate(.85); }
+.pond .tile.tg .tf { filter: brightness(.8) saturate(.75); } /* tsumogiri */
 .pond .tile.last .tf {
   outline: calc(var(--u) * .25) solid #fff;
   filter: drop-shadow(0 0 calc(var(--u) * .7) var(--glow));
@@ -563,14 +570,16 @@ details li { margin: 4px 0; }
   background: radial-gradient(circle at 35% 35%, #ff9aa0, #e01b2b);
   border-radius: 50%;
 }
+.callouts { position: absolute; inset: 0; pointer-events: none; z-index: 20; }
 .callout {
   position: absolute;
-  left: 50%;
-  top: calc(var(--u) * 76);
-  transform: translateX(-50%);
-  pointer-events: none;
+  transform: translate(-50%, -50%);
   opacity: 0;
 }
+.callout.c0 { left: 50%; top: 76%; }
+.callout.c1 { left: 76%; top: 50%; }
+.callout.c2 { left: 50%; top: 24%; }
+.callout.c3 { left: 24%; top: 50%; }
 .callout span {
   display: inline-block;
   font-size: calc(var(--u) * 5.4);
@@ -582,11 +591,10 @@ details li { margin: 4px 0; }
   text-shadow: none;
   filter: drop-shadow(0 0 calc(var(--u) * .5) #1b9cff) drop-shadow(0 calc(var(--u) * .2) calc(var(--u) * .3) rgba(0, 40, 90, .6));
 }
-.layer.r2 .callout span { transform: rotate(180deg); }
 .callout.show { animation: callout 1.4s ease-out forwards; }
 @keyframes callout {
-  0% { opacity: 0; transform: translateX(-50%) scale(1.6); }
-  15% { opacity: 1; transform: translateX(-50%) scale(1); }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   75% { opacity: 1; }
   100% { opacity: 0; }
 }
@@ -689,8 +697,9 @@ details li { margin: 4px 0; }
 .handrow .tile { --w: min(40px, 6.4vw); }
 .handrow .meld { margin-right: 6px; }
 .inds { display: flex; align-items: center; gap: 4px; margin: 6px 0; color: var(--muted); }
-.inds .tile { --w: 26px; }
-.inds span:not(.tile) { margin: 0 4px 0 8px; }
+.inds .tile { --w: 30px; }
+.inds .lbl { margin: 0 4px 0 10px; }
+.inds .lbl:first-child { margin-left: 0; }
 .yaku { list-style: none; padding: 0; margin: 8px 0; columns: 2; column-gap: 24px; }
 .yaku li { display: flex; justify-content: space-between; gap: 12px; break-inside: avoid; padding: 2px 0; }
 .yaku .jp { color: var(--muted); margin-right: 6px; }
