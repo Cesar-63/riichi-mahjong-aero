@@ -17,29 +17,45 @@ export async function detectTileset() {
   });
   if (await probe('tiles/Front.svg')) {
     Object.assign(tileset, { mode: 'img', ext: 'svg', layered: true });
-    return;
+  } else {
+    try {
+      const res = await fetch('tiles/tileset.json', { cache: 'no-cache' });
+      if (res.ok) {
+        const cfg = await res.json();
+        Object.assign(tileset, { mode: 'img', ext: cfg.ext || 'svg', layered: cfg.layered !== false });
+      }
+    } catch { /* no manifest: CSS tiles */ }
   }
-  try {
-    const res = await fetch('tiles/tileset.json', { cache: 'no-cache' });
-    if (res.ok) {
-      const cfg = await res.json();
-      Object.assign(tileset, { mode: 'img', ext: cfg.ext || 'svg', layered: cfg.layered !== false });
-    }
-  } catch { /* no manifest: CSS tiles */ }
+  if (tileset.mode === 'img') await preloadTiles();
+}
+
+// Download and decode every tile image up front and keep them referenced, so
+// tiles never appear blank while their face image loads.
+const preloaded = [];
+async function preloadTiles() {
+  const names = new Set(['Back', ...(tileset.layered ? ['Front'] : [])]);
+  for (let t = 0; t < 34; t++) names.add(imageName(t * 4 + 1));
+  for (const id of [16, 52, 88]) names.add(imageName(id));
+  await Promise.all([...names].map((n) => {
+    const img = new Image();
+    img.src = `${tileset.dir}${n}.${tileset.ext}`;
+    preloaded.push(img);
+    return img.decode().catch(() => {});
+  }));
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function face(id) {
   if (id === null || id === undefined || id < 0) {
-    if (tileset.mode === 'img') return `<span class="tf back"><img src="${tileset.dir}Back.${tileset.ext}" alt=""></span>`;
+    if (tileset.mode === 'img') return `<span class="tf back"><img src="${tileset.dir}Back.${tileset.ext}" alt="" decoding="sync"></span>`;
     return '<span class="tf back"></span>';
   }
   const t = tileType(id);
   if (tileset.mode === 'img') {
     const src = `${tileset.dir}${imageName(id)}.${tileset.ext}`;
-    const bg = tileset.layered ? `<img src="${tileset.dir}Front.${tileset.ext}" alt="">` : '';
-    return `<span class="tf img">${bg}<img src="${src}" alt="${imageName(id)}"></span>`;
+    const bg = tileset.layered ? `<img src="${tileset.dir}Front.${tileset.ext}" alt="" decoding="sync">` : '';
+    return `<span class="tf img">${bg}<img src="${src}" alt="${imageName(id)}" decoding="sync"></span>`;
   }
   const aka = isAka(id) ? ' aka' : '';
   if (t >= 27) return `<span class="tf txt h${t - 27}${aka}"><b>${HONOR_KANJI[t - 27]}</b></span>`;
@@ -71,7 +87,7 @@ function meldHTML(m, owner) {
   return `<span class="meld">${parts.join('')}</span>`;
 }
 
-function pondHTML(discards, lastId) {
+function pondRows(discards) {
   const visible = [];
   let sideNext = false;
   for (const d of discards) {
@@ -82,17 +98,89 @@ function pondHTML(discards, lastId) {
     visible.push({ ...d, side: d.riichi || sideNext });
     if (d.riichi || sideNext) sideNext = false;
   }
-  const rows = [visible.slice(0, 6), visible.slice(6, 12), visible.slice(12)];
-  return rows.map((r) => `<div class="prow">${r.map((d) => tile(d.tile, {
-    side: d.side,
-    cls: `${d.tsumogiri ? 'tg' : ''} ${d.tile === lastId ? 'last' : ''}`,
-  })).join('')}</div>`).join('');
+  return [visible.slice(0, 6), visible.slice(6, 12), visible.slice(12)].map((row) => row.map((d) => ({
+    key: `${d.tile}${d.side ? 's' : ''}`,
+    html: tile(d.tile, { side: d.side, cls: d.tsumogiri ? 'tg' : '', attrs: `data-tile="${d.tile}"` }),
+  })));
+}
+
+// Keyed update of a container's children: nodes whose key and markup are
+// unchanged are kept, so their tile images are never recreated (recreating
+// an SVG <img> shows a blank tile until the browser rasterizes it again).
+function reconcile(container, items) {
+  const old = new Map();
+  for (const el of container.children) old.set(el.dataset.k, el);
+  let prev = null;
+  for (const { key, html } of items) {
+    let el = old.get(key);
+    if (el && el._h === html) old.delete(key);
+    else {
+      const t = document.createElement('template');
+      t.innerHTML = html.trim();
+      el = t.content.firstElementChild;
+      el.dataset.k = key;
+      el._h = html;
+    }
+    const ref = prev ? prev.nextSibling : container.firstChild;
+    if (el !== ref) container.insertBefore(el, ref);
+    prev = el;
+  }
+  for (const el of old.values()) el.remove();
+}
+
+function setHTML(el, html) {
+  if (el._h !== html) {
+    el._h = html;
+    el.innerHTML = html;
+  }
 }
 
 const ROT = [0, -90, 180, 90];
 const CALL_TEXT = { chi: 'チー', pon: 'ポン', kan: 'カン', riichi: 'リーチ', ron: 'ロン', tsumo: 'ツモ' };
 
+function skeleton(board) {
+  if (board._sk) return board._sk;
+  board.innerHTML = `<div class="center">
+      <div class="round"></div><div class="sticks"></div><div class="wall"></div><div class="dora"></div>
+    </div>
+    ${ROT.map((deg, r) => `<div class="layer r${r}" style="transform:rotate(${deg}deg)">
+      <div class="pond"><div class="prow"></div><div class="prow"></div><div class="prow"></div></div>
+      <div class="ohand"></div>
+      <div class="melds ${r === 0 ? 'mine' : ''}"></div>
+      <div class="np"><div class="np-in"></div></div>
+      <div class="name"></div>
+      <div class="callout"></div>
+    </div>`).join('')}
+    <div class="myhand"></div>
+    <div class="status"><span class="furiten-slot"></span><span class="timer"></span></div>
+    <div class="actions"></div>`;
+  const q = (sel, root = board) => root.querySelector(sel);
+  board._sk = {
+    round: q('.center .round'),
+    sticks: q('.center .sticks'),
+    wall: q('.center .wall'),
+    dora: q('.center .dora'),
+    layers: [0, 1, 2, 3].map((r) => {
+      const l = q(`.layer.r${r}`);
+      return {
+        rows: [...l.querySelectorAll('.prow')],
+        ohand: q('.ohand', l),
+        melds: q('.melds', l),
+        np: q('.np', l),
+        npIn: q('.np-in', l),
+        name: q('.name', l),
+        callout: q('.callout', l),
+      };
+    }),
+    hand: q('.myhand'),
+    furiten: q('.furiten-slot'),
+    actions: q('.actions'),
+  };
+  return board._sk;
+}
+
 export function renderBoard(board, v, ui) {
+  const sk = skeleton(board);
   const me = v.seat;
   const rel = (abs) => (abs - me + 4) % 4;
   const o = v.options;
@@ -101,54 +189,47 @@ export function renderBoard(board, v, ui) {
     return ev ? ev.tile : null;
   })();
 
-  let html = '';
-  // center
-  const roundName = `${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局`;
-  const doraSlots = [0, 1, 2, 3, 4].map((i) => tile(i < v.dora.length ? v.dora[i] : -1)).join('');
-  html += `<div class="center">
-    <div class="round">${roundName}</div>
-    <div class="sticks"><span title="Honba">本 ${v.honba}</span><span title="Depósitos de riichi">供 ${v.kyoutaku}</span></div>
-    <div class="wall">残り ${v.wallLeft}</div>
-    <div class="dora">${doraSlots}</div>
-  </div>`;
+  setHTML(sk.round, `${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局`);
+  setHTML(sk.sticks, `<span title="Honba">本 ${v.honba}</span><span title="Depósitos de riichi">供 ${v.kyoutaku}</span>`);
+  setHTML(sk.wall, `残り ${v.wallLeft}`);
+  reconcile(sk.dora, [0, 1, 2, 3, 4].map((i) => {
+    const id = i < v.dora.length ? v.dora[i] : -1;
+    return { key: `${i}:${id}`, html: tile(id) };
+  }));
 
   v.players.forEach((p, abs) => {
-    const r = rel(abs);
-    const isTurn = v.turn === abs && (v.phase === 'turn');
-    let handHTML = '';
-    if (r !== 0) {
-      handHTML = `<div class="ohand">${Array.from({ length: p.handCount }, () => tile(-1)).join('')}${p.hasDrawn ? `<span class="gap"></span>${tile(-1)}` : ''}</div>`;
-    }
-    const melds = p.melds.map((m) => meldHTML(m, abs)).join('');
-    html += `<div class="layer r${r}" style="transform:rotate(${ROT[r]}deg)">
-      <div class="pond">${pondHTML(p.discards, lastDiscard)}</div>
-      ${handHTML}
-      <div class="melds ${r === 0 ? 'mine' : ''}">${melds}</div>
-      <div class="np ${isTurn ? 'turn' : ''} ${p.online ? '' : 'off'}">
-        <div class="np-in">
-          <span class="wind ${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</span>
-          <span class="score">${p.score}</span>
-          ${p.riichi ? '<span class="stick"></span>' : ''}
-        </div>
-      </div>
-      <div class="name"><span>${esc(p.name)}${p.bot ? ' 🤖' : ''}${p.online ? '' : ' (desconectado)'}</span></div>
-      <div class="callout" data-seat="${abs}"></div>
-    </div>`;
+    const L = sk.layers[rel(abs)];
+    const isTurn = v.turn === abs && v.phase === 'turn';
+    pondRows(p.discards).forEach((items, i) => reconcile(L.rows[i], items));
+    const backs = rel(abs) === 0 ? [] : Array.from({ length: p.handCount }, (_, i) => ({ key: `b${i}`, html: tile(-1) }));
+    if (backs.length && p.hasDrawn) backs.push({ key: 'gap', html: '<span class="gap"></span>' }, { key: 'drawn', html: tile(-1) });
+    reconcile(L.ohand, backs);
+    reconcile(L.melds, p.melds.map((m, i) => ({ key: `${i}:${m.type}:${m.tiles.join('-')}`, html: meldHTML(m, abs) })));
+    L.np.className = `np${isTurn ? ' turn' : ''}${p.online ? '' : ' off'}`;
+    setHTML(L.npIn, `<span class="wind ${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</span>
+      <span class="score">${p.score}</span>${p.riichi ? '<span class="stick"></span>' : ''}`);
+    setHTML(L.name, `<span>${esc(p.name)}${p.bot ? ' 🤖' : ''}${p.abandoned ? ' (abandonó)' : p.online ? '' : ' (desconectado)'}</span>`);
+    L.callout.dataset.seat = abs;
   });
+  board.querySelectorAll('.pond .tile.last').forEach((el) => el.classList.remove('last'));
+  if (lastDiscard !== null) board.querySelector(`.pond [data-tile="${lastDiscard}"]`)?.classList.add('last');
 
-  // own hand
-  const legal = new Set(o && o.kind === 'turn' ? (ui.riichiMode ? o.riichi : o.discard) : []);
-  const handTiles = v.hand.map((id) => tile(id, {
-    cls: `${legal.has(id) ? 'can' : (o && o.kind === 'turn' ? 'no' : '')}`,
-    attrs: `data-id="${id}"`,
-  })).join('');
-  const drawnHTML = v.drawn !== null
-    ? `<span class="gap"></span>${tile(v.drawn, { cls: legal.has(v.drawn) ? 'can' : 'no', attrs: `data-id="${v.drawn}"` })}`
-    : '';
-  html += `<div class="myhand">${handTiles}${drawnHTML}</div>`;
-  html += `<div class="status">${v.furiten ? '<span class="furiten">振聴 Furiten</span>' : ''}<span class="timer"></span></div>`;
-  html += `<div class="actions">${actionsHTML(v, ui)}</div>`;
-  board.innerHTML = html;
+  // own hand: same nodes for the same tiles, legality only toggles classes
+  const items = v.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
+  if (v.drawn !== null) {
+    items.push({ key: 'gap', html: '<span class="gap"></span>' });
+    items.push({ key: String(v.drawn), html: tile(v.drawn, { attrs: `data-id="${v.drawn}"` }) });
+  }
+  reconcile(sk.hand, items);
+  const myTurn = o && o.kind === 'turn';
+  const legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
+  for (const el of sk.hand.querySelectorAll('.tile')) {
+    const id = Number(el.dataset.id);
+    el.classList.toggle('can', legal.has(id));
+    el.classList.toggle('no', !!myTurn && !legal.has(id));
+  }
+  setHTML(sk.furiten, v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
+  setHTML(sk.actions, actionsHTML(v, ui));
 }
 
 function btn(label, action, cls = '') {

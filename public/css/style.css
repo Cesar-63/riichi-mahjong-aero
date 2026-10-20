@@ -92,17 +92,40 @@ details li { margin: 4px 0; }
   overflow: hidden;
   font-size: calc(var(--u) * 1.8);
 }
-.toggle {
+#menu {
   position: fixed;
   top: 8px;
   left: 8px;
-  font-size: 13px;
-  color: var(--muted);
-  background: rgba(0, 0, 0, .4);
-  padding: 4px 8px;
-  border-radius: 6px;
-  z-index: 5;
+  z-index: 15; /* above the result modal, so it is always reachable */
+  font-size: 14px;
 }
+#menu-btn { padding: 6px 12px; background: rgba(0, 0, 0, .55); border: 1px solid rgba(255, 255, 255, .15); }
+#menu-panel {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  padding: 10px;
+  background: #13261f;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+#menu-panel.hidden { display: none; }
+#menu-panel label { color: var(--muted); padding: 4px 2px; }
+#menu-panel button { text-align: left; padding: 8px 12px; }
+button.danger { background: #5a1f22; color: #ffd9da; }
+#rules-dialog {
+  max-width: min(560px, calc(100vw - 32px));
+  background: #13261f;
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+}
+#rules-dialog::backdrop { background: rgba(0, 0, 0, .55); }
+#rules-dialog li { margin: 6px 0; color: var(--muted); }
+#rules-dialog form { text-align: right; }
 
 .layer { position: absolute; inset: 0; pointer-events: none; }
 

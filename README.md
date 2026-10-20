@@ -31,8 +31,14 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    con asientos al azar.
 2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
-3. **No llamar** (esquina superior izquierda) pasa automáticamente en
-   chi/pon/kan; el ron se sigue ofreciendo.
+3. **☰ Menú** (esquina superior izquierda, siempre visible):
+   - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
+     ofreciendo.
+   - **Reglas** y **Pantalla completa**.
+   - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
+     el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
+     otra vez a la misma sala. Contra bots, abandonar termina la partida; si
+     todos los humanos abandonan, la sala se libera.
 4. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
