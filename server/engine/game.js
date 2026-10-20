@@ -2,7 +2,7 @@
 // The whole game lives in a plain JSON-serializable object (`game.s`), so it
 // can be stored between stateless serverless invocations.
 import {
-  tileType, isYaochuu, isWind, isDragon, counts34, sortTiles, YAOCHUU,
+  tileType, isYaochuu, isWind, isDragon, counts34, sortTiles, YAOCHUU, deadSlot,
 } from '../../public/js/shared/tiles.js';
 import { waits, isAgari, isKokushi, decompose } from './hand.js';
 import { evaluate, ronValue, tsumoValues, limitName } from './score.js';
@@ -21,6 +21,8 @@ function cryptoRandom() {
 }
 
 const SEATS = [0, 1, 2, 3];
+
+export { deadSlot };
 
 export class Game {
   constructor(state, rng = cryptoRandom) {
@@ -76,12 +78,22 @@ export class Game {
       [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
     }
     const dead = tiles.splice(tiles.length - 14, 14);
+    // Dice choose whose wall is broken and where (counting the dealer as 1,
+    // counter-clockwise; then that many stacks from the wall's right end).
+    const dice = [1 + Math.floor(this.rng() * 6), 1 + Math.floor(this.rng() * 6)];
+    const sum = dice[0] + dice[1];
+    const breakWall = (this.dealer() + sum - 1) % 4;
     const four = (v) => SEATS.map(() => (typeof v === 'function' ? v() : v));
     const k = {
       wall: tiles,
       // dead[0..3] rinshan tiles, dead[4..8] dora indicators, dead[9..13] ura
       dead,
       kanCount: 0,
+      dice,
+      // first live stack, in clockwise stack order starting at seat 0's right end
+      breakStack: ((4 - breakWall) % 4) * 17 + sum,
+      pops: 0, // live tiles moved to the dead wall by kans
+      lastDraw: null,
       doraCount: 1,
       pendingDora: 0,
       hands: four(() => []),
@@ -116,14 +128,20 @@ export class Game {
   draw(seat, rinshan = false) {
     const k = this.k;
     let tile;
+    let slot;
     if (rinshan) {
       tile = k.dead[k.kanCount - 1];
       k.wall.pop(); // keep the dead wall at 14 tiles
+      k.pops++;
+      slot = deadSlot(k.kanCount - 1);
     } else {
       if (k.wall.length === 0) return this.exhaustiveDraw();
+      slot = 122 - k.wall.length - k.pops;
       tile = k.wall.shift();
     }
     k.hands[seat].push(tile);
+    this.s.drawSeq = (this.s.drawSeq || 0) + 1;
+    k.lastDraw = { seat, slot, n: this.s.drawSeq };
     k.drawn = tile;
     k.turn = seat;
     k.afterCall = false;
@@ -745,6 +763,14 @@ export class Game {
       kyoutaku: s.kyoutaku,
       dealer: this.dealer(),
       wallLeft: k.wall.length,
+      wall: {
+        dice: k.dice,
+        breakStack: k.breakStack,
+        liveTaken: 122 - k.wall.length - k.pops,
+        pops: k.pops,
+        doraCount: k.doraCount,
+        lastDraw: k.lastDraw,
+      },
       dora: k.dead.slice(4, 4 + k.doraCount),
       turn: k.turn,
       players: s.players.map((p, i) => ({

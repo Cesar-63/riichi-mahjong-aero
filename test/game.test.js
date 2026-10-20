@@ -215,3 +215,30 @@ test('double ron: both winners paid by the discarder', () => {
   assert.equal(r.deltas.reduce((a, b) => a + b, 0), 0);
   assert.equal(r.deltas[0], -(r.wins[0].points + r.wins[1].points));
 });
+
+test('wall view: slots taken match draws, kans and dead-wall usage', async () => {
+  const { deadSlot } = await import('../server/engine/game.js');
+  // dead-wall slots are distinct and inside 122..135
+  const slots = Array.from({ length: 14 }, (_, i) => deadSlot(i));
+  assert.equal(new Set(slots).size, 14);
+  assert.ok(slots.every((x) => x >= 122 && x <= 135));
+  assert.deepEqual(slots.slice(0, 4), [134, 135, 132, 133]); // rinshan from the stack next to the break
+  assert.equal(deadSlot(4), 130); // first dora indicator: top of the third stack from the break
+
+  const rng = mulberry32(11);
+  const g = Game.create(['A', 'B', 'C', 'D'], {}, rng);
+  const w0 = g.view(0).wall;
+  assert.equal(w0.liveTaken, 53); // 13 x 4 dealt + dealer's first draw
+  assert.equal(w0.lastDraw.slot, 52);
+  assert.ok(w0.dice.every((d) => d >= 1 && d <= 6));
+  const sum = w0.dice[0] + w0.dice[1];
+  assert.equal(w0.breakStack % 17, sum);
+  for (let n = 0; n < 4; n++) {
+    const seat = g.s.k.turn;
+    g.act(seat, { type: 'discard', tile: g.view(seat).options.discard[0] });
+    while (g.s.phase === 'response') g.act(g.pendingSeats()[0], { type: 'pass' });
+    if (g.s.phase !== 'turn') break;
+    const w = g.view(0).wall;
+    assert.equal(w.lastDraw.slot, w.liveTaken - 1);
+  }
+});

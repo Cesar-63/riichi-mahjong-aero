@@ -19,7 +19,19 @@
   --tile: #fbfbf6;
   --tile-edge: #cfd8dc;
   --shadow: rgba(0, 45, 80, .35);
+  /* 2.5D tiles: the edge of every tile is drawn towards (--tx, --ty), which
+     each rotated seat layer sets so that it always points down on screen. */
+  --tx: 0;
+  --ty: 1;
+  --body: #ddd6c1;
+  --back-2: #1585d2;
+  --back-3: #0c5a98;
+  --edge-shadow: rgba(0, 30, 60, .35);
 }
+.layer.r1 { --tx: -1; --ty: 0; }
+.layer.r2 { --tx: 0; --ty: -1; }
+.layer.r3 { --tx: 1; --ty: 0; }
+.myhand { --tx: 0; --ty: -1; } /* standing tiles: we see their top edge */
 
 /* Light glass panels (lobby, menus, dialogs) use dark text. */
 .card, .modal-box, #menu-panel, #rules-dialog {
@@ -264,6 +276,7 @@ details li { margin: 4px 0; }
 /* ------------------------------------------------------------ tiles */
 .tile {
   --w: calc(var(--u) * 4.4);
+  --t: calc(var(--w) * .13); /* tile thickness */
   position: relative;
   display: inline-block;
   flex: none;
@@ -272,7 +285,13 @@ details li { margin: 4px 0; }
   text-shadow: none;
 }
 .tile.side { width: calc(var(--w) * 4 / 3); height: var(--w); }
-.tile .tf { position: absolute; inset: 0; border-radius: calc(var(--w) * .12); }
+.tile .tf {
+  --sx: var(--tx);
+  --sy: var(--ty);
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--w) * .12);
+}
 .tile.side .rot {
   position: absolute;
   left: calc(var(--w) / 6);
@@ -281,10 +300,22 @@ details li { margin: 4px 0; }
   height: calc(var(--w) * 4 / 3);
   transform: rotate(90deg);
 }
+/* inside the 90deg-rotated wrapper the edge direction is rotated back */
+.tile.side .tf { --sx: var(--ty); --sy: calc(-1 * var(--tx)); }
 .tf img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.tf.img img + img { inset: 6%; width: 88%; height: 88%; }
-/* glossy reflection on every tile face */
-.tf.img::after, .tf.txt::after, .tf.back::after {
+.tf.img.layered img { inset: 6%; width: 88%; height: 88%; }
+/* face-up tile: ivory body, then the coloured back layer, then a soft shadow */
+.tf.img, .tf.txt {
+  box-shadow:
+    calc(var(--sx) * var(--t) * .55) calc(var(--sy) * var(--t) * .55) 0 0 var(--body),
+    calc(var(--sx) * var(--t)) calc(var(--sy) * var(--t)) 0 0 var(--back-2),
+    calc(var(--sx) * var(--t) * 1.4) calc(var(--sy) * var(--t) * 1.4) var(--t) 0 var(--edge-shadow);
+}
+.tf.img.layered, .tf.txt {
+  background: linear-gradient(170deg, #ffffff 0%, #fbf9f1 55%, #efeadb 100%);
+}
+/* glossy reflection on every tile */
+.tf.img::after, .tf.txt::after, .tf.back::after, .wst::after {
   content: "";
   position: absolute;
   left: 5%;
@@ -295,10 +326,7 @@ details li { margin: 4px 0; }
   background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .05));
   pointer-events: none;
 }
-.tf.img { filter: drop-shadow(0 1px 1.5px rgba(0, 40, 60, .35)); }
 .tf.txt {
-  background: linear-gradient(#ffffff, var(--tile));
-  box-shadow: inset 0 calc(var(--w) * -.07) 0 var(--tile-edge), 0 1px 2px rgba(0, 40, 60, .4);
   color: #111;
   display: flex;
   flex-direction: column;
@@ -317,23 +345,82 @@ details li { margin: 4px 0; }
 .tf.h5 b { color: #1d7a3a; }
 .tf.h6 b { color: #b3261e; }
 .tf.aka b, .tf.aka i { color: #e01b1b; }
-.tf.aka { background: linear-gradient(#fff4f2, #fbe4df); }
-/* tile backs: glossy aqua */
-.tf.back {
+.tf.txt.aka { background: linear-gradient(#fff4f2, #fbe4df); }
+/* face-down tile (glossy aqua back): darker back edge, then the ivory body */
+.tf.back, .wst, .flytile {
   background: linear-gradient(180deg, #7fdcff 0%, #2aa2ec 48%, #1585d2 52%, #46b9ff 100%);
-  box-shadow: inset 0 0 0 calc(var(--w) * .05) rgba(255, 255, 255, .55), inset 0 calc(var(--w) * -.09) 0 rgba(0, 60, 120, .35), 0 1px 2px rgba(0, 40, 60, .45);
+}
+.tf.back {
+  box-shadow:
+    inset 0 0 0 calc(var(--w) * .04) rgba(255, 255, 255, .5),
+    calc(var(--sx) * var(--t) * .45) calc(var(--sy) * var(--t) * .45) 0 0 var(--back-3),
+    calc(var(--sx) * var(--t)) calc(var(--sy) * var(--t)) 0 0 var(--body),
+    calc(var(--sx) * var(--t) * 1.4) calc(var(--sy) * var(--t) * 1.4) var(--t) 0 var(--edge-shadow);
 }
 .tf.back:has(img) { background: none; }
 .tf.back img { border-radius: inherit; }
-.ohand .tile + .tile, .meld .tile + .tile { margin-left: 1px; }
+/* neighbouring tiles leave room for the edge (it points sideways on side seats) */
+.pond .tile, .ohand .tile, .meld .tile { margin-right: var(--t); }
+.kakan .tile + .tile { margin-top: var(--t); }
+
+/* ------------------------------------------------------------ wall */
+/* 17 stacks of two face-down tiles per side, laid out as a pinwheel square */
+.wall {
+  position: absolute;
+  left: calc(var(--u) * 12);
+  top: calc(var(--u) * 82);
+  display: flex;
+}
+.wst {
+  --w: calc(var(--u) * 4.1);
+  --t: calc(var(--w) * .13);
+  --sx: var(--tx);
+  --sy: var(--ty);
+  position: relative;
+  flex: none;
+  width: var(--w);
+  height: calc(var(--w) * 4 / 3);
+  border-radius: calc(var(--w) * .12);
+  box-shadow:
+    inset 0 0 0 calc(var(--w) * .04) rgba(255, 255, 255, .45),
+    calc(var(--sx) * var(--t) * .45) calc(var(--sy) * var(--t) * .45) 0 0 var(--back-3),
+    calc(var(--sx) * var(--t)) calc(var(--sy) * var(--t)) 0 0 var(--body),
+    calc(var(--sx) * var(--t) * 1.45) calc(var(--sy) * var(--t) * 1.45) 0 0 var(--back-3),
+    calc(var(--sx) * var(--t) * 2) calc(var(--sy) * var(--t) * 2) 0 0 var(--body),
+    calc(var(--sx) * var(--t) * 2.4) calc(var(--sy) * var(--t) * 2.4) var(--t) 0 var(--edge-shadow);
+}
+/* a single remaining tile sits one thickness lower */
+.wst.n1 {
+  transform: translate(calc(var(--sx) * var(--t)), calc(var(--sy) * var(--t)));
+  box-shadow:
+    inset 0 0 0 calc(var(--w) * .04) rgba(255, 255, 255, .45),
+    calc(var(--sx) * var(--t) * .45) calc(var(--sy) * var(--t) * .45) 0 0 var(--back-3),
+    calc(var(--sx) * var(--t)) calc(var(--sy) * var(--t)) 0 0 var(--body),
+    calc(var(--sx) * var(--t) * 1.4) calc(var(--sy) * var(--t) * 1.4) var(--t) 0 var(--edge-shadow);
+}
+.wst.n0 { visibility: hidden; }
+.wst.dead { filter: saturate(.75) brightness(.97); }
+/* revealed dora indicator lying face up on the dead wall */
+.wst.up { background: linear-gradient(170deg, #ffffff, #efeadb); filter: none; }
+.wst.up::after { z-index: 1; }
+.wst .tf { box-shadow: none; }
+.wst .tf.img.layered, .wst .tf.txt { background: none; }
+.flytile {
+  position: fixed;
+  z-index: 30;
+  border-radius: 12%;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5), 0 6px 14px rgba(0, 30, 60, .45);
+  transform-origin: 0 0;
+}
 
 /* ------------------------------------------------------------ center */
 .center {
   position: absolute;
-  left: calc(var(--u) * 35);
-  top: calc(var(--u) * 35);
-  width: calc(var(--u) * 30);
-  height: calc(var(--u) * 30);
+  left: calc(var(--u) * 37);
+  top: calc(var(--u) * 37);
+  width: calc(var(--u) * 26);
+  height: calc(var(--u) * 26);
   background: linear-gradient(160deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .08) 60%, rgba(0, 60, 80, .12));
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -344,8 +431,7 @@ details li { margin: 4px 0; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--u) * .6);
-  padding-bottom: calc(var(--u) * 1);
+  gap: calc(var(--u) * .4);
   overflow: hidden;
 }
 .center::before {
@@ -360,9 +446,9 @@ details li { margin: 4px 0; }
   pointer-events: none;
 }
 .center > * { position: relative; }
-.center .round { font-size: calc(var(--u) * 3.2); font-weight: 700; text-shadow: 0 1px 2px rgba(0, 40, 60, .6), 0 0 calc(var(--u) * 1.5) rgba(127, 246, 255, .8); }
-.center .sticks { display: flex; gap: calc(var(--u) * 1.5); color: var(--muted); }
-.center .wall {
+.center .round { font-size: calc(var(--u) * 2.8); font-weight: 700; text-shadow: 0 1px 2px rgba(0, 40, 60, .6), 0 0 calc(var(--u) * 1.5) rgba(127, 246, 255, .8); }
+.center .sticks { display: flex; gap: calc(var(--u) * 1.2); color: var(--muted); font-size: calc(var(--u) * 1.5); }
+.center .wall-left {
   color: var(--accent);
   font-weight: 700;
   padding: 0 calc(var(--u) * 1.2);
@@ -370,19 +456,21 @@ details li { margin: 4px 0; }
   background: rgba(0, 50, 70, .25);
 }
 .center .dora { display: flex; gap: calc(var(--u) * .2); }
-.center .dora .tile { --w: calc(var(--u) * 3.2); }
+.center .dora .tile { --w: calc(var(--u) * 2.4); }
 
 /* ------------------------------------------------------------ seats */
 /* each layer is drawn as the bottom seat, then rotated */
 .pond {
   position: absolute;
-  left: calc(var(--u) * 36.8);
-  top: calc(var(--u) * 65.6);
+  left: calc(var(--u) * 36.1);
+  top: calc(var(--u) * 63.4);
 }
-.prow { display: flex; align-items: flex-end; height: calc(var(--u) * 4.4 * 4 / 3); }
+.pond .tile { --w: calc(var(--u) * 4.1); }
+.prow { display: flex; align-items: flex-end; height: calc(var(--u) * 4.1 * (4 / 3 + .13)); }
 .pond .tile.tg .tf { filter: brightness(.9) saturate(.85); }
 .pond .tile.last .tf {
-  box-shadow: 0 0 0 calc(var(--u) * .25) #fff, 0 0 calc(var(--u) * 1.4) calc(var(--u) * .4) var(--glow);
+  outline: calc(var(--u) * .25) solid #fff;
+  filter: drop-shadow(0 0 calc(var(--u) * .7) var(--glow));
 }
 
 .ohand {
@@ -412,23 +500,36 @@ details li { margin: 4px 0; }
 
 .np {
   position: absolute;
-  left: calc(var(--u) * 35);
-  top: calc(var(--u) * 58.6);
-  width: calc(var(--u) * 30);
+  left: calc(var(--u) * 37);
+  top: calc(var(--u) * 56.6);
+  width: calc(var(--u) * 26);
   height: calc(var(--u) * 6.4);
-  display: flex;
+  display: grid;
+  grid-template-areas: "in in" "name status";
   justify-content: center;
-  align-items: center;
+  justify-items: center;
+  align-content: center;
+  column-gap: calc(var(--u) * 1);
 }
-.np-in { display: flex; align-items: center; gap: calc(var(--u) * 1); }
-.layer.r2 .np-in, .layer.r2 .name span { transform: rotate(180deg); }
+.np-in { grid-area: in; display: flex; align-items: center; gap: calc(var(--u) * .8); }
+.np-name {
+  grid-area: name;
+  max-width: calc(var(--u) * 16);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(var(--u) * 1.35);
+  color: var(--muted);
+}
+.np-status { grid-area: status; display: flex; gap: calc(var(--u) * .6); align-items: center; }
+.layer.r2 .np { transform: rotate(180deg); }
 .np .wind {
   font-weight: 700;
-  font-size: calc(var(--u) * 2.4);
+  font-size: calc(var(--u) * 2.1);
   color: var(--muted);
 }
 .np .wind.oya { color: #ff8a8a; text-shadow: 0 0 calc(var(--u) * 1) rgba(255, 90, 100, .9), 0 1px 1px rgba(0, 0, 0, .4); }
-.np .score { font-size: calc(var(--u) * 2.4); font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 40, 60, .8), 0 0 calc(var(--u) * .8) rgba(0, 60, 80, .5); }
+.np .score { font-size: calc(var(--u) * 2.1); font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 40, 60, .8), 0 0 calc(var(--u) * .8) rgba(0, 60, 80, .5); }
 .np.turn .score { color: var(--accent); text-shadow: 0 0 calc(var(--u) * 1.2) rgba(255, 242, 122, .8), 0 1px 1px rgba(0, 0, 0, .4); }
 .np.turn::after {
   content: "";
@@ -444,8 +545,8 @@ details li { margin: 4px 0; }
 .np.off { opacity: .5; }
 .stick {
   display: inline-block;
-  width: calc(var(--u) * 7);
-  height: calc(var(--u) * .9);
+  width: calc(var(--u) * 5);
+  height: calc(var(--u) * .8);
   background: linear-gradient(180deg, #fff, #dfe9ee);
   border-radius: calc(var(--u) * .5);
   box-shadow: 0 0 calc(var(--u) * .8) rgba(255, 255, 255, .8);
@@ -462,17 +563,6 @@ details li { margin: 4px 0; }
   background: radial-gradient(circle at 35% 35%, #ff9aa0, #e01b2b);
   border-radius: 50%;
 }
-.name {
-  position: absolute;
-  left: calc(var(--u) * 12);
-  bottom: calc(var(--u) * 7.2);
-  font-size: calc(var(--u) * 1.6);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.name span { display: inline-block; }
-.layer.r0 .name { left: calc(var(--u) * 8); bottom: calc(var(--u) * 10.6); }
-
 .callout {
   position: absolute;
   left: 50%;
@@ -517,22 +607,14 @@ details li { margin: 4px 0; }
 }
 .myhand .tile.no .tf { filter: brightness(.65) saturate(.6); }
 
-.status {
-  position: absolute;
-  left: calc(var(--u) * 8);
-  bottom: calc(var(--u) * 12.6);
-  display: flex;
-  gap: calc(var(--u) * 1.5);
-  align-items: center;
-}
 .timer {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--ink);
-  font-size: calc(var(--u) * 2.2);
+  font-size: calc(var(--u) * 1.5);
 }
 .timer:not(:empty) {
-  padding: calc(var(--u) * .2) calc(var(--u) * 1.4);
+  padding: 0 calc(var(--u) * .9);
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, .08));
   border: 1px solid rgba(255, 255, 255, .55);
