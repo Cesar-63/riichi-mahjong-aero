@@ -11,17 +11,23 @@
   <main id="lobby" class="screen">
     <div class="card">
       <h1>麻雀 <span>Riichi Mahjong</span></h1>
-      <p class="sub">Partida por equipos estilo Tenhou · 2 contra 2 · Tonpuusen (東風戦)</p>
+      <p class="sub">Estilo Tenhou · Tonpuusen (東風戦)</p>
       <div id="entry">
+        <div class="modes" role="radiogroup" aria-label="Modo de juego">
+          <label><input type="radio" name="mode" value="classic" checked>
+            <span><b>Clásico</b><small>Ranked · 4 jugadores, cada uno por su cuenta</small></span></label>
+          <label><input type="radio" name="mode" value="teams">
+            <span><b>Por equipos</b><small>2 contra 2 · ves la mano de tu compañero</small></span></label>
+        </div>
         <label>Nombre <input id="name" maxlength="16" autocomplete="nickname"></label>
         <label>Sala <input id="room" maxlength="24" placeholder="publica"></label>
         <div class="row">
           <button id="join" class="primary">Entrar a la sala</button>
         </div>
-        <button id="bots" class="link">Modo test: tú y un bot contra 2 bots</button>
+        <button id="bots" class="link">Modo test: jugar contra bots</button>
       </div>
       <div id="waiting" class="hidden">
-        <h2>Sala <span id="w-room"></span></h2>
+        <h2>Sala <span id="w-room"></span> <small id="w-mode"></small></h2>
         <div class="teams">
           <section class="team" data-team="N">
             <h3>Equipo Norte</h3>
@@ -46,8 +52,8 @@
       <details>
         <summary>Reglas</summary>
         <ul>
-          <li>Dos equipos (Norte y Sur) de 2 jugadores. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero).</li>
-          <li>Al final se suman los resultados de cada equipo; gana el equipo con más puntos.</li>
+          <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>
+          <li><b>Por equipos:</b> Norte contra Sur, 2 y 2. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero). Al final se suman los resultados de cada equipo.</li>
           <li>25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (oka +20 al 1º).</li>
           <li>Kuitan (tanyao abierto) permitido. 3 akadora (un 5 rojo por palo).</li>
           <li>Sin kiriage mangan. Doble ron permitido; triple ron es empate abortivo.</li>
@@ -55,7 +61,7 @@
           <li>Nagashi mangan, pao en daisangen/daisuushii, sin doble yakuman.</li>
           <li>Si nadie llega a 30.000 al final de 東4, se juega 南 a muerte súbita.</li>
           <li>Tiempo: 5 s por acción + 10 s de reserva por mano.</li>
-          <li>Modo test: los bots solo descartan lo que roban y hacen pon/chi siempre que pueden (nunca ganan). Tu bot compañero descarta lo que le pidas.</li>
+          <li>Modo test: los bots solo descartan lo que roban y hacen pon/chi siempre que pueden (nunca ganan). En el modo por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
         </ul>
       </details>
     </div>

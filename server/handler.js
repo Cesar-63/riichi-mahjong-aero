@@ -17,6 +17,8 @@ export const TIMING = {
 const ROOM_TTL = 6 * 3600 * 1000;
 const LOCK_MS = 5000;
 
+const MODE_NAME = { classic: 'Clásico', teams: 'Por equipos' };
+
 const keys = (code) => ({
   room: `mj:room:${code}`,
   meta: `mj:meta:${code}`,
@@ -25,7 +27,8 @@ const keys = (code) => ({
 });
 
 function newRoom(code) {
-  return { code, version: 0, status: 'lobby', queue: [], seats: null, game: null, clock: null, deadline: null };
+  // mode: 'classic' (ranked, 4 individual players) or 'teams' (2 vs 2); set by whoever opens the room
+  return { code, version: 0, status: 'lobby', mode: null, queue: [], seats: null, game: null, clock: null, deadline: null };
 }
 
 function cleanName(n) {
@@ -123,27 +126,33 @@ function apply(room, op, token, body, now, seen) {
     if (room.status === 'finished') Object.assign(room, newRoom(room.code), { version: room.version });
     if (room.status === 'playing') throw new Error('Hay una partida en curso en esta sala');
     const name = cleanName(body.name);
+    const mode = body.mode === 'teams' ? 'teams' : 'classic';
     if (isBotRoom(room.code)) {
-      // Test mode: the player and Bot 1 are team North against two bots; starts right away.
-      room.queue = [
-        { token, name, team: 'N' },
-        { token: 'bot-1', name: 'Bot 1', bot: true, team: 'N' },
-        { token: 'bot-2', name: 'Bot 2', bot: true, team: 'S' },
-        { token: 'bot-3', name: 'Bot 3', bot: true, team: 'S' },
-      ];
+      // Test mode, starts right away. Teams: the player and Bot 1 against two bots.
+      room.mode = mode;
+      const bots = [1, 2, 3].map((n) => ({ token: `bot-${n}`, name: `Bot ${n}`, bot: true }));
+      room.queue = [{ token, name }, ...bots];
+      if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
       startGame(room, now, seen);
       return true;
+    }
+    if (room.queue.length === 0) room.mode = mode;
+    else if (room.mode !== mode) {
+      throw new Error(`La sala "${room.code}" es de modo ${MODE_NAME[room.mode]}: elige ese modo o usa otra sala`);
     }
     const existing = room.queue.find((q) => q.token === token);
     if (existing) existing.name = name;
     else {
       if (room.queue.length >= 4) throw new Error('La sala está llena (4/4)');
-      room.queue.push({ token, name, team: null, ready: false });
+      room.queue.push(mode === 'teams' ? { token, name, team: null, ready: false } : { token, name });
     }
+    // Classic (ranked) rooms start as soon as four players are in.
+    if (mode === 'classic' && room.queue.length === 4) startGame(room, now, seen);
     return true;
   }
   if (op === 'team' || op === 'ready' || op === 'start') {
     if (room.status !== 'lobby') return false;
+    if (room.mode !== 'teams') throw new Error('Esta sala no es de modo por equipos');
     const me = room.queue.find((q) => q.token === token);
     if (!me) throw new Error('No estás en esta sala');
     if (op === 'team') {
@@ -229,8 +238,9 @@ const shuffled = (list) => {
 
 // Teammates sit next to each other: one team takes seats 0-1, the other 2-3.
 function startGame(room, now, seen) {
-  const teams = shuffled(['N', 'S']).map((t) => shuffled(room.queue.filter((q) => q.team === t)));
-  const players = teams.flat().map(({ ready, ...p }) => p);
+  const players = room.mode === 'teams'
+    ? shuffled(['N', 'S']).flatMap((t) => shuffled(room.queue.filter((q) => q.team === t))).map(({ ready, ...p }) => p)
+    : shuffled(room.queue).map(({ team, ready, ...p }) => p);
   room.seats = players;
   room.requests = {};
   room.queue = [];
@@ -329,7 +339,7 @@ export function processTimeouts(room, now, seen) {
 }
 
 function viewFor(room, token, seen, now) {
-  const base = { version: room.version, now, room: room.code, status: room.status };
+  const base = { version: room.version, now, room: room.code, status: room.status, mode: room.mode || 'classic' };
   if (room.status === 'lobby') {
     return {
       ...base,

@@ -26,14 +26,19 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Cómo se juega
 
-1. Escribe un nombre y un código de sala (por defecto `publica`) y pulsa
-   **Entrar a la sala**. En la sala de espera (máximo 4):
-   - elige **Equipo Norte** o **Equipo Sur** (2 jugadores por equipo);
-   - marca **Estoy listo** (cambiar de equipo quita el listo);
-   - el **host** (el primero que entró; si se va, el siguiente) pulsa
-     **Comenzar partida** cuando hay 2 + 2 y los 4 están listos.
-   Los compañeros se sientan uno al lado del otro (se sortea qué equipo
-   empieza en 東 y el orden dentro de cada equipo).
+1. En el menú principal elige el **modo de juego**, escribe un nombre y un
+   código de sala (por defecto `publica`) y pulsa **Entrar a la sala**. Cada
+   sala queda con el modo de quien la abrió; para entrar hay que elegir ese
+   mismo modo.
+   - **Clásico** (ranked individual, el modo original): la partida empieza
+     sola al llegar a 4 jugadores, con asientos al azar.
+   - **Por equipos** (2 contra 2): en la sala de espera (máximo 4) eliges
+     **Equipo Norte** o **Equipo Sur** (2 por equipo), marcas **Estoy listo**
+     (cambiar de equipo lo quita) y el **host** (el primero que entró; si se
+     va, el siguiente) pulsa **Comenzar partida** cuando hay 2 + 2 y los 4
+     están listos. Los compañeros se sientan uno al lado del otro (se sortea
+     qué equipo empieza en 東 y el orden dentro de cada equipo). Ver
+     [Juego por equipos](#juego-por-equipos).
 2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **☰ Menú** (esquina superior izquierda, siempre visible):
@@ -72,6 +77,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Juego por equipos
 
+Solo en el modo **Por equipos**:
+
+
 - Cada jugador ve la **mano de su compañero** en un panel fuera del tablero:
   acoplado al margen del lado donde se sienta el compañero si la pantalla
   tiene espacio, o como franja desplegable arriba en pantallas angostas. Se
@@ -87,15 +95,17 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Modo test (contra bots)
 
-En el lobby, **Modo test** crea una sala privada (`bots-…`) donde tú y
-**Bot 1** son el Equipo Norte contra Bot 2 y Bot 3, y empieza al instante.
-Los bots:
+En el menú principal, **Modo test: jugar contra bots** crea una sala privada
+(`bots-…`) con el modo elegido y empieza al instante: en **Clásico**, tú contra
+3 bots; en **Por equipos**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y
+Bot 3. Los bots:
 
 - descartan siempre la ficha que acaban de robar (tras una llamada, la última
   ficha legal de la mano);
 - hacen pon o chi siempre que pueden;
 - nunca declaran ron, tsumo, riichi ni kan;
-- tu compañero bot descarta la ficha que le pidas (en su turno, si es legal).
+- en el modo por equipos, tu compañero bot descarta la ficha que le pidas (en
+  su turno, si es legal).
 
 Sirve para probar la interfaz y las reglas sin juntar a 4 personas. Cualquier
 sala cuyo código empiece por `bots-` funciona así.

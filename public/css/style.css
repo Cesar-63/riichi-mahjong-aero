@@ -850,3 +850,29 @@ button.pass {
 .teamres > div.won { box-shadow: 0 0 0 2px #2fae2c, 0 0 16px rgba(140, 255, 120, .7); }
 .teamres > div.mine b::after { content: " (tu equipo)"; font-weight: 500; color: var(--muted); }
 .teamres span:last-child { font-size: 1.4rem; font-weight: 800; }
+
+/* ------------------------------------------------------------ mode picker */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 4px; }
+.modes label { margin: 0; cursor: pointer; }
+.modes input { position: absolute; opacity: 0; pointer-events: none; }
+.modes span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  height: 100%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: #0b3550;
+  border: 1px solid rgba(255, 255, 255, .85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(210, 238, 255, .45));
+  box-shadow: inset 0 1px 0 #fff;
+  transition: box-shadow .15s, transform .1s;
+}
+.modes b { font-size: 1rem; }
+.modes small { font-weight: 500; color: #3f6d88; line-height: 1.25; }
+.modes input:checked + span {
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #2f9fea, 0 0 14px rgba(127, 220, 255, .8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(190, 230, 255, .7));
+}
+.modes input:focus-visible + span { outline: 2px solid #0a82d6; outline-offset: 2px; }
+#w-mode { font-size: .8em; color: var(--muted); font-weight: 600; }

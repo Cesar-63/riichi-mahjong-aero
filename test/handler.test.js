@@ -9,7 +9,7 @@ const tokens = ['a', 'b', 'c', 'd'].map((c) => c.repeat(32));
 // ready and the host (first to join) starts. Returns the host's start view.
 async function startTeams(store, room, now) {
   const call = async (body) => (await handle({ room, ...body }, store, now)).body;
-  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true, mode: 'teams' });
   for (let i = 0; i < 4; i++) {
     await call({ op: 'team', token: tokens[i], team: i < 2 ? 'N' : 'S' });
     await call({ op: 'ready', token: tokens[i], ready: true });
@@ -23,12 +23,21 @@ test('four players join, play via actions and timeouts until the game ends', asy
   let now = 1_000_000;
   const call = async (body) => (await handle({ room: 't1', ...body }, store, now)).body;
 
-  const r4 = await startTeams(store, 't1', now);
-  assert.equal(r4.status, 'playing');
+  for (let i = 0; i < 3; i++) {
+    const r = await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+    assert.equal(r.status, 'lobby');
+    assert.equal(r.mode, 'classic');
+    assert.equal(r.queue.length, i + 1);
+  }
+  assert.ok((await call({ op: 'join', token: tokens[3], name: 'P3', mode: 'teams' })).error, 'mode must match the room');
+  const r4 = await call({ op: 'join', token: tokens[3], name: 'P3', hb: true });
+  assert.equal(r4.status, 'playing', 'classic rooms start at four players');
   assert.equal(r4.game.players.length, 4);
-  // Only the teammate's hand is sent, never the opponents'.
+  // Other players' hands are never sent; classic mode has no teammate.
   assert.equal(JSON.stringify(r4).includes('"hands"'), false);
-  assert.ok(r4.game.partner);
+  assert.equal(r4.game.partner, undefined);
+  assert.ok(r4.game.players.every((p) => p.team === null));
+  assert.ok((await call({ op: 'request', token: tokens[0], tile: 1 })).error);
 
   const spectator = await call({ op: 'poll', token: 'e'.repeat(32) });
   assert.equal(spectator.spectator, true);
@@ -102,6 +111,7 @@ test('bot room: one player against three bots that call and tsumogiri', async ()
   const first = await call({ op: 'join', token: me, name: 'Yo', hb: true });
   assert.equal(first.status, 'playing');
   assert.equal(first.game.players.filter((p) => p.bot).length, 3);
+  assert.equal(first.game.partner, undefined, 'classic bot room has no teammate');
   const mySeat = first.game.seat;
   let calls = 0;
   let botWins = 0;
@@ -155,10 +165,10 @@ test('waiting room: teams of two, ready and host start', async () => {
   const now = 30_000_000;
   const call = async (body) => (await handle({ room: 'w1', ...body }, store, now)).body;
   for (let i = 0; i < 4; i++) {
-    const r = await call({ op: 'join', token: tokens[i], name: `P${i}` });
-    assert.equal(r.status, 'lobby', 'four players do not start a game by themselves');
+    const r = await call({ op: 'join', token: tokens[i], name: `P${i}`, mode: 'teams' });
+    assert.equal(r.status, 'lobby', 'four players do not start a team game by themselves');
   }
-  assert.ok((await call({ op: 'join', token: 'e'.repeat(32), name: 'Extra' })).error, 'room holds 4');
+  assert.ok((await call({ op: 'join', token: 'e'.repeat(32), name: 'Extra', mode: 'teams' })).error, 'room holds 4');
   assert.ok((await call({ op: 'ready', token: tokens[0], ready: true })).error, 'ready needs a team');
   await call({ op: 'team', token: tokens[0], team: 'N' });
   await call({ op: 'team', token: tokens[1], team: 'N' });
@@ -218,7 +228,7 @@ test('bot partner honours a discard request', async () => {
   const store = createStore({});
   let now = 50_000_000;
   const call = async (body) => (await handle({ room: 'bots-req', ...body }, store, now)).body;
-  let v = (await call({ op: 'join', token: tokens[0], name: 'Yo', hb: true })).game;
+  let v = (await call({ op: 'join', token: tokens[0], name: 'Yo', hb: true, mode: 'teams' })).game;
   assert.equal(v.players[v.partner.seat].name, 'Bot 1');
   const mate = v.partner.seat;
   let honoured = false;

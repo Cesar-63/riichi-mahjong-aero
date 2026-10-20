@@ -21,6 +21,7 @@ store.set('mj.token', token);
 
 const state = {
   room: store.get('mj.room') || 'publica',
+  mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -102,7 +103,17 @@ function showLobby(data) {
   q.textContent = '';
   const players = data.queue;
   const me = players.find((p) => p.you);
+  const teams = data.mode === 'teams';
   $('#w-room').textContent = data.room;
+  $('#w-mode').textContent = teams ? '· Por equipos' : '· Clásico';
+  $('#waiting .teams').classList.toggle('hidden', !teams);
+  $('#ready').classList.toggle('hidden', !teams);
+  if (!teams) {
+    $('#start').classList.add('hidden');
+    $('#unassigned').innerHTML = `En la sala (${players.length}/4): ${players.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}`;
+    $('#w-hint').textContent = 'La partida empieza sola al llegar a 4 jugadores; los asientos se sortean.';
+    return;
+  }
   const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' (tú)' : ''}${p.host ? ' <span class="badge">host</span>' : ''}<span class="tick">${p.ready ? '✔ listo' : '…'}</span></li>`;
   for (const team of ['N', 'S']) {
     const box = document.querySelector(`.team[data-team="${team}"]`);
@@ -267,7 +278,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.name', name);
   store.set('mj.room', room);
   state.lastHb = 0;
-  await api('join', { name });
+  await api('join', { name, mode: state.mode });
   pollLoop();
 });
 
@@ -298,12 +309,12 @@ $('#bots').addEventListener('click', async () => {
     return;
   }
   state.name = name;
-  state.room = `bots-${token.slice(0, 12)}`;
+  state.room = `bots-${state.mode === 'teams' ? 't' : 'c'}-${token.slice(0, 10)}`;
   store.set('mj.name', name);
   store.set('mj.room', state.room);
   $('#room').value = state.room;
   state.lastHb = 0;
-  await api('join', { name });
+  await api('join', { name, mode: state.mode });
   pollLoop();
 });
 
@@ -362,6 +373,14 @@ $('#m-abandon').addEventListener('click', async () => {
   if (!$('#lobby').classList.contains('hidden')) return;
   showLobby({ queue: [], inQueue: false, room: state.room });
   pollLoop();
+});
+
+document.querySelectorAll('input[name="mode"]').forEach((r) => {
+  r.checked = r.value === state.mode;
+  r.addEventListener('change', () => {
+    state.mode = r.value;
+    store.set('mj.mode', state.mode);
+  });
 });
 
 $('#name').value = state.name;
