@@ -1,4 +1,6 @@
-import { renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset } from './render.js';
+import {
+  renderBoard, renderPartner, renderHand, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
+} from './render.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -22,6 +24,10 @@ store.set('mj.token', token);
 const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
+  // ?3d=1 / ?3d=0 in the URL overrides the saved choice
+  view3d: new URLSearchParams(location.search).has('3d')
+    ? new URLSearchParams(location.search).get('3d') !== '0'
+    : store.get('mj.3d') === '1',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -152,16 +158,89 @@ function showGame(v) {
     ui.optKey = optKey;
     ui.riichiMode = ui.kanSelect = ui.chiSelect = ui.ponSelect = false;
   }
-  const board = $('#board');
-  renderBoard(board, v, ui);
+  ui.view3d = state.view3d;
+  $('#board').classList.toggle('hidden', state.view3d);
+  $('#stage3d').classList.toggle('hidden', !state.view3d);
+  $('#hud3d').classList.toggle('hidden', !state.view3d);
+  if (state.view3d) {
+    renderHud(v, ui);
+    ensure3d().then((t) => {
+      if (state.view !== v) return;
+      t.update(v, ui);
+      flyDrawToHand(t, v, ui);
+    });
+    showCallouts($('#hud3d'), v, ui);
+  } else {
+    const board = $('#board');
+    renderBoard(board, v, ui);
+    showCallouts(board, v, ui);
+  }
   renderPartner(v, ui);
-  showCallouts(board, v, ui);
   if (v.phase === 'result' && v.result) showModal(resultHTML(v));
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v));
   else hideModal();
 
   if (v.options && v.options.kind === 'response' && ui.noCalls && !v.options.ron) send({ type: 'pass' });
   tick();
+}
+
+// ------------------------------------------------------------------ 3D view
+
+// The 3D renderer (three.js) is only downloaded when the 3D view is used.
+let table3d = null;
+function ensure3d() {
+  if (!table3d) {
+    table3d = import('./three3d/table3d.js').then((m) => {
+      const t = m.createTable3D($('#stage3d'));
+      t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
+      return t;
+    });
+  }
+  return table3d;
+}
+
+const setIfChanged = (el, html) => {
+  if (el._h !== html) {
+    el._h = html;
+    el.innerHTML = html;
+  }
+};
+
+// The tile just drawn flies from its slot in the 3D wall to the hand overlay.
+function flyDrawToHand(t, v, ui) {
+  const d = v.wall && v.wall.lastDraw;
+  if (!d || d.n === ui.lastDrawHud) return;
+  const first = ui.lastDrawHud === undefined;
+  ui.lastDrawHud = d.n;
+  if (first || d.seat !== v.seat || v.drawn === null || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const to = $(`#hud3d .myhand [data-id="${v.drawn}"]`);
+  const from = t.slotOnScreen(v, d.slot);
+  if (!to || !from) return;
+  const b = to.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'flytile';
+  const w = b.width * 0.55;
+  Object.assign(fly.style, { left: `${from.x - w / 2}px`, top: `${from.y - w * 0.66}px`, width: `${w}px`, height: `${w * 1.33}px` });
+  document.body.appendChild(fly);
+  to.style.visibility = 'hidden';
+  fly.animate([
+    { transform: 'translate(0, 0) scale(1)' },
+    { transform: `translate(${b.left - from.x + w / 2}px, ${b.top - from.y + w * 0.66}px) scale(${b.width / w})` },
+  ], { duration: 420, easing: 'cubic-bezier(.3, .7, .3, 1)' }).onfinish = () => {
+    fly.remove();
+    to.style.visibility = '';
+  };
+}
+
+// Buttons, timer, notices and the player's own hand over the 3D canvas
+// (Tenhou style: the hand faces the screen instead of lying on the table).
+function renderHud(v, ui) {
+  const hud = $('#hud3d');
+  renderHand(hud.querySelector('.myhand'), v, ui);
+  setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
+  setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
+  const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
+  setIfChanged(hud.querySelector('.ask'), askedBy ? `<span>${escapeHTML(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
 }
 
 function showModal(html) {
@@ -320,6 +399,13 @@ $('#bots').addEventListener('click', async () => {
 
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
+});
+
+$('#m-3d').checked = state.view3d;
+$('#m-3d').addEventListener('change', (e) => {
+  state.view3d = e.target.checked;
+  store.set('mj.3d', state.view3d ? '1' : '0');
+  if (state.view) showGame(state.view);
 });
 
 // ------------------------------------------------------------------ menu

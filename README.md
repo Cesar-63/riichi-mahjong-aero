@@ -75,6 +75,29 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
+## Vista 3D (beta)
+
+Prototipo con [three.js](https://threejs.org) (0.170, MIT, incluido en
+`public/vendor/three/`, sin build). Se activa en **☰ Menú → Vista 3D (beta)**
+o abriendo la página con `?3d=1` (`?3d=0` la desactiva); la elección se
+recuerda en el navegador. three.js solo se descarga cuando se usa.
+
+- Pantalla completa en cualquier proporción (16:9, ultrawide, móvil vertical).
+- Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
+  cielo luminoso sobre un mar de nubes, con islas de pasto flotantes y
+  burbujas de jabón iridiscentes; los reflejos salen del propio cielo.
+- Fichas 3D (cuerpo marfil, reverso aguamarina, cara con la imagen del set),
+  muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
+  se desliza a su lugar, así robos, descartes y llamadas se animan solos.
+- Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: es una fila de
+  fichas grandes al pie de la pantalla, mirando hacia ti. La ficha robada
+  vuela desde su hueco del muro 3D hasta la mano.
+- Botones, menú, resultados y el panel del compañero son los mismos del 2D,
+  encima del canvas.
+
+El motor de reglas y el servidor son los mismos: la vista 3D dibuja la misma
+"vista" que envía el servidor (`public/js/three3d/`).
+
 ## Juego por equipos
 
 Solo en el modo **Por equipos**:
