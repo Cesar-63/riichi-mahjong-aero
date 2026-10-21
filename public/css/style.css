@@ -1284,16 +1284,17 @@ html[data-theme="tetsuya"] #hud3d .roundinfo em.oya { color: #ff8a8a; }
 }
 
 /* ------------------------------------------------------------ points drawer (3D) */
+/* always there, on the left just above the hand, like the call buttons on the right */
 #hud3d .points-btn {
   position: absolute;
-  top: 8px;
-  left: 106px;
+  left: 24px;
+  bottom: calc(var(--hand3d-h, 110px) + 14px);
   pointer-events: auto;
-  padding: 7px 14px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 20px;
 }
-#hud3d.intro .points-btn { visibility: hidden; }
+#hud3d .status3d { left: 190px; }
 /* the drawer stays in sight in the middle: my score floats right above it,
    the others sit at the left, top and right edges */
 #scores3d { position: absolute; inset: 0; pointer-events: auto; cursor: pointer; }
@@ -1348,7 +1349,8 @@ html[data-theme="tetsuya"] #scores3d .sc small.up { color: #ff8a8a; }
 html[data-theme="tetsuya"] #scores3d .sc small.down { color: #8fe0a0; }
 html[data-theme="tetsuya"] #hud3d .points-btn { border-radius: 3px; }
 @media (max-width: 640px) {
-  #hud3d .points-btn { top: 52px; left: auto; right: 8px; padding: 5px 10px; font-size: 13px; }
+  #hud3d .points-btn { left: 10px; padding: 7px 12px; font-size: 14px; }
+  #hud3d .status3d { left: 130px; }
   #scores3d .sc { min-width: 0; padding: 6px 10px; }
   #scores3d .bottom { min-width: 0; }
   #scores3d .left, #scores3d .right { top: 62%; }

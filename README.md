@@ -147,7 +147,9 @@ usa.
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
-- **Cajón de puntos**: el botón **点棒 Puntos** hace que la cámara mire hacia
+- **Cajón de puntos**: el botón **点棒 Puntos** (siempre a la izquierda, justo
+  encima de tu mano, como los botones de llamada a la derecha) hace que la
+  cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
   10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
   1 + 2 + 4 + 10). Encima del cajón aparece tu puntaje y alrededor el de los
