@@ -25,6 +25,7 @@ store.set('mj.token', token);
 const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
+  theme: store.get('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero',
   // ?3d=1 / ?3d=0 in the URL overrides the saved choice
   view3d: new URLSearchParams(location.search).has('3d')
     ? new URLSearchParams(location.search).get('3d') !== '0'
@@ -193,7 +194,7 @@ let table3d = null;
 function ensure3d() {
   if (!table3d) {
     table3d = import('./three3d/table3d.js').then((m) => {
-      const t = m.createTable3D($('#stage3d'));
+      const t = m.createTable3D($('#stage3d'), state.theme);
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       // during the deal animation the hand overlay fills in as my tiles arrive
       t.onIntro(({ active, myTiles }) => {
@@ -476,6 +477,19 @@ $('#bots').addEventListener('click', async () => {
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
 });
+
+// Setting (Frutiger Aero / Tetsuya parlour): CSS theme + 3D scene.
+function setTheme(theme) {
+  state.theme = theme === 'tetsuya' ? 'tetsuya' : 'aero';
+  store.set('mj.theme', state.theme);
+  document.documentElement.dataset.theme = state.theme;
+  document.querySelectorAll('.theme-select').forEach((s) => { s.value = state.theme; });
+  if (table3d) table3d.then((t) => t.setTheme(state.theme));
+}
+document.querySelectorAll('.theme-select').forEach((sel) => {
+  sel.addEventListener('change', () => setTheme(sel.value));
+});
+setTheme(state.theme);
 
 $('#m-3d').checked = state.view3d;
 $('#m-3d').addEventListener('change', (e) => {

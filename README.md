@@ -75,6 +75,21 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
+## Ambientaciones
+
+Se elige en el menú principal (**Ambientación**) o en **☰ Menú** durante la
+partida, y se recuerda en el navegador. Cambia la interfaz 2D y la escena 3D al
+instante, sin recargar.
+
+- **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
+  botones brillantes tipo Aqua.
+- **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
+  mesa de madera con tapete verde bajo una lámpara cálida y sillas en
+  penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
+  brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
+  una franja oscura con resplandor azul y avisos de llamada en letra blanca
+  con contorno negro.
+
 ## Vista 3D (beta)
 
 Prototipo con [three.js](https://threejs.org) (0.170, MIT, incluido en

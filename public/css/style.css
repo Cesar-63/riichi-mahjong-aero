@@ -1038,3 +1038,207 @@ button.pass {
   .pinfo { font-size: 11px; }
   .tags { display: none; }
 }
+
+/* ------------------------------------------------------------ theme picker */
+.theme-pick select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 12px;
+  font: inherit;
+  border-radius: 12px;
+  color: #0b3550;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(240, 250, 255, .85));
+  border: 1px solid rgba(80, 160, 210, .55);
+}
+#menu-panel .theme-pick select { margin-top: 4px; padding: 6px 10px; }
+
+/* ==================================================================
+   Tetsuya setting: a dim mahjong parlour (PS2 "Tetsuya" games). Dark room,
+   wooden table with green felt, yellow-backed tiles, navy menu boxes with a
+   blue glow and gold-framed opponent portraits.
+   ================================================================== */
+html[data-theme="tetsuya"] {
+  --ink: #f1ede2;
+  --muted: #a9a394;
+  --accent: #f2c94c;
+  --danger: #e2504a;
+  --ok: #7fd36b;
+  --glow: #4a8dff;
+  --shadow: rgba(0, 0, 0, .6);
+  --body: #e6dcc2;
+  --back-1: #f2d17a;
+  --back-2: #c9993e;
+  --back-3: #8f6623;
+  --edge-shadow: rgba(0, 0, 0, .55);
+  --felt-1: #5c8b52;
+  --felt-2: #3f6a3a;
+  --wood-1: #9a774c;
+  --wood-2: #5d4126;
+}
+html[data-theme="tetsuya"] body {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
+  background:
+    radial-gradient(70% 55% at 50% 40%, rgba(255, 226, 170, .12), transparent 70%),
+    linear-gradient(180deg, #120f0c 0%, #070605 100%);
+}
+html[data-theme="tetsuya"] body::before,
+html[data-theme="tetsuya"] body::after { display: none; }
+
+/* navy boxes with a thin light rim, like the in-game menus */
+html[data-theme="tetsuya"] :is(.card, .modal-box, #menu-panel, #rules-dialog, #partner, #intro2d) {
+  --ink: #f1ede2;
+  --muted: #a9b2c8;
+  --accent: #f2c94c;
+  --danger: #ff6a5f;
+  --ok: #86e07a;
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(28, 36, 66, .96), rgba(12, 16, 32, .96));
+  border: 1px solid #5a6a9a;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6), 0 0 22px rgba(60, 110, 255, .35), 0 12px 36px rgba(0, 0, 0, .7);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-theme="tetsuya"] .card { border-radius: 6px; }
+html[data-theme="tetsuya"] .modal-box, html[data-theme="tetsuya"] #rules-dialog { border-radius: 6px; }
+html[data-theme="tetsuya"] :is(.card h1, .modal-box h2, .modal-box h3, #rules-dialog h2, #waiting h2) {
+  color: #f6f1e4;
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(90, 140, 255, .6);
+  letter-spacing: .04em;
+}
+html[data-theme="tetsuya"] .card h1 span { color: var(--muted); text-shadow: none; }
+html[data-theme="tetsuya"] :is(.card input, .theme-pick select) {
+  color: #f1ede2;
+  background: #0a0d1a;
+  border: 1px solid #44507a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6);
+  border-radius: 3px;
+}
+html[data-theme="tetsuya"] :is(.team, .modes span, .teamres > div) {
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(40, 50, 88, .9), rgba(20, 26, 48, .9));
+  border: 1px solid #44507a;
+  box-shadow: none;
+  border-radius: 4px;
+}
+html[data-theme="tetsuya"] .modes small { color: #a9b2c8; }
+html[data-theme="tetsuya"] .modes input:checked + span { box-shadow: 0 0 0 2px #f2c94c, 0 0 14px rgba(242, 201, 76, .5); }
+html[data-theme="tetsuya"] .team[data-team="N"] h3 { color: #8fb8ff; }
+html[data-theme="tetsuya"] .team[data-team="S"] h3 { color: #ffb38f; }
+
+/* buttons: dark lacquer boxes, the main one like the blue "技メニュー" box */
+html[data-theme="tetsuya"] button {
+  color: #f1ede2;
+  border-radius: 3px;
+  border: 1px solid #5a6a9a;
+  background: linear-gradient(180deg, #2a3358, #141a30);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 2px 6px rgba(0, 0, 0, .6);
+  text-shadow: 0 1px 0 #000;
+}
+html[data-theme="tetsuya"] :is(button.primary, .act) {
+  color: #fff;
+  border: 1px solid #7f9bff;
+  background: linear-gradient(180deg, #2f4fd0 0%, #1a2f8f 55%, #13236b 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5), 0 0 14px rgba(70, 120, 255, .55);
+}
+html[data-theme="tetsuya"] :is(button.primary, .act)::before { display: none; }
+html[data-theme="tetsuya"] .act.win { border-color: #ff8a7a; background: linear-gradient(180deg, #c8332a, #7d1712); box-shadow: 0 0 16px rgba(255, 80, 60, .6); }
+html[data-theme="tetsuya"] .act.riichi { border-color: #ffd27a; background: linear-gradient(180deg, #c9902a, #7a5410); }
+html[data-theme="tetsuya"] :is(.act.pass, button.pass) { color: #d9d4c7; border-color: #555; background: linear-gradient(180deg, #3a3a3a, #1c1c1c); box-shadow: 0 2px 6px rgba(0, 0, 0, .6); }
+html[data-theme="tetsuya"] button.danger { border-color: #ff8a7a; background: linear-gradient(180deg, #8a231d, #4a0f0c); }
+html[data-theme="tetsuya"] button.link { color: #f2c94c; background: none; border: 0; box-shadow: none; }
+html[data-theme="tetsuya"] .act.choice { background: linear-gradient(180deg, #2a3358, #141a30); border-color: #5a6a9a; }
+html[data-theme="tetsuya"] .badge { background: linear-gradient(180deg, #f2c94c, #a87a1c); color: #1a1205; }
+
+/* 2D table: green felt inside a wooden frame */
+html[data-theme="tetsuya"] #board {
+  background:
+    radial-gradient(circle at 50% 50%, var(--felt-2) 0%, var(--felt-1) 34%, #4f7c47 80%, #446d3f 100%);
+  border: calc(var(--u) * 1.4) solid var(--wood-1);
+  border-radius: calc(var(--u) * .6);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, .35),
+    inset 0 calc(var(--u) * .8) calc(var(--u) * 3) rgba(0, 0, 0, .45),
+    0 0 0 1px var(--wood-2),
+    0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(0, 0, 0, .8);
+  text-shadow: 0 1px 2px #000;
+}
+html[data-theme="tetsuya"] #board::before { display: none; }
+html[data-theme="tetsuya"] .center {
+  background: rgba(10, 10, 10, .72);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: calc(var(--u) * .8);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 calc(var(--u) * .6) calc(var(--u) * 2) rgba(0, 0, 0, .6);
+}
+html[data-theme="tetsuya"] .center::before { display: none; }
+html[data-theme="tetsuya"] .center .round { text-shadow: 0 2px 0 #000; }
+html[data-theme="tetsuya"] .center .wall-left { background: rgba(0, 0, 0, .4); }
+html[data-theme="tetsuya"] .np.turn::after { background: linear-gradient(90deg, transparent, #3fbf3f, #9cff7a, #3fbf3f, transparent); box-shadow: 0 0 10px #3fbf3f; }
+
+/* yellow-backed tiles, matte ivory faces */
+html[data-theme="tetsuya"] :is(.tf.back, .wst, .flytile) {
+  background: linear-gradient(180deg, #f3d683 0%, #ddb45c 50%, #c89a3f 100%);
+}
+html[data-theme="tetsuya"] :is(.tf.img::after, .tf.txt::after, .tf.back::after, .wst::after) { opacity: .35; }
+html[data-theme="tetsuya"] :is(.tf.img.layered, .tf.txt) {
+  background: radial-gradient(130% 95% at 35% 22%, #fbf8ee 0%, #f1ead6 55%, #e1d6b8 100%);
+}
+
+/* call text: heavy white brush lettering with a black outline */
+html[data-theme="tetsuya"] .callout span {
+  color: #fff;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  font-weight: 900;
+  -webkit-text-stroke: calc(var(--u) * .25) #000;
+  paint-order: stroke fill;
+  filter: drop-shadow(0 0 calc(var(--u) * .8) rgba(255, 60, 40, .9));
+}
+
+/* modal backdrop, toasts, timers */
+html[data-theme="tetsuya"] #modal { background: rgba(0, 0, 0, .65); backdrop-filter: none; -webkit-backdrop-filter: none; }
+html[data-theme="tetsuya"] #toast { background: linear-gradient(180deg, #2a3358, #141a30); border: 1px solid #5a6a9a; border-radius: 3px; box-shadow: 0 0 18px rgba(70, 120, 255, .45); }
+html[data-theme="tetsuya"] .timer:not(:empty) { background: rgba(0, 0, 0, .55); border-color: rgba(255, 255, 255, .25); border-radius: 3px; }
+html[data-theme="tetsuya"] #intro2d { border-radius: 4px; color: var(--ink); }
+html[data-theme="tetsuya"] #intro2d .dice { color: #fff; }
+html[data-theme="tetsuya"] #intro2d small { color: var(--accent); }
+html[data-theme="tetsuya"] .deltas td, html[data-theme="tetsuya"] .deltas th { border-bottom-color: rgba(255, 255, 255, .1); }
+html[data-theme="tetsuya"] .win + .win { border-top-color: rgba(255, 255, 255, .12); }
+html[data-theme="tetsuya"] .pts { text-shadow: 0 1px 0 #000; }
+html[data-theme="tetsuya"] .teamres > div.won { box-shadow: 0 0 0 2px #7fd36b, 0 0 16px rgba(127, 211, 107, .5); }
+
+/* 3D: gold-framed opponent portraits across the top, like the Tetsuya windows */
+html[data-theme="tetsuya"] .pcard {
+  color: #2a1c06;
+  border-radius: 2px;
+  border: 3px solid #3a3a3a;
+  background: linear-gradient(180deg, #fbe9a6 0%, #f0cf6a 55%, #d9ad44 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), 0 6px 18px rgba(0, 0, 0, .7);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-theme="tetsuya"] .pcard.turn { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), 0 0 0 2px #fff, 0 0 20px 4px rgba(255, 220, 120, .8); }
+html[data-theme="tetsuya"] .pcard .avatar {
+  border-radius: 2px;
+  border: 2px solid #3a2a10;
+  background: linear-gradient(160deg, var(--a), var(--b));
+  filter: saturate(.55) brightness(.9);
+}
+html[data-theme="tetsuya"] .pinfo em { color: #5a4312; }
+html[data-theme="tetsuya"] .pinfo em.oya { color: #b3261e; }
+/* own hand sits on a dark band with a blue glow under it */
+html[data-theme="tetsuya"] #hud3d .myhand {
+  padding: 10px 18px 12px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(14, 20, 44, .9), rgba(6, 8, 18, .95));
+  box-shadow: 0 0 0 1px #3a4a7a, 0 0 30px 6px rgba(50, 110, 255, .55);
+  filter: none;
+}
+html[data-theme="tetsuya"] #partner-toggle { color: var(--ink); }
+html[data-theme="tetsuya"] #partner-toggle .hint, html[data-theme="tetsuya"] #partner .hint { color: var(--muted); }
+html[data-theme="tetsuya"] .ask:not(:empty) { border-radius: 3px; }
+html[data-theme="tetsuya"] #menu-btn { border-radius: 3px; }

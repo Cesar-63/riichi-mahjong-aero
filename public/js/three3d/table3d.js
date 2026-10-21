@@ -19,8 +19,8 @@ const fz = (y) => (y - 50) * S;
 const STACKS = 17;
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
-export function createTable3D(container) {
-  const world = createWorld(container);
+export function createTable3D(container, theme = 'aero') {
+  const world = createWorld(container, theme);
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -269,7 +269,7 @@ export function createTable3D(container) {
       const tint = f.tg ? 0.82 : 1;
       body.material.color.copy(IVORY).multiplyScalar(tint);
       if (face) face.material.color.setScalar(tint);
-      const glow = f.last ? 0x2bd8ff : 0x000000;
+      const glow = f.last ? lastGlow : 0x000000;
       body.material.emissive.setHex(glow);
       body.material.emissiveIntensity = glow ? 0.55 : 0;
     }
@@ -277,13 +277,16 @@ export function createTable3D(container) {
   }
 
   // ---------------------------------------------------------- center panel
+  let lastGlow = 0x2bd8ff;
+  let lastView = null;
+  const panelMat = new THREE.MeshPhysicalMaterial({ color: 0x06404f, transparent: true, opacity: 0.72, roughness: 0.08, clearcoat: 1, envMapIntensity: 1.4 });
   const centerCanvas = document.createElement('canvas');
   centerCanvas.width = centerCanvas.height = 1024;
   const centerTex = new THREE.CanvasTexture(centerCanvas);
   centerTex.colorSpace = THREE.SRGBColorSpace;
   const panel = new THREE.Mesh(
     new RoundedBoxGeometry(6.6, 0.3, 6.6, 4, 0.25),
-    new THREE.MeshPhysicalMaterial({ color: 0x06404f, transparent: true, opacity: 0.72, roughness: 0.08, clearcoat: 1, envMapIntensity: 1.4 }),
+    panelMat,
   );
   panel.position.y = 0.15;
   scene.add(panel);
@@ -555,7 +558,25 @@ export function createTable3D(container) {
   window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
   window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
 
+  // Per-setting look of tile backs and the centre panel.
+  const LOOKS = {
+    aero: { back: 0x1d97e6, roughness: 0.18, clearcoat: 1, sheen: 0.5, panel: 0x06404f, panelOpacity: 0.72, glow: 0x2bd8ff },
+    tetsuya: { back: 0xd9ad55, roughness: 0.42, clearcoat: 0.35, sheen: 0, panel: 0x141414, panelOpacity: 0.82, glow: 0xff9a2a },
+  };
+  world.onTheme((name) => {
+    const l = LOOKS[name] || LOOKS.aero;
+    aqua.color.setHex(l.back);
+    aqua.roughness = l.roughness;
+    aqua.clearcoat = l.clearcoat;
+    aqua.sheen = l.sheen;
+    panelMat.color.setHex(l.panel);
+    panelMat.opacity = l.panelOpacity;
+    lastGlow = l.glow;
+    if (lastView) update(...lastView);
+  });
+
   return {
+    setTheme: world.setTheme,
     update(v, ui) {
       relOf = (abs) => (abs - v.seat + 4) % 4;
       const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
@@ -569,6 +590,7 @@ export function createTable3D(container) {
         return;
       }
       introKey = key;
+      lastView = [v, ui];
       update(v, ui);
     },
     onIntro(cb) {
