@@ -1,5 +1,5 @@
 import {
-  renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
+  renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
 import { WIND_KANJI, sortTiles } from './shared/tiles.js';
 
@@ -25,11 +25,6 @@ store.set('mj.token', token);
 const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
-  theme: store.get('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero',
-  // 3D unless 2.5D was chosen; ?3d=1 / ?3d=0 in the URL overrides the saved choice
-  view3d: new URLSearchParams(location.search).has('3d')
-    ? new URLSearchParams(location.search).get('3d') !== '0'
-    : store.get('mj.3d') !== '0',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -165,29 +160,18 @@ function showGame(v) {
     ui.optKey = optKey;
     ui.riichiMode = ui.kanSelect = ui.chiSelect = ui.ponSelect = false;
   }
-  ui.view3d = state.view3d;
-  $('#board').classList.toggle('hidden', state.view3d);
-  $('#stage3d').classList.toggle('hidden', !state.view3d);
-  $('#hud3d').classList.toggle('hidden', !state.view3d);
-  if (state.view3d) {
-    renderHud(v, ui);
-    ensure3d().then((t) => {
-      if (state.view !== v) return;
-      t.update(v, ui);
-    });
-    showCallouts($('#hud3d'), v, ui);
-  } else {
-    const board = $('#board');
-    renderBoard(board, v, ui);
-    showCallouts(board, v, ui);
-    intro2d(v, ui);
-  }
+  renderHud(v, ui);
+  ensure3d().then((t) => {
+    if (state.view !== v) return;
+    t.update(v, ui);
+  });
+  showCallouts($('#hud3d'), v, ui);
   renderPartner(v, ui);
-  // A win first plays its reveal (3D) or lets the call show (2D) before the
-  // score screen opens; in 3D an exhaustive draw first lays the hands down
-  // (tenpai face up, noten face down).
+  // A win first plays its reveal before the score screen opens, and an
+  // exhaustive draw first lays the hands down (tenpai face up, noten face
+  // down).
   const res = v.phase === 'result' ? v.result : null;
-  const revealed = res && (res.type === 'agari' || (state.view3d && res.type === 'draw' && !res.abortive));
+  const revealed = res && (res.type === 'agari' || (res.type === 'draw' && !res.abortive));
   const winKey = revealed ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
   if (winKey && ui.winStarted !== winKey) {
     ui.winStarted = winKey;
@@ -197,8 +181,8 @@ function showGame(v) {
       hideDoraBanner();
       if (state.view) showGame(state.view);
     };
-    // safety net in case the 3D reveal never reports back
-    setTimeout(finish, state.view3d ? 13000 : 1300);
+    // safety net in case the reveal never reports back
+    setTimeout(finish, 13000);
     ui.winFinish = finish;
   }
   const holdModal = winKey && ui.winDone !== winKey;
@@ -213,12 +197,12 @@ function showGame(v) {
 
 // ------------------------------------------------------------------ 3D view
 
-// The 3D renderer (three.js) is only downloaded when the 3D view is used.
+// The 3D renderer (three.js) is downloaded when the first game starts.
 let table3d = null;
 function ensure3d() {
   if (!table3d) {
     table3d = import('./three3d/table3d.js').then((m) => {
-      const t = m.createTable3D($('#stage3d'), state.theme, {
+      const t = m.createTable3D($('#stage3d'), {
         // a click on one of my 3D hand tiles
         onPick: (id) => discard(id),
       });
@@ -245,40 +229,6 @@ const setIfChanged = (el, html) => {
     el.innerHTML = html;
   }
 };
-
-// 2D board: during the deal pause show the phases and the dice roll.
-const DIE_FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-function intro2d(v, ui) {
-  const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
-  if (!v.intro || v.intro.left < 400 || !v.wall || ui.intro2dKey === key) return;
-  ui.intro2dKey = key;
-  const box = $('#intro2d');
-  const total = v.intro.total;
-  const t0 = Date.now() - (total - v.intro.left);
-  const [a, b] = v.wall.dice;
-  clearInterval(intro2d.timer);
-  box.classList.remove('hidden');
-  intro2d.timer = setInterval(() => {
-    const p = (Date.now() - t0) / total;
-    if (p >= 1) {
-      clearInterval(intro2d.timer);
-      box.classList.add('hidden');
-      return;
-    }
-    let html;
-    if (p < 0.26) html = '<b>Revolviendo fichas…</b>';
-    else if (p < 0.56) html = '<b>Armando los muros…</b>';
-    else if (p < 0.72) {
-      const r = () => 1 + Math.floor(Math.random() * 6);
-      const rolling = p < 0.68;
-      html = `<b>Tirando dados</b><span class="dice ${rolling ? 'rolling' : ''}">${DIE_FACE[rolling ? r() : a]}${DIE_FACE[rolling ? r() : b]}</span>`;
-    } else html = `<b>Repartiendo…</b><span class="dice">${DIE_FACE[a]}${DIE_FACE[b]}</span><small>${a + b}</small>`;
-    if (box._h !== html) {
-      box._h = html;
-      box.innerHTML = html;
-    }
-  }, 120);
-}
 
 // Dora count shown during the 3D win reveal: indicators, ura and the han
 // each kind adds for the (first) winner.
@@ -487,11 +437,6 @@ layout();
 document.addEventListener('click', (e) => {
   const v = state.view;
   const ui = state.ui;
-  const tileEl = e.target.closest('.myhand .tile.can');
-  if (tileEl && v && v.options && v.options.kind === 'turn') {
-    discard(Number(tileEl.dataset.id));
-    return;
-  }
   const b = e.target.closest('[data-action]');
   if (b) {
     const a = JSON.parse(b.dataset.action);
@@ -568,31 +513,6 @@ $('#bots').addEventListener('click', async () => {
 
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
-});
-
-// Setting (Frutiger Aero / Tetsuya parlour): CSS theme + 3D scene.
-function setTheme(theme) {
-  state.theme = theme === 'tetsuya' ? 'tetsuya' : 'aero';
-  store.set('mj.theme', state.theme);
-  document.documentElement.dataset.theme = state.theme;
-  document.querySelectorAll('.theme-select').forEach((s) => { s.value = state.theme; });
-  if (table3d) table3d.then((t) => t.setTheme(state.theme));
-}
-document.querySelectorAll('.theme-select').forEach((sel) => {
-  sel.addEventListener('change', () => setTheme(sel.value));
-});
-setTheme(state.theme);
-
-// View (3D / 2.5D), chosen in the lobby or the in-game menu.
-function setView3d(on) {
-  state.view3d = on;
-  store.set('mj.3d', on ? '1' : '0');
-  document.querySelectorAll('.view-select').forEach((s) => { s.value = on ? '3d' : '2d'; });
-  if (state.view) showGame(state.view);
-}
-document.querySelectorAll('.view-select').forEach((sel) => {
-  sel.value = state.view3d ? '3d' : '2d';
-  sel.addEventListener('change', () => setView3d(sel.value === '3d'));
 });
 
 // ------------------------------------------------------------------ menu

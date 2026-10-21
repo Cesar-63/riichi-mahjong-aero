@@ -1,7 +1,8 @@
-// DOM rendering of the table from a server view.
+// DOM pieces around the 3D table: tile images, call buttons, callouts,
+// the result and final screens and the teammate's hand.
 import {
   tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI, WIND_KANJI,
-  YAKU_NAMES, DRAW_NAMES, deadSlot,
+  YAKU_NAMES, DRAW_NAMES,
 } from './shared/tiles.js';
 
 // Tile art: FluffyStuff/riichi-mahjong-tiles layout in /tiles if present
@@ -55,8 +56,7 @@ function face(id) {
   const t = tileType(id);
   if (tileset.mode === 'img') {
     const src = `${tileset.dir}${imageName(id)}.${tileset.ext}`;
-    // Layered sets draw the tile body in CSS (so its 2.5D edge can follow the
-    // seat rotation); flat sets are full tile images.
+    // Layered sets draw the tile body in CSS; flat sets are full tile images.
     return `<span class="tf img${tileset.layered ? ' layered' : ''}"><img src="${src}" alt="${imageName(id)}" decoding="sync"></span>`;
   }
   const aka = isAka(id) ? ' aka' : '';
@@ -87,23 +87,6 @@ function meldHTML(m, owner) {
   const pos = rel === 3 ? 0 : rel === 2 ? 1 : parts.length;
   parts.splice(pos, 0, sideHTML);
   return `<span class="meld">${parts.join('')}</span>`;
-}
-
-function pondRows(discards) {
-  const visible = [];
-  let sideNext = false;
-  for (const d of discards) {
-    if (d.called) {
-      if (d.riichi) sideNext = true;
-      continue;
-    }
-    visible.push({ ...d, side: d.riichi || sideNext });
-    if (d.riichi || sideNext) sideNext = false;
-  }
-  return [visible.slice(0, 6), visible.slice(6, 12), visible.slice(12)].map((row) => row.map((d) => ({
-    key: `${d.tile}${d.side ? 's' : ''}`,
-    html: tile(d.tile, { side: d.side, cls: d.tsumogiri ? 'tg' : '', attrs: `data-tile="${d.tile}"` }),
-  })));
 }
 
 // Keyed update of a container's children: nodes whose key and markup are
@@ -137,243 +120,7 @@ function setHTML(el, html) {
   }
 }
 
-const ROT = [0, -90, 180, 90];
 const CALL_TEXT = { chi: 'チー', pon: 'ポン', kan: 'カン', riichi: 'リーチ', ron: 'ロン', tsumo: 'ツモ' };
-
-const WALL = 17; // stacks per side
-
-function skeleton(board) {
-  if (board._sk) return board._sk;
-  const stacks = (r) => Array.from({ length: WALL }, (_, j) => {
-    // Side walls overlap along the screen's vertical axis: paint lower stacks on top.
-    const z = r === 1 ? WALL - j : r === 3 ? j + 1 : 1;
-    return `<span class="wst n0" style="z-index:${z}"></span>`;
-  }).join('');
-  board.innerHTML = `<div class="center">
-      <div class="round"></div><div class="sticks"></div><div class="wall-left"></div><div class="dora"></div>
-    </div>
-    ${ROT.map((deg, r) => `<div class="layer r${r}" style="transform:rotate(${deg}deg)">
-      <div class="wall">${stacks(r)}</div>
-      <div class="pond"><div class="prow"></div><div class="prow"></div><div class="prow"></div></div>
-      <div class="ohand"></div>
-      <div class="melds ${r === 0 ? 'mine' : ''}"></div>
-      <div class="np"><div class="np-in"></div><div class="np-name"></div>${r === 0 ? '<div class="np-status"><span class="furiten-slot"></span><span class="timer"></span></div>' : ''}</div>
-    </div>`).join('')}
-    <div class="myhand"></div>
-    <div class="ask"></div>
-    <div class="actions"></div>
-    <div class="callouts">${ROT.map((_, r) => `<div class="callout c${r}"></div>`).join('')}</div>`;
-  const q = (sel, root = board) => root.querySelector(sel);
-  board._sk = {
-    round: q('.center .round'),
-    sticks: q('.center .sticks'),
-    wallLeft: q('.center .wall-left'),
-    dora: q('.center .dora'),
-    layers: [0, 1, 2, 3].map((r) => {
-      const l = q(`.layer.r${r}`);
-      return {
-        wall: [...l.querySelectorAll('.wst')],
-        rows: [...l.querySelectorAll('.prow')],
-        ohand: q('.ohand', l),
-        melds: q('.melds', l),
-        np: q('.np', l),
-        npIn: q('.np-in', l),
-        name: q('.np-name', l),
-        callout: q(`.callouts .c${r}`),
-      };
-    }),
-    hand: q('.myhand'),
-    ask: q('.ask'),
-    furiten: q('.furiten-slot'),
-    actions: q('.actions'),
-  };
-  return board._sk;
-}
-
-// Stack c (0..67) runs clockwise from seat 0's right end; returns its owner
-// seat and its index j left-to-right as seen by that owner.
-const stackPos = (c) => ({ seat: (4 - Math.floor(c / WALL)) % 4, j: WALL - 1 - (c % WALL) });
-
-function renderWall(sk, v, rel) {
-  const w = v.wall;
-  if (!w) return;
-  const rinshan = new Set();
-  for (let r = 0; r < w.pops; r++) rinshan.add(deadSlot(r));
-  const dora = new Map();
-  for (let i = 0; i < w.doraCount; i++) dora.set(deadSlot(4 + i), v.dora[i]);
-  const present = (slot) => !(slot < w.liveTaken || (slot >= 122 - w.pops && slot < 122) || rinshan.has(slot));
-  for (let c = 0; c < 4 * WALL; c++) {
-    const offset = (c - w.breakStack + 4 * WALL) % (4 * WALL);
-    const top = 2 * offset;
-    const n = (present(top) ? 1 : 0) + (present(top + 1) ? 1 : 0);
-    const { seat, j } = stackPos(c);
-    const el = sk.layers[rel(seat)].wall[j];
-    const up = present(top) && dora.has(top) ? face(dora.get(top)) : '';
-    const cls = `wst n${n}${offset >= 61 ? ' dead' : ''}${up ? ' up' : ''}`;
-    if (el.className !== cls) el.className = cls;
-    if (el._h !== up) {
-      el._h = up;
-      el.innerHTML = up;
-    }
-  }
-}
-
-// Flies a tile back from the wall slot that was just drawn to the drawer's hand.
-function animateDraw(sk, v, ui, rel) {
-  const d = v.wall && v.wall.lastDraw;
-  if (!d || d.n === ui.lastDrawN) return;
-  const first = ui.lastDrawN === undefined;
-  ui.lastDrawN = d.n;
-  if (first || v.phase !== 'turn' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const { seat, j } = stackPos((v.wall.breakStack + (d.slot >> 1)) % (4 * WALL));
-  const from = sk.layers[rel(seat)].wall[j];
-  const to = d.seat === v.seat ? sk.hand.lastElementChild : sk.layers[rel(d.seat)].ohand.querySelector('[data-k="drawn"]');
-  if (!from || !to) return;
-  const a = from.getBoundingClientRect();
-  const b = to.getBoundingClientRect();
-  const fly = document.createElement('div');
-  fly.className = 'flytile';
-  Object.assign(fly.style, { left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px` });
-  document.body.appendChild(fly);
-  to.style.visibility = 'hidden';
-  const anim = fly.animate([
-    { transform: 'translate(0, 0) scale(1)' },
-    { transform: `translate(${(b.left - a.left) * 0.5}px, ${(b.top - a.top) * 0.5 - 30}px) scale(1.1)`, offset: 0.5 },
-    { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})` },
-  ], { duration: 360, easing: 'ease-in-out' });
-  anim.onfinish = () => {
-    fly.remove();
-    to.style.visibility = '';
-  };
-}
-
-const EDGE_DIR = [[0, 1], [-1, 0], [0, -1], [1, 0]]; // --tx/--ty per seat layer
-
-// Where the latest discard leaves from, measured before the hand is
-// re-rendered: the drawn-tile slot for tsumogiri, a tile inside the hand for
-// tedashi (opponents' hidden tiles: a deterministic spot among their backs).
-function discardSource(sk, v, ui, rel) {
-  const ev = [...v.events].reverse().find((e) => e.type === 'discard' || e.type === 'riichi');
-  const id = ev ? ev.id : 0;
-  const first = ui.lastDiscardEv === undefined;
-  if (id === ui.lastDiscardEv) return null;
-  ui.lastDiscardEv = id;
-  if (first || !ev || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
-  const d = v.players[ev.seat].discards.find((x) => x.tile === ev.tile);
-  if (!d || d.called) return null;
-  let src;
-  if (ev.seat === v.seat) src = sk.hand.querySelector(`[data-id="${ev.tile}"]`);
-  else {
-    const oh = sk.layers[rel(ev.seat)].ohand;
-    const backs = [...oh.querySelectorAll('[data-k^="b"]')];
-    src = d.tsumogiri
-      ? oh.querySelector('[data-k="drawn"]') || backs[backs.length - 1]
-      : backs[ev.tile % Math.max(1, backs.length)];
-  }
-  return src ? { rect: src.getBoundingClientRect(), seat: ev.seat, tile: ev.tile } : null;
-}
-
-// Flies the discarded tile, face up, from its hand position into the pond.
-function animateDiscard(sk, info, rel) {
-  if (!info) return;
-  const r = rel(info.seat);
-  const target = sk.layers[r].rows.map((row) => row.querySelector(`[data-tile="${info.tile}"]`)).find(Boolean);
-  if (!target) return;
-  const a = info.rect;
-  const b = target.getBoundingClientRect();
-  const w = target.offsetWidth;
-  const h = target.offsetHeight;
-  const fly = document.createElement('div');
-  fly.className = 'pond flydiscard';
-  fly.innerHTML = target.outerHTML;
-  Object.assign(fly.style, {
-    left: `${b.left + b.width / 2 - w / 2}px`,
-    top: `${b.top + b.height / 2 - h / 2}px`,
-    width: `${w}px`,
-    height: `${h}px`,
-  });
-  fly.style.setProperty('--tx', EDGE_DIR[r][0]);
-  fly.style.setProperty('--ty', EDGE_DIR[r][1]);
-  document.body.appendChild(fly);
-  target.style.visibility = 'hidden';
-  const dx = a.left + a.width / 2 - (b.left + b.width / 2);
-  const dy = a.top + a.height / 2 - (b.top + b.height / 2);
-  const s0 = Math.max(a.width, a.height) / Math.max(b.width, b.height);
-  const anim = fly.animate([
-    { transform: `translate(${dx}px, ${dy}px) rotate(${ROT[r]}deg) scale(${s0})` },
-    { transform: `translate(0, 0) rotate(${ROT[r]}deg) scale(1)` },
-  ], { duration: 280, easing: 'cubic-bezier(.2, .8, .3, 1)' });
-  anim.onfinish = () => {
-    fly.remove();
-    target.style.visibility = '';
-  };
-}
-
-// The player's own hand: same nodes for the same tiles, legality only toggles
-// classes. Used by the 2D board and by the 3D view's overlay.
-export function renderHand(el, v, ui) {
-  const o = v.options;
-  const items = v.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
-  if (v.drawn !== null) {
-    items.push({ key: 'gap', html: '<span class="gap"></span>' });
-    items.push({ key: String(v.drawn), html: tile(v.drawn, { attrs: `data-id="${v.drawn}"` }) });
-  }
-  reconcile(el, items);
-  const myTurn = o && o.kind === 'turn';
-  const legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
-  for (const t of el.querySelectorAll('.tile')) {
-    const id = Number(t.dataset.id);
-    t.classList.toggle('can', legal.has(id));
-    t.classList.toggle('no', !!myTurn && !legal.has(id));
-    t.classList.toggle('asked', id === v.partnerRequest);
-  }
-}
-
-export function renderBoard(board, v, ui) {
-  const sk = skeleton(board);
-  const me = v.seat;
-  const rel = (abs) => (abs - me + 4) % 4;
-  const discardFrom = discardSource(sk, v, ui, rel);
-  const o = v.options;
-  const lastDiscard = (() => {
-    const ev = [...v.events].reverse().find((e) => e.type === 'discard' || e.type === 'riichi');
-    return ev ? ev.tile : null;
-  })();
-
-  setHTML(sk.round, `${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局`);
-  setHTML(sk.sticks, `<span title="Honba">本 ${v.honba}</span><span title="Depósitos de riichi">供 ${v.kyoutaku}</span>${v.wall ? `<span title="Dados">🎲 ${v.wall.dice.join('+')}</span>` : ''}`);
-  setHTML(sk.wallLeft, `残り ${v.wallLeft}`);
-  reconcile(sk.dora, [0, 1, 2, 3, 4].map((i) => {
-    const id = i < v.dora.length ? v.dora[i] : -1;
-    return { key: `${i}:${id}`, html: tile(id) };
-  }));
-  renderWall(sk, v, rel);
-
-  v.players.forEach((p, abs) => {
-    const L = sk.layers[rel(abs)];
-    const isTurn = v.turn === abs && v.phase === 'turn';
-    pondRows(p.discards).forEach((items, i) => reconcile(L.rows[i], items));
-    const backs = rel(abs) === 0 ? [] : Array.from({ length: p.handCount }, (_, i) => ({ key: `b${i}`, html: tile(-1) }));
-    if (backs.length && p.hasDrawn) backs.push({ key: 'gap', html: '<span class="gap"></span>' }, { key: 'drawn', html: tile(-1) });
-    reconcile(L.ohand, backs);
-    reconcile(L.melds, p.melds.map((m, i) => ({ key: `${i}:${m.type}:${m.tiles.join('-')}`, html: meldHTML(m, abs) })));
-    L.np.className = `np${isTurn ? ' turn' : ''}${p.online ? '' : ' off'}`;
-    setHTML(L.npIn, `<span class="wind ${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</span>
-      <span class="score">${p.score}</span>${p.riichi ? '<span class="stick"></span>' : ''}`);
-    setHTML(L.name, `${esc(p.name)}${p.bot ? ' 🤖' : ''}${p.abandoned ? ' (abandonó)' : p.online ? '' : ' (desconectado)'}`);
-    L.callout.dataset.seat = abs;
-  });
-  board.querySelectorAll('.pond .tile.last').forEach((el) => el.classList.remove('last'));
-  if (lastDiscard !== null) board.querySelector(`.pond [data-tile="${lastDiscard}"]`)?.classList.add('last');
-
-  renderHand(sk.hand, v, ui);
-  const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
-  setHTML(sk.ask, askedBy ? `<span>${esc(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
-  setHTML(sk.furiten, v.furiten ? '<span class="furiten">振聴</span>' : '');
-  setHTML(sk.actions, actionsHTML(v, ui));
-  animateDiscard(sk, discardFrom, rel);
-  animateDraw(sk, v, ui, rel);
-}
 
 function btn(label, action, cls = '') {
   return `<button class="act ${cls}" data-action='${esc(JSON.stringify(action))}'>${label}</button>`;
@@ -413,13 +160,13 @@ export function actionsHTML(v, ui) {
   return h;
 }
 
-export function showCallouts(board, v, ui) {
+export function showCallouts(root, v, ui) {
   for (const e of v.events) {
     if (e.id <= ui.lastEvent) continue;
     const text = CALL_TEXT[e.type];
     if (!text) continue;
     for (const seat of e.seats || [e.seat]) {
-      const el = board.querySelector(`.callout[data-seat="${seat}"]`);
+      const el = root.querySelector(`.callout[data-seat="${seat}"]`);
       if (!el) continue;
       el.innerHTML = `<span class="t-${e.type}">${text}</span>`;
       el.classList.remove('show');
@@ -486,8 +233,8 @@ export function resultHTML(v) {
   return h;
 }
 
-// Teammate's hand, outside the board: docked in the side margin next to the
-// teammate's seat when there is room, else a collapsible strip on top.
+// Teammate's hand: docked at the side of the screen next to the teammate's
+// seat on wide screens, else a collapsible strip on top.
 export function renderPartner(v, ui) {
   const panel = document.getElementById('partner');
   const p = v.partner;
@@ -495,9 +242,7 @@ export function renderPartner(v, ui) {
     panel.classList.add('hidden');
     return;
   }
-  const board = Math.min(innerWidth, innerHeight - 4);
-  // 3D view fills the screen: dock on wide screens over the scenery at the side
-  const margin = ui.view3d ? (innerWidth >= 1100 ? 260 : 0) : (innerWidth - board) / 2;
+  const margin = innerWidth >= 1100 ? 260 : 0;
   const docked = margin >= 190;
   const side = (p.seat - v.seat + 4) % 4 === 1 ? 'right' : 'left';
   const open = ui.partnerOpen;

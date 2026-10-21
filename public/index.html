@@ -1,14 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="tetsuya">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Riichi Mahjong</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%80%84%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
-  <script>
-    try { document.documentElement.dataset.theme = localStorage.getItem('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero'; } catch { /* storage unavailable */ }
-  </script>
 </head>
 <body>
   <main id="lobby" class="screen">
@@ -22,18 +19,6 @@
           <label><input type="radio" name="mode" value="teams">
             <span><b>Por equipos</b><small>2 contra 2 · ves la mano de tu compañero</small></span></label>
         </div>
-        <label class="theme-pick">Vista
-          <select class="view-select">
-            <option value="3d">3D</option>
-            <option value="2d">2.5D (clásica)</option>
-          </select>
-        </label>
-        <label class="theme-pick">Ambientación
-          <select class="theme-select">
-            <option value="aero">Frutiger Aero</option>
-            <option value="tetsuya">Salón Tetsuya</option>
-          </select>
-        </label>
         <label>Nombre <input id="name" maxlength="16" autocomplete="nickname"></label>
         <label>Sala <input id="room" maxlength="24" placeholder="publica"></label>
         <div class="row">
@@ -83,10 +68,8 @@
   </main>
 
   <div id="game" class="screen hidden">
-    <div id="board"></div>
-    <div id="intro2d" class="hidden" aria-live="polite"></div>
-    <div id="stage3d" class="hidden"></div>
-    <div id="hud3d" class="hidden">
+    <div id="stage3d"></div>
+    <div id="hud3d">
       <div class="portraits"></div>
       <div class="roundinfo"></div>
       <button class="act points-btn" type="button" title="Mirar tu cajón de puntos">点棒 Puntos</button>
@@ -111,18 +94,6 @@
       <button id="menu-btn" aria-expanded="false" aria-controls="menu-panel">☰ Menú</button>
       <div id="menu-panel" class="hidden">
         <label><input type="checkbox" id="nocalls"> No llamar (pasar chi/pon/kan)</label>
-        <label class="theme-pick">Vista
-          <select class="view-select">
-            <option value="3d">3D</option>
-            <option value="2d">2.5D (clásica)</option>
-          </select>
-        </label>
-        <label class="theme-pick">Ambientación
-          <select class="theme-select">
-            <option value="aero">Frutiger Aero</option>
-            <option value="tetsuya">Salón Tetsuya</option>
-          </select>
-        </label>
         <button id="m-rules">Reglas</button>
         <button id="m-full">Pantalla completa</button>
         <button id="m-abandon" class="danger">Abandonar partida</button>

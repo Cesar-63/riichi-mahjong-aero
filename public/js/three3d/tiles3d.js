@@ -13,13 +13,10 @@ export const D = 0.74; // thickness
 export const GAP = 0.045; // air between neighbouring tiles, so they never fuse into one block
 const BACK_SHARE = 0.36; // part of the thickness in the back colour
 
-const LOOKS = {
-  aero: { back: '#1f98e4', backHi: '#7fd6ff', backLo: '#0c5c9c', ivory: '#f6f1e2', ivoryLo: '#d9cfb4', glow: 0x2bd8ff, shine: 40 },
-  tetsuya: { back: '#d8ab52', backHi: '#f4d78a', backLo: '#9c7228', ivory: '#f2ecda', ivoryLo: '#cfc3a2', glow: 0xff9a2a, shine: 18 },
-};
+// parlour tiles: yellow backs, ivory bodies
+const look = { back: '#d8ab52', backHi: '#f4d78a', backLo: '#9c7228', ivory: '#f2ecda', ivoryLo: '#cfc3a2', glow: 0xff9a2a, shine: 18 };
 
 export function createTileKit(renderer) {
-  let look = LOOKS.aero;
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
   // ---------------------------------------------------------- geometry
@@ -152,14 +149,8 @@ export function createTileKit(renderer) {
   const backMat = phong({ map: back.t });
   const sideMat = phong({ vertexColors: true, map: edges.t });
 
-  function setLook(name) {
-    look = LOOKS[name] || LOOKS.aero;
-    paintSides();
-    paintBack();
-    for (const f of faces.values()) paintFace(f);
-    backMat.shininess = look.shine;
-  }
-  setLook('aero');
+  paintSides();
+  paintBack();
 
   // BoxGeometry material order: +x, -x, +y, -y, +z (face), -z (back).
   // Side and face materials are per tile so each can be dimmed or lit alone.
@@ -191,5 +182,5 @@ export function createTileKit(renderer) {
     for (const m of mesh.userData.mats || []) m.dispose();
   }
 
-  return { makeTile, style, dispose, setLook, glowColor: () => look.glow };
+  return { makeTile, style, dispose, glowColor: () => look.glow };
 }
