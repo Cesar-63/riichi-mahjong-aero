@@ -8,7 +8,7 @@ export const TIMING = {
   turnMs: Number(env.TURN_SECONDS || 5) * 1000,
   bankMs: Number(env.BANK_SECONDS || 10) * 1000,
   graceMs: 1200, // network/polling latency allowance
-  resultMs: Number(env.RESULT_SECONDS || 12) * 1000,
+  resultMs: Number(env.RESULT_SECONDS || 16) * 1000,
   autoMs: 700, // forced riichi tsumogiri
   botMs: 600, // test-mode bot thinking time
   // pause at the start of every hand for the shuffle/wall/dice/deal animation

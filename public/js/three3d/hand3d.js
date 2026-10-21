@@ -3,7 +3,7 @@
 // player at the bottom of the screen (Tenhou/Tetsuya style) and is sized to
 // fit any screen. Tiles stand slightly tilted back so their top edge shows.
 import * as THREE from '../../vendor/three/three.module.min.js';
-import { H } from './tiles3d.js';
+import { H, GAP } from './tiles3d.js';
 
 const TILT = 0.32; // top edge leans towards the player, so it shows
 
@@ -51,7 +51,7 @@ export function createHand3D({ world, kit, onPick }) {
     camera.right = w;
     camera.top = h;
     camera.updateProjectionMatrix();
-    size = Math.max(18, Math.min(64, (w * 0.92) / 15.2, (h * 0.125) / H));
+    size = Math.max(18, Math.min(64, (w * 0.92) / 15.8, (h * 0.125) / H));
     document.documentElement.style.setProperty('--hand3d-h', `${Math.round(size * H + 30)}px`);
     if (last) layout(...last);
   }
@@ -62,7 +62,8 @@ export function createHand3D({ world, kit, onPick }) {
     last = [v, ui, visible, null];
     const ids = [...v.hand, ...(v.drawn !== null ? [v.drawn] : [])];
     const gap = v.drawn !== null ? size * 0.45 : 0;
-    const total = ids.length * size + gap;
+    const pitch = size * (1 + GAP * 1.5); // a visible line of air between tiles
+    const total = ids.length * pitch - (pitch - size) + gap;
     const x0 = (camera.right - total) / 2 + size / 2;
     const y = 16 + (size * H) / 2;
     const o = v.options;
@@ -72,7 +73,7 @@ export function createHand3D({ world, kit, onPick }) {
     ids.forEach((id, i) => {
       seen.add(id);
       let t = tiles.get(id);
-      const target = new THREE.Vector3(x0 + i * size + (v.drawn !== null && i === ids.length - 1 ? gap : 0), y, 0);
+      const target = new THREE.Vector3(x0 + i * pitch + (v.drawn !== null && i === ids.length - 1 ? gap : 0), y, 0);
       if (!t) {
         const mesh = kit.makeTile(id);
         mesh.castShadow = mesh.receiveShadow = false;

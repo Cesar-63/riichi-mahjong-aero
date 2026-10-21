@@ -22,6 +22,12 @@
           <label><input type="radio" name="mode" value="teams">
             <span><b>Por equipos</b><small>2 contra 2 · ves la mano de tu compañero</small></span></label>
         </div>
+        <label class="theme-pick">Vista
+          <select class="view-select">
+            <option value="3d">3D</option>
+            <option value="2d">2.5D (clásica)</option>
+          </select>
+        </label>
         <label class="theme-pick">Ambientación
           <select class="theme-select">
             <option value="aero">Frutiger Aero</option>
@@ -102,7 +108,12 @@
       <button id="menu-btn" aria-expanded="false" aria-controls="menu-panel">☰ Menú</button>
       <div id="menu-panel" class="hidden">
         <label><input type="checkbox" id="nocalls"> No llamar (pasar chi/pon/kan)</label>
-        <label><input type="checkbox" id="m-3d"> Vista 3D (beta)</label>
+        <label class="theme-pick">Vista
+          <select class="view-select">
+            <option value="3d">3D</option>
+            <option value="2d">2.5D (clásica)</option>
+          </select>
+        </label>
         <label class="theme-pick">Ambientación
           <select class="theme-select">
             <option value="aero">Frutiger Aero</option>

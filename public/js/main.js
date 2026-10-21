@@ -26,10 +26,10 @@ const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
   theme: store.get('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero',
-  // ?3d=1 / ?3d=0 in the URL overrides the saved choice
+  // 3D unless 2.5D was chosen; ?3d=1 / ?3d=0 in the URL overrides the saved choice
   view3d: new URLSearchParams(location.search).has('3d')
     ? new URLSearchParams(location.search).get('3d') !== '0'
-    : store.get('mj.3d') === '1',
+    : store.get('mj.3d') !== '0',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -190,7 +190,7 @@ function showGame(v) {
       if (state.view) showGame(state.view);
     };
     // safety net in case the 3D reveal never reports back
-    setTimeout(finish, state.view3d ? 9000 : 1300);
+    setTimeout(finish, state.view3d ? 13000 : 1300);
     ui.winFinish = finish;
   }
   const holdModal = winKey && ui.winDone !== winKey;
@@ -494,11 +494,16 @@ document.querySelectorAll('.theme-select').forEach((sel) => {
 });
 setTheme(state.theme);
 
-$('#m-3d').checked = state.view3d;
-$('#m-3d').addEventListener('change', (e) => {
-  state.view3d = e.target.checked;
-  store.set('mj.3d', state.view3d ? '1' : '0');
+// View (3D / 2.5D), chosen in the lobby or the in-game menu.
+function setView3d(on) {
+  state.view3d = on;
+  store.set('mj.3d', on ? '1' : '0');
+  document.querySelectorAll('.view-select').forEach((s) => { s.value = on ? '3d' : '2d'; });
   if (state.view) showGame(state.view);
+}
+document.querySelectorAll('.view-select').forEach((sel) => {
+  sel.value = state.view3d ? '3d' : '2d';
+  sel.addEventListener('change', () => setView3d(sel.value === '3d'));
 });
 
 // ------------------------------------------------------------------ menu

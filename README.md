@@ -84,18 +84,21 @@ instante, sin recargar.
 - **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
   botones brillantes tipo Aqua.
 - **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
-  mesa de madera (con vetas) y tapete verde bajo una lámpara cálida y sillas en
+  mesa de madera (con vetas y el marco cortado en diagonal en las esquinas,
+  como un marco de cuadro) y tapete verde bajo una lámpara cálida y sillas en
   penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
   brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
   una franja oscura con resplandor azul y avisos de llamada en letra blanca
   con contorno negro.
 
-## Vista 3D (beta)
+## Vista 3D
 
-Prototipo con [three.js](https://threejs.org) (0.170, MIT, incluido en
-`public/vendor/three/`, sin build). Se activa en **☰ Menú → Vista 3D (beta)**
-o abriendo la página con `?3d=1` (`?3d=0` la desactiva); la elección se
-recuerda en el navegador. three.js solo se descarga cuando se usa.
+Hecha con [three.js](https://threejs.org) (0.170, MIT, incluido en
+`public/vendor/three/`, sin build). Es la vista por defecto; la vista 2.5D
+clásica se elige en el menú principal (**Vista**) o en **☰ Menú → Vista**
+durante la partida, o abriendo la página con `?3d=0` (`?3d=1` fuerza la 3D).
+La elección se recuerda en el navegador. three.js solo se descarga cuando se
+usa.
 
 - Pantalla completa en cualquier proporción (16:9, ultrawide, móvil vertical).
 - Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
@@ -105,7 +108,10 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
   redondeadas separadas, así no hay escalón entre el frente y el reverso). El
   canto usa colores por vértice (marfil hacia la cara y una franja del color
   del reverso atrás) y el bisel está pintado en las texturas, como se hacía en
-  PS2. Iluminación Phong mate, sin reflejos de entorno.
+  PS2. Iluminación Phong mate, sin reflejos de entorno. Cada cara lleva una
+  línea oscura fina en el borde y entre fichas vecinas queda siempre un poco
+  de aire (muros, manos, descartes, llamadas y tu mano), así nunca se ven
+  fundidas en un solo bloque.
 - Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
   se desliza a su lugar, así robos, descartes y llamadas se animan solos.
 - **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
@@ -135,11 +141,15 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
   recién entonces marca el riichi), un palito de 1000 puntos en 3D entra
   girando y se acomoda en la placa central frente al jugador.
 - **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador caen boca
-  arriba una por una frente a su asiento (la ganadora, separada y brillando),
-  la cámara muestra la mesa entera, los indicadores de dora brillan y los de
-  ura dora salen de debajo del muro muerto y se voltean, con un cartel que
-  cuenta dora, ura y aka. Después se abre la pantalla de resultado. En 2D el
-  resultado se abre tras un momento, para que se vea el aviso.
+  arriba una por una frente a su asiento (la ganadora, separada y brillando) y
+  la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
+  una fila con cartel **ドラ**: los indicadores de dora vuelan desde el muro
+  muerto hasta ella; con riichi sigue el cartel **裏ドラ** y los ura dora salen
+  de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
+  fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
+  rosado: ura dora) y un cartel cuenta dora, ura y aka. Después se abre la
+  pantalla de resultado. En 2D el resultado se abre tras un momento, para que
+  se vea el aviso.
 
 ### Animación de inicio de cada mano
 
@@ -147,14 +157,23 @@ Al empezar cada mano el servidor pausa los relojes y los bots durante
 `INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo giran revueltas sobre la mesa.
-2. **Armar los muros**: forman las cuatro filas de pilas de dos, un poco hacia
-   afuera, y se empujan a su lugar.
-3. **Tirar los dados**: rebotan desde el lado del oya y caen mostrando la
-   tirada real, que decide el corte del muro.
+1. **Revolver**: las fichas boca abajo se revuelven sobre la mesa, empujadas
+   por dos "manos" que giran. Es una pequeña simulación con colisiones
+   (`public/js/three3d/shuffle.js`): las fichas chocan y se deslizan unas
+   contra otras en vez de atravesarse, y al final se juntan y se enderezan
+   para dejar lugar a los muros.
+2. **Armar los muros**: cada ficha salta de la pila (subiendo primero, para
+   pasar por encima de las demás) a las cuatro filas de pilas de dos, un poco
+   hacia afuera, primero la de abajo y encima la de arriba, y se empujan a su
+   lugar.
+3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
+   en la placa central mostrando la tirada real, que decide el corte del
+   muro.
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
-   uno y el primer robo del oya; tu mano se llena a medida que llegan tus
-   fichas. Al final se voltea el indicador de dora.
+   uno y el primer robo del oya; cada bloque se levanta por encima de los
+   muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y
+   tu mano se llena a medida que llegan tus fichas. Al final se voltea el
+   indicador de dora.
 
 En 2D se muestra un aviso con la fase y los dados rodando. Quien se conecta a
 mitad de la pausa ve la animación acortada.
@@ -217,7 +236,7 @@ invocación puede caer en una instancia distinta): Redis es obligatorio en
 producción.
 
 Variables opcionales: `TURN_SECONDS` (5), `BANK_SECONDS` (10),
-`RESULT_SECONDS` (12, tiempo para cerrar la pantalla de resultado).
+`RESULT_SECONDS` (16, tiempo para cerrar la pantalla de resultado).
 
 ### Costo aproximado
 
