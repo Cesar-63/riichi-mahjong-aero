@@ -249,3 +249,23 @@ test('bot partner honours a discard request', async () => {
   }
   assert.ok(honoured, 'bot discarded the requested tile');
 });
+
+test('deal animation pause: no clocks or bots run until it ends', async () => {
+  const { TIMING } = await import('../server/handler.js');
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  let now = 60_000_000;
+  const call = async (body) => (await handle({ room: 'bots-intro', ...body }, store, now)).body;
+  const first = (await call({ op: 'join', token: tokens[0], name: 'Yo', hb: true })).game;
+  assert.equal(first.intro.left, TIMING.introMs);
+  const startEvents = first.events.length;
+  now += TIMING.introMs - 100;
+  const during = (await call({ op: 'poll', token: tokens[0], hb: true })).game;
+  assert.equal(during.events.length, startEvents, 'nothing happens during the intro');
+  assert.ok(during.intro.left > 0);
+  if (during.clock) assert.ok(during.clock.start >= now, 'my clock starts after the intro');
+  now += 100 + TIMING.botMs + TIMING.turnMs + TIMING.bankMs + 2000;
+  const after = (await call({ op: 'poll', token: tokens[0], hb: true })).game;
+  assert.equal(after.intro, null);
+  assert.ok(after.events.length > startEvents || after.wallLeft < first.wallLeft, 'play resumes');
+});

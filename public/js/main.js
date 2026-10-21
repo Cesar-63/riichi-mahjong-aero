@@ -1,6 +1,7 @@
 import {
-  renderBoard, renderPartner, renderHand, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
+  renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
+import { WIND_KANJI } from './shared/tiles.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -24,6 +25,7 @@ store.set('mj.token', token);
 const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
+  theme: store.get('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero',
   // ?3d=1 / ?3d=0 in the URL overrides the saved choice
   view3d: new URLSearchParams(location.search).has('3d')
     ? new URLSearchParams(location.search).get('3d') !== '0'
@@ -167,16 +169,33 @@ function showGame(v) {
     ensure3d().then((t) => {
       if (state.view !== v) return;
       t.update(v, ui);
-      flyDrawToHand(t, v, ui);
     });
     showCallouts($('#hud3d'), v, ui);
   } else {
     const board = $('#board');
     renderBoard(board, v, ui);
     showCallouts(board, v, ui);
+    intro2d(v, ui);
   }
   renderPartner(v, ui);
-  if (v.phase === 'result' && v.result) showModal(resultHTML(v));
+  // A win first plays its reveal (3D) or lets the call show (2D) before the
+  // score screen opens.
+  const winKey = v.phase === 'result' && v.result && v.result.type === 'agari' ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
+  if (winKey && ui.winStarted !== winKey) {
+    ui.winStarted = winKey;
+    const finish = () => {
+      if (ui.winDone === winKey) return;
+      ui.winDone = winKey;
+      hideDoraBanner();
+      if (state.view) showGame(state.view);
+    };
+    // safety net in case the 3D reveal never reports back
+    setTimeout(finish, state.view3d ? 9000 : 1300);
+    ui.winFinish = finish;
+  }
+  const holdModal = winKey && ui.winDone !== winKey;
+  if (holdModal) hideModal();
+  else if (v.phase === 'result' && v.result) showModal(resultHTML(v));
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v));
   else hideModal();
 
@@ -191,8 +210,16 @@ let table3d = null;
 function ensure3d() {
   if (!table3d) {
     table3d = import('./three3d/table3d.js').then((m) => {
-      const t = m.createTable3D($('#stage3d'));
+      const t = m.createTable3D($('#stage3d'), state.theme, {
+        // a click on one of my 3D hand tiles
+        onPick: (id) => send(state.ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id }),
+      });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
+      t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      t.onWin(({ phase, result }) => {
+        if (phase === 'dora') showDoraBanner(result);
+        if (phase === 'done' && state.ui.winFinish) state.ui.winFinish();
+      });
       return t;
     });
   }
@@ -206,37 +233,90 @@ const setIfChanged = (el, html) => {
   }
 };
 
-// The tile just drawn flies from its slot in the 3D wall to the hand overlay.
-function flyDrawToHand(t, v, ui) {
-  const d = v.wall && v.wall.lastDraw;
-  if (!d || d.n === ui.lastDrawHud) return;
-  const first = ui.lastDrawHud === undefined;
-  ui.lastDrawHud = d.n;
-  if (first || d.seat !== v.seat || v.drawn === null || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const to = $(`#hud3d .myhand [data-id="${v.drawn}"]`);
-  const from = t.slotOnScreen(v, d.slot);
-  if (!to || !from) return;
-  const b = to.getBoundingClientRect();
-  const fly = document.createElement('div');
-  fly.className = 'flytile';
-  const w = b.width * 0.55;
-  Object.assign(fly.style, { left: `${from.x - w / 2}px`, top: `${from.y - w * 0.66}px`, width: `${w}px`, height: `${w * 1.33}px` });
-  document.body.appendChild(fly);
-  to.style.visibility = 'hidden';
-  fly.animate([
-    { transform: 'translate(0, 0) scale(1)' },
-    { transform: `translate(${b.left - from.x + w / 2}px, ${b.top - from.y + w * 0.66}px) scale(${b.width / w})` },
-  ], { duration: 420, easing: 'cubic-bezier(.3, .7, .3, 1)' }).onfinish = () => {
-    fly.remove();
-    to.style.visibility = '';
-  };
+// 2D board: during the deal pause show the phases and the dice roll.
+const DIE_FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+function intro2d(v, ui) {
+  const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+  if (!v.intro || v.intro.left < 400 || !v.wall || ui.intro2dKey === key) return;
+  ui.intro2dKey = key;
+  const box = $('#intro2d');
+  const total = v.intro.total;
+  const t0 = Date.now() - (total - v.intro.left);
+  const [a, b] = v.wall.dice;
+  clearInterval(intro2d.timer);
+  box.classList.remove('hidden');
+  intro2d.timer = setInterval(() => {
+    const p = (Date.now() - t0) / total;
+    if (p >= 1) {
+      clearInterval(intro2d.timer);
+      box.classList.add('hidden');
+      return;
+    }
+    let html;
+    if (p < 0.26) html = '<b>Revolviendo fichas…</b>';
+    else if (p < 0.56) html = '<b>Armando los muros…</b>';
+    else if (p < 0.72) {
+      const r = () => 1 + Math.floor(Math.random() * 6);
+      const rolling = p < 0.68;
+      html = `<b>Tirando dados</b><span class="dice ${rolling ? 'rolling' : ''}">${DIE_FACE[rolling ? r() : a]}${DIE_FACE[rolling ? r() : b]}</span>`;
+    } else html = `<b>Repartiendo…</b><span class="dice">${DIE_FACE[a]}${DIE_FACE[b]}</span><small>${a + b}</small>`;
+    if (box._h !== html) {
+      box._h = html;
+      box.innerHTML = html;
+    }
+  }, 120);
 }
 
-// Buttons, timer, notices and the player's own hand over the 3D canvas
-// (Tenhou style: the hand faces the screen instead of lying on the table).
+// Dora count shown during the 3D win reveal: indicators, ura and the han
+// each kind adds for the (first) winner.
+function showDoraBanner(result) {
+  const w = result.wins[0];
+  const han = (k) => (w.yaku.find(([y]) => y === k) || [k, 0])[1];
+  const group = (label, ids, n) => `<div class="dgroup"><span class="dl">${label}</span>${ids.map((id) => tile(id)).join('')}<b>${n}</b></div>`;
+  let html = group('ドラ Dora', result.dora, han('dora'));
+  if (w.ura && w.ura.length) html += group('裏ドラ Ura', w.ura, han('ura'));
+  if (han('aka')) html += `<div class="dgroup"><span class="dl">赤ドラ Aka</span><b>${han('aka')}</b></div>`;
+  const el = $('#dora3d');
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+function hideDoraBanner() {
+  $('#dora3d').classList.add('hidden');
+}
+
+// Tetsuya-style portraits of the three opponents along the top of the 3D view:
+// left = kamicha, centre = toimen, right = shimocha.
+const AVATAR = [['#ffb199', '#ff5e7e'], ['#8fe3ff', '#2a8fe6'], ['#b9f58a', '#2fae2c'], ['#ffe08a', '#f08a12']];
+function portraitsHTML(v) {
+  return [3, 2, 1].map((r) => {
+    const abs = (v.seat + r) % 4;
+    const p = v.players[abs];
+    const [a, b] = AVATAR[abs];
+    const turn = v.turn === abs && v.phase === 'turn';
+    const tags = [
+      p.riichi ? '<i class="tag riichi">リーチ</i>' : '',
+      v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
+      p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">desconectado</i>' : '',
+    ].join('');
+    return `<div class="pcard${turn ? ' turn' : ''}">
+      <div class="avatar" style="--a:${a};--b:${b}">${escapeHTML((p.name || '?').trim().charAt(0).toUpperCase())}${p.bot ? '<span>🤖</span>' : ''}</div>
+      <div class="pinfo">
+        <b>${escapeHTML(p.name)}</b>
+        <span><em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em> ${p.score}</span>
+        <span class="tags">${tags}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Buttons, timer and notices over the 3D canvas (the hand itself is 3D, see
+// three3d/hand3d.js).
 function renderHud(v, ui) {
   const hud = $('#hud3d');
-  renderHand(hud.querySelector('.myhand'), v, ui);
+  setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
@@ -400,6 +480,19 @@ $('#bots').addEventListener('click', async () => {
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
 });
+
+// Setting (Frutiger Aero / Tetsuya parlour): CSS theme + 3D scene.
+function setTheme(theme) {
+  state.theme = theme === 'tetsuya' ? 'tetsuya' : 'aero';
+  store.set('mj.theme', state.theme);
+  document.documentElement.dataset.theme = state.theme;
+  document.querySelectorAll('.theme-select').forEach((s) => { s.value = state.theme; });
+  if (table3d) table3d.then((t) => t.setTheme(state.theme));
+}
+document.querySelectorAll('.theme-select').forEach((sel) => {
+  sel.addEventListener('change', () => setTheme(sel.value));
+});
+setTheme(state.theme);
 
 $('#m-3d').checked = state.view3d;
 $('#m-3d').addEventListener('change', (e) => {

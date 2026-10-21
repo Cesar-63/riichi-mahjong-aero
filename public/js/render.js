@@ -421,7 +421,7 @@ export function showCallouts(board, v, ui) {
     for (const seat of e.seats || [e.seat]) {
       const el = board.querySelector(`.callout[data-seat="${seat}"]`);
       if (!el) continue;
-      el.innerHTML = `<span>${text}</span>`;
+      el.innerHTML = `<span class="t-${e.type}">${text}</span>`;
       el.classList.remove('show');
       void el.offsetWidth;
       el.classList.add('show');

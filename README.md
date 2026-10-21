@@ -75,6 +75,21 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
+## Ambientaciones
+
+Se elige en el menú principal (**Ambientación**) o en **☰ Menú** durante la
+partida, y se recuerda en el navegador. Cambia la interfaz 2D y la escena 3D al
+instante, sin recargar.
+
+- **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
+  botones brillantes tipo Aqua.
+- **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
+  mesa de madera (con vetas) y tapete verde bajo una lámpara cálida y sillas en
+  penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
+  brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
+  una franja oscura con resplandor azul y avisos de llamada en letra blanca
+  con contorno negro.
+
 ## Vista 3D (beta)
 
 Prototipo con [three.js](https://threejs.org) (0.170, MIT, incluido en
@@ -86,14 +101,63 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
 - Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
   cielo luminoso sobre un mar de nubes, con islas de pasto flotantes y
   burbujas de jabón iridiscentes; los reflejos salen del propio cielo.
-- Fichas 3D (cuerpo marfil, reverso aguamarina, cara con la imagen del set),
-  muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
+- **Fichas estilo PS2**: cada ficha es una sola caja casi recta (sin piezas
+  redondeadas separadas, así no hay escalón entre el frente y el reverso). El
+  canto usa colores por vértice (marfil hacia la cara y una franja del color
+  del reverso atrás) y el bisel está pintado en las texturas, como se hacía en
+  PS2. Iluminación Phong mate, sin reflejos de entorno.
+- Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
   se desliza a su lugar, así robos, descartes y llamadas se animan solos.
-- Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: es una fila de
-  fichas grandes al pie de la pantalla, mirando hacia ti. La ficha robada
-  vuela desde su hueco del muro 3D hasta la mano.
+- **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
+  normal (evita sombras despegadas), placa central opaca para que reciba
+  sombras, y sombras de contacto suaves bajo cada ficha apoyada (estilo PS2),
+  que se desvanecen cuando la ficha se levanta.
+- Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
+  una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
+  pantalla, levemente inclinadas para que se vea el canto superior, y con el
+  tamaño ajustado al ancho y alto de la pantalla. La ficha robada vuela desde
+  su hueco del muro hasta la mano; durante el reparto la mano se llena a medida
+  que llegan tus fichas.
+- **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
+  cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
+  pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
+  mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
+- **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
+  derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
+  modo por equipos; el que tiene el turno brilla.
 - Botones, menú, resultados y el panel del compañero son los mismos del 2D,
   encima del canvas.
+
+### Animaciones de riichi y de victoria (3D)
+
+- **Riichi**: aviso grande "リーチ"; la ficha baja desde arriba girando hasta
+  quedar de lado en los descartes. Si nadie hace ron sobre ella (el servidor
+  recién entonces marca el riichi), un palito de 1000 puntos en 3D entra
+  girando y se acomoda en la placa central frente al jugador.
+- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador caen boca
+  arriba una por una frente a su asiento (la ganadora, separada y brillando),
+  la cámara muestra la mesa entera, los indicadores de dora brillan y los de
+  ura dora salen de debajo del muro muerto y se voltean, con un cartel que
+  cuenta dora, ura y aka. Después se abre la pantalla de resultado. En 2D el
+  resultado se abre tras un momento, para que se vea el aviso.
+
+### Animación de inicio de cada mano
+
+Al empezar cada mano el servidor pausa los relojes y los bots durante
+`INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
+las 136 fichas y la mesa vista entera:
+
+1. **Revolver**: las fichas boca abajo giran revueltas sobre la mesa.
+2. **Armar los muros**: forman las cuatro filas de pilas de dos, un poco hacia
+   afuera, y se empujan a su lugar.
+3. **Tirar los dados**: rebotan desde el lado del oya y caen mostrando la
+   tirada real, que decide el corte del muro.
+4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
+   uno y el primer robo del oya; tu mano se llena a medida que llegan tus
+   fichas. Al final se voltea el indicador de dora.
+
+En 2D se muestra un aviso con la fase y los dados rodando. Quien se conecta a
+mitad de la pausa ve la animación acortada.
 
 El motor de reglas y el servidor son los mismos: la vista 3D dibuja la misma
 "vista" que envía el servidor (`public/js/three3d/`).
