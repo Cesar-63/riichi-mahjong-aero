@@ -477,26 +477,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // ----------------------------------------------------- riichi sticks
   // The server only marks a riichi once its discard went through without a
   // ron, so the stick is placed exactly when "nobody called".
-  const stickTex = (() => {
-    const c = document.createElement('canvas');
-    c.width = 512;
-    c.height = 64;
-    const g = c.getContext('2d');
-    const grad = g.createLinearGradient(0, 0, 0, 64);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(1, '#dfe4e6');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 512, 64);
-    g.fillStyle = '#d4202c';
-    g.beginPath();
-    g.arc(256, 32, 20, 0, Math.PI * 2);
-    g.fill();
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  })();
   const stickGeo = new THREE.BoxGeometry(3.1, 0.1, 0.38);
-  const stickTop = new THREE.MeshPhongMaterial({ map: stickTex, shininess: 50 });
   const stickSide = new THREE.MeshPhongMaterial({ color: 0xe8ecee, shininess: 50 });
   const sticks = new Map(); // seat -> { mesh, target }
 
@@ -504,11 +485,19 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // A drawer slides out of the player's edge of the table with their point
   // sticks in it (10000, 5000, 1000 and 100 compartments) while the camera
   // looks down at it; the HUD then shows everyone's score.
+  // Point sticks as in a traditional Japanese set (white, painted dots):
+  // 100 = eight black dots in two rows; 1000 = one red dot; 5000 = a big red
+  // dot with four small ones in a square; 10000 = the same, a small red dot
+  // to each side and a big black dot towards each end. [colour, x, y, r] on
+  // a 512 x 64 texture, centred.
+  const RED = '#c8151f';
+  const BLACK = '#1c1414';
+  const quincunx = [[RED, 0, 0, 10], ...[[-22, -11], [22, -11], [-22, 11], [22, 11]].map(([x, y]) => [RED, x, y, 5.5])];
   const STICK_DOTS = {
-    10000: [['#d4202c', 0, 22], ...[-3, -2, 2, 3].map((k) => ['#1a1a1a', k * 34, 9])],
-    5000: [-2, -1, 0, 1, 2].map((k) => ['#1a1a1a', k * 30, 10]),
-    1000: [['#d4202c', 0, 20]],
-    100: [-3, -2, -1, 1, 2, 3].map((k) => ['#1a1a1a', k * 70, 7]),
+    100: [-33, -11, 11, 33].flatMap((x) => [[BLACK, x, -10, 6], [BLACK, x, 10, 6]]),
+    1000: [[RED, 0, 0, 9]],
+    5000: quincunx,
+    10000: [...quincunx, [RED, -46, 0, 5.5], [RED, 46, 0, 5.5], [BLACK, -92, 0, 10], [BLACK, 92, 0, 10]],
   };
   const stickMats = {};
   for (const [value, dots] of Object.entries(STICK_DOTS)) {
@@ -521,14 +510,20 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     grad.addColorStop(1, '#dfe4e6');
     g.fillStyle = grad;
     g.fillRect(0, 0, 512, 64);
-    for (const [color, x, r] of dots) {
+    for (const [color, x, y, r] of dots) {
       g.fillStyle = color;
       g.beginPath();
-      g.arc(256 + x, 32, r, 0, Math.PI * 2);
+      g.arc(256 + x, 32 + y, r, 0, Math.PI * 2);
+      g.fill();
+      // a little shine: the dots are glossy paint in a shallow hole
+      g.fillStyle = 'rgba(255, 255, 255, .35)';
+      g.beginPath();
+      g.arc(256 + x - r * 0.3, 32 + y - r * 0.3, r * 0.35, 0, Math.PI * 2);
       g.fill();
     }
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 50 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
@@ -580,7 +575,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       for (let j = 0; j < Math.min(n, 30); j++) {
         const m = new THREE.Mesh(drawerStickGeo, stickMats[value]);
         m.rotation.y = Math.PI / 2;
-        m.position.set(cx + ((j % 5) - 2) * 0.36, -DRAWER.h / 2 + DRAWER.wall + 0.04 + Math.floor(j / 5) * 0.085, 0);
+        // side by side, centred in the compartment, five to a layer
+        const cols = Math.min(n, 5);
+        m.position.set(cx + ((j % 5) - (cols - 1) / 2) * 0.36, -DRAWER.h / 2 + DRAWER.wall + 0.04 + Math.floor(j / 5) * 0.085, 0);
         m.castShadow = true;
         drawerSticks.add(m);
       }
@@ -628,7 +625,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         st.target = target;
       }
       if (p.riichi && !st) {
-        const mesh = new THREE.Mesh(stickGeo, [stickSide, stickSide, stickTop, stickSide, stickSide, stickSide]);
+        const mesh = new THREE.Mesh(stickGeo, stickMats[1000]); // a riichi stick is a 1000
         mesh.castShadow = true;
         // tossed in from above the player's side, turning into place
         const from = { p: place(rel(abs), 0.8, 4.5, 4.6, 'stand').p, q: target.q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 1.4)) };

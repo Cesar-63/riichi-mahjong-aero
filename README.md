@@ -152,7 +152,11 @@ usa.
   cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
   10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
-  1 + 2 + 4 + 10). Encima del cajón aparece tu puntaje y alrededor el de los
+  1 + 2 + 4 + 10). Los palitos son los de un juego japonés tradicional,
+  blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
+  un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
+  chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
+  uno negro grande hacia cada extremo. Encima del cajón aparece tu puntaje y alrededor el de los
   demás en su posición (izquierda = kamicha, arriba = toimen, derecha =
   shimocha), con la diferencia con el tuyo. Un toque lo cierra.
 - **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
