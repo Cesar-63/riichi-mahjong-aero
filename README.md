@@ -116,6 +116,12 @@ Solo en el modo **Por equipos**:
 - Los puntos y el uma siguen siendo individuales; al final se suma el
   resultado de cada equipo y gana el que tenga más.
 
+## Ideas en diseño
+
+- [Modo Bakuchi (trampas)](docs/modo-bakuchi.md): modo aparte en el que se
+  puede hacer trampa con el muro, los dados y el reparto, y los rivales pueden
+  vigilar y acusar. Todavía no está implementado.
+
 ## Modo test (contra bots)
 
 En el menú principal, **Modo test: jugar contra bots** crea una sala privada
