@@ -92,8 +92,33 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
 - Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: es una fila de
   fichas grandes al pie de la pantalla, mirando hacia ti. La ficha robada
   vuela desde su hueco del muro 3D hasta la mano.
+- **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
+  cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
+  pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
+  mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
+- **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
+  derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
+  modo por equipos; el que tiene el turno brilla.
 - Botones, menú, resultados y el panel del compañero son los mismos del 2D,
   encima del canvas.
+
+### Animación de inicio de cada mano
+
+Al empezar cada mano el servidor pausa los relojes y los bots durante
+`INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
+las 136 fichas y la mesa vista entera:
+
+1. **Revolver**: las fichas boca abajo giran revueltas sobre la mesa.
+2. **Armar los muros**: forman las cuatro filas de pilas de dos, un poco hacia
+   afuera, y se empujan a su lugar.
+3. **Tirar los dados**: rebotan desde el lado del oya y caen mostrando la
+   tirada real, que decide el corte del muro.
+4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
+   uno y el primer robo del oya; tu mano se llena a medida que llegan tus
+   fichas. Al final se voltea el indicador de dora.
+
+En 2D se muestra un aviso con la fase y los dados rodando. Quien se conecta a
+mitad de la pausa ve la animación acortada.
 
 El motor de reglas y el servidor son los mismos: la vista 3D dibuja la misma
 "vista" que envía el servidor (`public/js/three3d/`).

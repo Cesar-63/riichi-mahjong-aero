@@ -361,10 +361,218 @@ export function createTable3D(container) {
     }
   }
 
+
+  // ------------------------------------------------------------ hand intro
+  // At the start of every hand the server pauses the clocks (view.intro) and
+  // the table plays: 1) shuffle face down, 2) build the walls a little outward
+  // and push them into place, 3) throw the dice, 4) deal in blocks of four
+  // (4-4-4 then 1, plus the dealer's draw) and flip the dora indicator. It
+  // uses its own temporary tiles that end exactly where the normal view puts
+  // them, so the hand-over is seamless.
+  const PHASES = { shuffle: [0, 0.26], build: [0.26, 0.48], push: [0.48, 0.56], dice: [0.56, 0.72], deal: [0.72, 0.97], flip: [0.95, 1] };
+  const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  const span = (p, [a, b]) => (p - a) / (b - a);
+  let intro = null;
+  let introKey = '';
+  let introListener = () => {};
+
+  const pipTexture = (n) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fbfdff';
+    g.fillRect(0, 0, 128, 128);
+    const spots = { 1: [[64, 64]], 2: [[34, 34], [94, 94]], 3: [[30, 30], [64, 64], [98, 98]], 4: [[34, 34], [94, 34], [34, 94], [94, 94]], 5: [[32, 32], [96, 32], [64, 64], [32, 96], [96, 96]], 6: [[34, 28], [94, 28], [34, 64], [94, 64], [34, 100], [94, 100]] }[n];
+    for (const [x, y] of spots) {
+      g.fillStyle = n === 1 ? '#e0242f' : '#14365a';
+      g.beginPath();
+      g.arc(x, y, n === 1 ? 20 : 12, 0, Math.PI * 2);
+      g.fill();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  // BoxGeometry face order: +x, -x, +y, -y, +z, -z (opposite faces add up to 7)
+  const DIE_FACES = [3, 4, 1, 6, 2, 5];
+  const DIE_NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((n) => new THREE.Vector3(...n));
+  const dieMats = DIE_FACES.map((n) => new THREE.MeshPhysicalMaterial({ map: pipTexture(n), roughness: 0.25, clearcoat: 1 }));
+  const dieGeo = new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.14);
+
+  function startIntro(v, ui) {
+    const rel = (abs) => (abs - v.seat + 4) % 4;
+    const total = v.intro.total;
+    // drop what is on the table from the previous hand
+    for (const [key, o] of objects) {
+      scene.remove(o.obj);
+      objects.delete(key);
+    }
+    if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const yawQ = (a) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a);
+    const tiles = [];
+    for (let slot = 0; slot < 136; slot++) {
+      const isDora = slot === deadSlot(4);
+      const obj = makeTile(isDora ? v.dora[0] : null);
+      scene.add(obj);
+      const final = slotPose(v, slot, rel);
+      const stack = (v.wall.breakStack + (slot >> 1)) % (4 * STACKS);
+      const ownerRel = rel((4 - Math.floor(stack / STACKS)) % 4);
+      const outward = new THREE.Vector3(0, 0, 1.6).applyQuaternion(qSeat[ownerRel]);
+      const r = Math.sqrt(Math.random()) * 8.5;
+      const a = Math.random() * Math.PI * 2;
+      tiles.push({
+        obj,
+        slot,
+        isDora,
+        shuffle: { r, a, y: D / 2, yaw: Math.random() * Math.PI * 2, spin: rnd(-1.4, 1.4), wob: Math.random() * 6 },
+        pre: { p: final.p.clone().add(outward), q: final.q },
+        final,
+        // build order: walls fill stack by stack from their left end
+        order: ((STACKS - 1 - (stack % STACKS)) + (slot & 1) * 0.5) / STACKS,
+      });
+    }
+    // deal schedule: blocks of 4 (two stacks) three times round, then singles, then the dealer's draw
+    const deal = [];
+    const handTarget = (abs, i) => {
+      const r = rel(abs);
+      if (r === 0) return { p: place(0, fx(30) + i * 0.7, 5, fz(118), 'stand').p, q: place(0, 0, 0, 0, 'stand').q, mine: true };
+      const x = fx(12) + i * W + W / 2 + (i === 13 ? 0.35 : 0);
+      return place(r, x, H / 2, fz(95), 'stand');
+    };
+    let slot = 0;
+    const order = [0, 1, 2, 3].map((i) => (v.dealer + i) % 4);
+    for (let round = 0; round < 3; round++) {
+      for (const abs of order) {
+        deal.push({ slots: [slot, slot + 1, slot + 2, slot + 3], abs, first: round * 4 });
+        slot += 4;
+      }
+    }
+    for (const abs of order) deal.push({ slots: [slot++], abs, first: 12 });
+    deal.push({ slots: [slot++], abs: v.dealer, first: 13 });
+    deal.forEach((d, n) => {
+      d.t0 = PHASES.deal[0] + (n / deal.length) * (PHASES.deal[1] - PHASES.deal[0] - 0.02);
+      d.slots.forEach((sl, k) => {
+        const t = tiles[sl];
+        t.deal = { t0: d.t0, dur: 0.05, to: handTarget(d.abs, d.first + k), mine: rel(d.abs) === 0 };
+      });
+    });
+    // dice: thrown from the dealer's side, they land showing the real roll
+    const dealerRel = rel(v.dealer);
+    const dice = v.wall.dice.map((value, i) => {
+      const m = new THREE.Mesh(dieGeo, dieMats);
+      m.castShadow = true;
+      scene.add(m);
+      const from = new THREE.Vector3(i ? 0.8 : -0.8, 3.2, 6.5).applyQuaternion(qSeat[dealerRel]);
+      const to = new THREE.Vector3(i ? 1.1 : -0.9, 0.75, i ? -0.5 : 0.7).applyQuaternion(qSeat[dealerRel]);
+      const up = DIE_NORMALS[DIE_FACES.indexOf(value)];
+      const q = yawQ(Math.random() * Math.PI * 2).multiply(new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(0, 1, 0)));
+      return { m, from, to, q, axis: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(), turns: rnd(5, 8) };
+    });
+    drawCenter(v, rel);
+    world.forceView('overview');
+    intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, myDealt: -1 };
+    introListener({ active: true, myTiles: 0 });
+  }
+
+  function stepIntro() {
+    if (!intro) return;
+    const p = Math.min(1, (performance.now() - intro.t0) / intro.total);
+    const tmpQ = new THREE.Quaternion();
+    let myTiles = 0;
+    for (const t of intro.tiles) {
+      const o = t.obj;
+      if (t.deal && p >= t.deal.t0) {
+        // dealing: lift, carry in an arc, land standing at the hand
+        const u = ease((p - t.deal.t0) / t.deal.dur);
+        o.position.lerpVectors(t.final.p, t.deal.to.p, u);
+        o.position.y += Math.sin(u * Math.PI) * 1.8;
+        o.quaternion.slerpQuaternions(t.final.q, t.deal.to.q, u);
+        o.visible = !(t.deal.mine && u >= 1);
+        if (t.deal.mine && u >= 1) myTiles++;
+        continue;
+      }
+      if (p < PHASES.shuffle[1] || p < PHASES.build[0] + t.order * 0.16) {
+        // shuffling: swirl around the table, sliding and turning
+        const sh = t.shuffle;
+        const time = p * intro.total / 1000;
+        const a = sh.a + time * 0.9 + Math.sin(time * 2 + sh.wob) * 0.25;
+        const r = sh.r + Math.sin(time * 3 + sh.wob) * 0.6;
+        o.position.set(Math.cos(a) * r, sh.y, Math.sin(a) * r);
+        o.quaternion.copy(qLocal.down).premultiply(tmpQ.setFromAxisAngle(new THREE.Vector3(0, 1, 0), sh.yaw + time * sh.spin));
+        t.lastShuffle = { p: o.position.clone(), q: o.quaternion.clone() };
+        continue;
+      }
+      if (p < PHASES.push[0]) {
+        // building: hop from the pile into a line a little outside its final place
+        const start = PHASES.build[0] + t.order * 0.16;
+        const u = ease((p - start) / 0.05);
+        const from = t.lastShuffle || t.pre;
+        o.position.lerpVectors(from.p, t.pre.p, u);
+        o.position.y += Math.sin(u * Math.PI) * 1.2;
+        o.quaternion.slerpQuaternions(from.q, t.pre.q, u);
+        continue;
+      }
+      // pushing the walls in, then (dora) flipping face up
+      const u = ease(span(p, PHASES.push));
+      o.position.lerpVectors(t.pre.p, t.final.p, u);
+      o.quaternion.copy(t.pre.q);
+      if (t.isDora && p > PHASES.flip[0]) {
+        const f = ease(span(p, PHASES.flip));
+        o.position.y = t.final.p.y + Math.sin(f * Math.PI) * 0.8;
+        o.quaternion.copy(t.final.q).multiply(tmpQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI * f));
+      }
+    }
+    for (const d of intro.dice) {
+      const u = Math.max(0, Math.min(1, span(p, PHASES.dice)));
+      d.m.visible = p >= PHASES.dice[0];
+      d.m.position.lerpVectors(d.from, d.to, 1 - (1 - u) ** 2);
+      // three bounces, each lower
+      d.m.position.y = d.to.y + Math.abs(Math.sin(u * Math.PI * 3)) * (1 - u) ** 1.5 * 2.6 + (1 - u) * (d.from.y - d.to.y) * 0.35;
+      d.m.quaternion.copy(d.q).multiply(tmpQ.setFromAxisAngle(d.axis, (1 - u) ** 2 * d.turns * Math.PI * 2));
+    }
+    if (myTiles !== intro.myDealt) {
+      intro.myDealt = myTiles;
+      introListener({ active: true, myTiles });
+    }
+    if (p >= 1) endIntro();
+  }
+
+  function endIntro() {
+    for (const t of intro.tiles) scene.remove(t.obj);
+    for (const d of intro.dice) scene.remove(d.m);
+    const pending = intro.pending;
+    intro = null;
+    world.forceView(null);
+    introListener({ active: false });
+    if (pending) update(...pending);
+  }
+  world.onTick(stepIntro);
+
+  // Mouse over the top half of the screen (or a touch there) shows the whole
+  // table; the bottom half (or a touch there) goes back to the player view.
+  const pickView = (y) => world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
+  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
+  window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
+
   return {
     update(v, ui) {
       relOf = (abs) => (abs - v.seat + 4) % 4;
+      const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+      if (v.intro && v.intro.left > 400 && v.wall && key !== introKey) {
+        introKey = key;
+        if (intro) endIntro();
+        startIntro(v, ui);
+      }
+      if (intro) {
+        intro.pending = [v, ui];
+        return;
+      }
+      introKey = key;
       update(v, ui);
+    },
+    onIntro(cb) {
+      introListener = cb;
     },
     setCallouts(els) {
       calloutEls = els;

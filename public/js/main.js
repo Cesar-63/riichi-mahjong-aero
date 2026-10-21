@@ -1,6 +1,7 @@
 import {
   renderBoard, renderPartner, renderHand, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
+import { WIND_KANJI } from './shared/tiles.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -174,6 +175,7 @@ function showGame(v) {
     const board = $('#board');
     renderBoard(board, v, ui);
     showCallouts(board, v, ui);
+    intro2d(v, ui);
   }
   renderPartner(v, ui);
   if (v.phase === 'result' && v.result) showModal(resultHTML(v));
@@ -193,6 +195,12 @@ function ensure3d() {
     table3d = import('./three3d/table3d.js').then((m) => {
       const t = m.createTable3D($('#stage3d'));
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
+      // during the deal animation the hand overlay fills in as my tiles arrive
+      t.onIntro(({ active, myTiles }) => {
+        state.ui.introTiles = active ? myTiles : null;
+        $('#hud3d').classList.toggle('intro', active);
+        applyIntroHand();
+      });
       return t;
     });
   }
@@ -206,13 +214,54 @@ const setIfChanged = (el, html) => {
   }
 };
 
+// 2D board: during the deal pause show the phases and the dice roll.
+const DIE_FACE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+function intro2d(v, ui) {
+  const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+  if (!v.intro || v.intro.left < 400 || !v.wall || ui.intro2dKey === key) return;
+  ui.intro2dKey = key;
+  const box = $('#intro2d');
+  const total = v.intro.total;
+  const t0 = Date.now() - (total - v.intro.left);
+  const [a, b] = v.wall.dice;
+  clearInterval(intro2d.timer);
+  box.classList.remove('hidden');
+  intro2d.timer = setInterval(() => {
+    const p = (Date.now() - t0) / total;
+    if (p >= 1) {
+      clearInterval(intro2d.timer);
+      box.classList.add('hidden');
+      return;
+    }
+    let html;
+    if (p < 0.26) html = '<b>Revolviendo fichas…</b>';
+    else if (p < 0.56) html = '<b>Armando los muros…</b>';
+    else if (p < 0.72) {
+      const r = () => 1 + Math.floor(Math.random() * 6);
+      const rolling = p < 0.68;
+      html = `<b>Tirando dados</b><span class="dice ${rolling ? 'rolling' : ''}">${DIE_FACE[rolling ? r() : a]}${DIE_FACE[rolling ? r() : b]}</span>`;
+    } else html = `<b>Repartiendo…</b><span class="dice">${DIE_FACE[a]}${DIE_FACE[b]}</span><small>${a + b}</small>`;
+    if (box._h !== html) {
+      box._h = html;
+      box.innerHTML = html;
+    }
+  }, 120);
+}
+
+function applyIntroHand() {
+  const n = state.ui.introTiles;
+  [...document.querySelectorAll('#hud3d .myhand .tile')].forEach((el, i) => {
+    el.style.visibility = n === null || n === undefined || i < n ? '' : 'hidden';
+  });
+}
+
 // The tile just drawn flies from its slot in the 3D wall to the hand overlay.
 function flyDrawToHand(t, v, ui) {
   const d = v.wall && v.wall.lastDraw;
   if (!d || d.n === ui.lastDrawHud) return;
   const first = ui.lastDrawHud === undefined;
   ui.lastDrawHud = d.n;
-  if (first || d.seat !== v.seat || v.drawn === null || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (first || v.intro || d.seat !== v.seat || v.drawn === null || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const to = $(`#hud3d .myhand [data-id="${v.drawn}"]`);
   const from = t.slotOnScreen(v, d.slot);
   if (!to || !from) return;
@@ -232,11 +281,38 @@ function flyDrawToHand(t, v, ui) {
   };
 }
 
+// Tetsuya-style portraits of the three opponents along the top of the 3D view:
+// left = kamicha, centre = toimen, right = shimocha.
+const AVATAR = [['#ffb199', '#ff5e7e'], ['#8fe3ff', '#2a8fe6'], ['#b9f58a', '#2fae2c'], ['#ffe08a', '#f08a12']];
+function portraitsHTML(v) {
+  return [3, 2, 1].map((r) => {
+    const abs = (v.seat + r) % 4;
+    const p = v.players[abs];
+    const [a, b] = AVATAR[abs];
+    const turn = v.turn === abs && v.phase === 'turn';
+    const tags = [
+      p.riichi ? '<i class="tag riichi">リーチ</i>' : '',
+      v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
+      p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">desconectado</i>' : '',
+    ].join('');
+    return `<div class="pcard${turn ? ' turn' : ''}">
+      <div class="avatar" style="--a:${a};--b:${b}">${escapeHTML((p.name || '?').trim().charAt(0).toUpperCase())}${p.bot ? '<span>🤖</span>' : ''}</div>
+      <div class="pinfo">
+        <b>${escapeHTML(p.name)}</b>
+        <span><em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em> ${p.score}</span>
+        <span class="tags">${tags}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // Buttons, timer, notices and the player's own hand over the 3D canvas
 // (Tenhou style: the hand faces the screen instead of lying on the table).
 function renderHud(v, ui) {
   const hud = $('#hud3d');
+  setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
   renderHand(hud.querySelector('.myhand'), v, ui);
+  applyIntroHand();
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;

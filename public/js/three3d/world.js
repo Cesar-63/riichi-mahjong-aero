@@ -35,21 +35,48 @@ export function createWorld(container) {
 
   const clock = new THREE.Clock();
   const tickers = [];
+  const tickersEarly = [];
+  // Two camera views: 'player' (low, close to the player's side, Tetsuya
+  // style) and 'overview' (the whole table). Portrait screens always use the
+  // overview, since the low view would cut the table's width.
+  const views = { player: null, overview: null };
+  let mode = 'player';
+  let forced = null;
+  const look = new THREE.Vector3();
+  let snapped = false;
   const fit = () => {
     const w = container.clientWidth || window.innerWidth;
     const h = container.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // Keep the whole table in view for any aspect ratio: landscape fits the
-    // table's depth (the scenery fills the sides), portrait pulls back.
     const portrait = camera.aspect < 1.05;
     // distance that fits the table's width (plus rim) in the horizontal field of view
     const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
     const dist = portrait ? Math.max(36, 15.5 / Math.tan(halfH) * 0.92) : 36;
-    camera.position.set(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72));
-    camera.lookAt(0, -2.2, portrait ? 1.2 : 1.6);
+    views.overview = {
+      pos: new THREE.Vector3(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72)),
+      target: new THREE.Vector3(0, -2.2, portrait ? 1.2 : 1.6),
+    };
+    views.player = portrait ? views.overview : {
+      pos: new THREE.Vector3(0, 14.5, 24),
+      target: new THREE.Vector3(0, -0.6, -2.8),
+    };
     camera.updateProjectionMatrix();
+    if (!snapped) {
+      snapped = true;
+      const v = views[forced || mode];
+      camera.position.copy(v.pos);
+      look.copy(v.target);
+      camera.lookAt(look);
+    }
   };
+  tickersEarly.push((dt) => {
+    const v = views[forced || mode];
+    const k = 1 - Math.exp(-dt * 4.5);
+    camera.position.lerp(v.pos, k);
+    look.lerp(v.target, k);
+    camera.lookAt(look);
+  });
   window.addEventListener('resize', fit);
   fit();
 
@@ -58,11 +85,16 @@ export function createWorld(container) {
     const dt = Math.min(clock.getDelta(), 0.1);
     const t = clock.elapsedTime;
     if (!still) for (const f of animate) f(dt, t);
+    for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
     renderer.render(scene, camera);
   });
 
-  return { THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry };
+  return {
+    THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry,
+    setView: (m) => { mode = m; },
+    forceView: (m) => { forced = m; },
+  };
 }
 
 function makeSky() {
@@ -166,7 +198,7 @@ function addIslands(scene) {
     return g;
   };
   // beside the table (seen at the sides of wide screens) and further up/back (top corners)
-  const spots = [[-31, -7, -2, 5], [32, -8, 6, 6], [-29, -11, 15, 4], [-50, 1, -40, 8], [52, 3, -44, 9], [0, 4, -95, 12]];
+  const spots = [[-31, -7, -2, 5], [32, -8, 6, 6], [-29, -11, 15, 4], [-50, 1, -40, 8], [52, 3, -44, 9]];
   const islands = spots.map(([x, y, z, r]) => {
     const g = make(r);
     g.position.set(x, y, z);

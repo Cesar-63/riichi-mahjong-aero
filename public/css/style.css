@@ -949,3 +949,92 @@ button.pass {
 #hud3d .myhand .gap { width: clamp(8px, 1.2vw, 18px); }
 #hud3d .actions, #hud3d .status3d { bottom: calc(clamp(26px, min(5.2vw, 8.4vh), 70px) * 1.6 + 40px); }
 #hud3d .ask { bottom: calc(clamp(26px, min(5.2vw, 8.4vh), 70px) * 1.6 + 92px); }
+
+/* ------------------------------------------------------------ hand intro */
+#hud3d.intro .actions, #hud3d.intro .status3d { visibility: hidden; }
+#intro2d {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 26px;
+  border-radius: 999px;
+  color: #0b3550;
+  font-size: 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .85), rgba(220, 244, 255, .7));
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(0, 50, 90, .35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#intro2d .dice { font-size: 44px; line-height: 1; letter-spacing: 6px; color: #0a5c9e; }
+#intro2d .dice.rolling { animation: dice-roll .25s linear infinite; display: inline-block; }
+#intro2d small { font-size: 22px; font-weight: 700; color: #0a82d6; }
+@keyframes dice-roll { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #intro2d .dice.rolling { animation: none; } }
+
+/* ------------------------------------------------------------ opponents' portraits (3D) */
+#hud3d .portraits {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  width: min(760px, calc(100vw - 220px));
+}
+.pcard {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 18px;
+  color: #0b3550;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .82), rgba(220, 244, 255, .6));
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: inset 0 1px 0 #fff, 0 8px 22px rgba(0, 50, 90, .3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: box-shadow .2s, transform .2s;
+}
+.pcard.turn { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #fff, 0 0 18px 4px var(--glow); }
+.pcard .avatar {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, .85) 0 12%, rgba(255, 255, 255, 0) 38%),
+    linear-gradient(160deg, var(--a), var(--b));
+  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, .18), 0 2px 6px rgba(0, 40, 80, .3);
+}
+.pcard .avatar span { position: absolute; right: -6px; bottom: -4px; font-size: 18px; }
+.pinfo { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.pinfo b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pinfo span { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pinfo em { font-style: normal; font-weight: 800; color: #3f6d88; }
+.pinfo em.oya { color: #e0303c; }
+.tags .tag { font-style: normal; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; margin-right: 4px; color: #fff; }
+.tag.riichi { background: linear-gradient(180deg, #ffd27a, #f08a12); }
+.tag.mate { background: linear-gradient(180deg, #8fe3ff, #2a8fe6); }
+.tag.off { background: #8a9aa6; }
+@media (max-width: 760px) {
+  #hud3d .portraits { width: calc(100vw - 110px); left: auto; right: 8px; transform: none; gap: 6px; }
+  .pcard { padding: 4px 6px 4px 4px; gap: 6px; border-radius: 12px; }
+  .pcard .avatar { width: 32px; height: 32px; font-size: 16px; }
+  .pinfo { font-size: 11px; }
+  .tags { display: none; }
+}

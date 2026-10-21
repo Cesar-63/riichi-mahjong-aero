@@ -11,6 +11,8 @@ export const TIMING = {
   resultMs: Number(env.RESULT_SECONDS || 12) * 1000,
   autoMs: 700, // forced riichi tsumogiri
   botMs: 600, // test-mode bot thinking time
+  // pause at the start of every hand for the shuffle/wall/dice/deal animation
+  introMs: Number(env.INTRO_SECONDS ?? 6) * 1000,
   offlineMs: 1500, // decision time for disconnected players
   offlineAfterMs: 10000,
 };
@@ -222,7 +224,7 @@ function apply(room, op, token, body, now, seen) {
     if (over > 0) room.clock.bank[seat] = Math.max(0, room.clock.bank[seat] - over);
   }
   g.act(seat, body.action || {});
-  afterChange(room, g);
+  afterChange(room, g, now);
   schedule(room, now, seen);
   return true;
 }
@@ -247,16 +249,17 @@ function startGame(room, now, seen) {
   room.status = 'playing';
   room.game = Game.create(players.map((p) => p.name)).s;
   room.clock = { bank: [0, 0, 0, 0], decisions: {}, kyokuKey: null };
-  afterChange(room, new Game(room.game));
+  afterChange(room, new Game(room.game), now);
   schedule(room, now, seen);
 }
 
-function afterChange(room, g) {
+function afterChange(room, g, now) {
   const s = g.s;
   const key = `${s.round}-${s.kyokuNum}-${s.honba}`;
   if (room.clock.kyokuKey !== key && s.phase !== 'result') {
     room.clock.kyokuKey = key;
     room.clock.bank = [0, 0, 0, 0].map(() => TIMING.bankMs);
+    room.clock.introUntil = now + TIMING.introMs; // nobody's clock runs during the deal animation
     room.requests = {}; // tile ids are reused every hand
   }
   if (s.phase === 'end') {
@@ -291,6 +294,8 @@ function schedule(room, now, seen) {
   const key = `${g.s.phase}:${g.s.seq}`;
   const old = room.clock.decisions;
   const next = {};
+  // Decisions taken during the deal animation start counting when it ends.
+  const t0 = Math.max(now, room.clock.introUntil || 0);
   for (const seat of g.pendingSeats()) {
     if (old[seat] && old[seat].key === key) {
       next[seat] = old[seat];
@@ -298,19 +303,19 @@ function schedule(room, now, seen) {
     }
     if (room.seats[seat].bot) {
       const delay = g.s.phase === 'result' ? 0 : TIMING.botMs;
-      next[seat] = { key, start: now, deadline: now + delay, auto: true, bot: true };
+      next[seat] = { key, start: t0, deadline: t0 + delay, auto: true, bot: true };
       continue;
     }
     const offline = isOffline(room, seat, seen, now);
     let deadline;
     let auto = false;
-    if (g.s.phase === 'result') deadline = now + (offline ? TIMING.offlineMs : TIMING.resultMs);
+    if (g.s.phase === 'result') deadline = t0 + (offline ? TIMING.offlineMs : TIMING.resultMs);
     else if (g.isForced(seat)) {
-      deadline = now + TIMING.autoMs;
+      deadline = t0 + TIMING.autoMs;
       auto = true;
-    } else if (offline) deadline = now + TIMING.offlineMs;
-    else deadline = now + TIMING.turnMs + TIMING.graceMs + room.clock.bank[seat];
-    next[seat] = { key, start: now, deadline, auto };
+    } else if (offline) deadline = t0 + TIMING.offlineMs;
+    else deadline = t0 + TIMING.turnMs + TIMING.graceMs + room.clock.bank[seat];
+    next[seat] = { key, start: t0, deadline, auto };
   }
   room.clock.decisions = next;
   const dls = Object.values(next).map((d) => d.deadline);
@@ -332,7 +337,7 @@ export function processTimeouts(room, now, seen) {
       if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
       g.defaultAction(seat);
     }
-    afterChange(room, g);
+    afterChange(room, g, now);
     changed = true;
   }
   return changed;
@@ -380,5 +385,7 @@ function viewFor(room, token, seen, now) {
       auto: dec.auto,
     }
     : null;
+  const introLeft = (room.clock && room.clock.introUntil || 0) - now;
+  view.intro = introLeft > 0 ? { left: introLeft, total: TIMING.introMs } : null;
   return { ...base, game: view };
 }
