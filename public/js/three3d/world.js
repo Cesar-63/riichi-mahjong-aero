@@ -204,6 +204,50 @@ function feltTexture() {
   return tex;
 }
 
+// Wood with long grain lines, darker streaks and a few knots.
+function woodTexture(base, dark, light) {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = base;
+  g.fillRect(0, 0, 1024, 256);
+  for (let i = 0; i < 90; i++) {
+    const y0 = Math.random() * 256;
+    const amp = 2 + Math.random() * 6;
+    const freq = 0.004 + Math.random() * 0.01;
+    const ph = Math.random() * 10;
+    g.strokeStyle = Math.random() < 0.6 ? dark : light;
+    g.globalAlpha = 0.08 + Math.random() * 0.22;
+    g.lineWidth = 0.6 + Math.random() * 2.4;
+    g.beginPath();
+    for (let x = 0; x <= 1024; x += 8) {
+      const y = y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 3.1 + ph * 2) * amp * 0.3;
+      if (x === 0) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  for (let k = 0; k < 3; k++) {
+    const x = 120 + Math.random() * 780;
+    const y = 40 + Math.random() * 176;
+    for (let r = 18; r > 2; r -= 3) {
+      g.globalAlpha = 0.12;
+      g.strokeStyle = dark;
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.ellipse(x, y, r * 2.2, r * 0.7, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
+  g.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 function addParlour(group) {
   const felt = new THREE.Mesh(
     new THREE.BoxGeometry(TABLE, 0.8, TABLE),
@@ -213,8 +257,12 @@ function addParlour(group) {
   felt.receiveShadow = true;
   group.add(felt);
   // wooden frame: four mitred-looking rails a little above the felt
-  const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.55, envMapIntensity: 0.6 });
-  const darkWood = new THREE.MeshStandardMaterial({ color: 0x3b2a1a, roughness: 0.7 });
+  const railTex = woodTexture('#9a7448', '#5a3a1c', '#c49a64');
+  railTex.repeat.set(2, 1);
+  const wood = new THREE.MeshStandardMaterial({ map: railTex, roughness: 0.5, envMapIntensity: 0.6 });
+  const darkTex = woodTexture('#43301e', '#1e140a', '#6a4c2e');
+  darkTex.repeat.set(2, 1);
+  const darkWood = new THREE.MeshStandardMaterial({ map: darkTex, roughness: 0.65 });
   const R = 1.3;
   for (let i = 0; i < 4; i++) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(TABLE + 2 * R, 1.3, R), wood);

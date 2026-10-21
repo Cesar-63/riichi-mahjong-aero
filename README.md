@@ -84,7 +84,7 @@ instante, sin recargar.
 - **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
   botones brillantes tipo Aqua.
 - **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
-  mesa de madera con tapete verde bajo una lámpara cálida y sillas en
+  mesa de madera (con vetas) y tapete verde bajo una lámpara cálida y sillas en
   penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
   brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
   una franja oscura con resplandor azul y avisos de llamada en letra blanca
@@ -127,6 +127,19 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
   modo por equipos; el que tiene el turno brilla.
 - Botones, menú, resultados y el panel del compañero son los mismos del 2D,
   encima del canvas.
+
+### Animaciones de riichi y de victoria (3D)
+
+- **Riichi**: aviso grande "リーチ"; la ficha baja desde arriba girando hasta
+  quedar de lado en los descartes. Si nadie hace ron sobre ella (el servidor
+  recién entonces marca el riichi), un palito de 1000 puntos en 3D entra
+  girando y se acomoda en la placa central frente al jugador.
+- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador caen boca
+  arriba una por una frente a su asiento (la ganadora, separada y brillando),
+  la cámara muestra la mesa entera, los indicadores de dora brillan y los de
+  ura dora salen de debajo del muro muerto y se voltean, con un cartel que
+  cuenta dora, ura y aka. Después se abre la pantalla de resultado. En 2D el
+  resultado se abre tras un momento, para que se vea el aviso.
 
 ### Animación de inicio de cada mano
 

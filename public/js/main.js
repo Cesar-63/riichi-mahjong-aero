@@ -178,7 +178,24 @@ function showGame(v) {
     intro2d(v, ui);
   }
   renderPartner(v, ui);
-  if (v.phase === 'result' && v.result) showModal(resultHTML(v));
+  // A win first plays its reveal (3D) or lets the call show (2D) before the
+  // score screen opens.
+  const winKey = v.phase === 'result' && v.result && v.result.type === 'agari' ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
+  if (winKey && ui.winStarted !== winKey) {
+    ui.winStarted = winKey;
+    const finish = () => {
+      if (ui.winDone === winKey) return;
+      ui.winDone = winKey;
+      hideDoraBanner();
+      if (state.view) showGame(state.view);
+    };
+    // safety net in case the 3D reveal never reports back
+    setTimeout(finish, state.view3d ? 9000 : 1300);
+    ui.winFinish = finish;
+  }
+  const holdModal = winKey && ui.winDone !== winKey;
+  if (holdModal) hideModal();
+  else if (v.phase === 'result' && v.result) showModal(resultHTML(v));
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v));
   else hideModal();
 
@@ -199,6 +216,10 @@ function ensure3d() {
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      t.onWin(({ phase, result }) => {
+        if (phase === 'dora') showDoraBanner(result);
+        if (phase === 'done' && state.ui.winFinish) state.ui.winFinish();
+      });
       return t;
     });
   }
@@ -244,6 +265,26 @@ function intro2d(v, ui) {
       box.innerHTML = html;
     }
   }, 120);
+}
+
+// Dora count shown during the 3D win reveal: indicators, ura and the han
+// each kind adds for the (first) winner.
+function showDoraBanner(result) {
+  const w = result.wins[0];
+  const han = (k) => (w.yaku.find(([y]) => y === k) || [k, 0])[1];
+  const group = (label, ids, n) => `<div class="dgroup"><span class="dl">${label}</span>${ids.map((id) => tile(id)).join('')}<b>${n}</b></div>`;
+  let html = group('ドラ Dora', result.dora, han('dora'));
+  if (w.ura && w.ura.length) html += group('裏ドラ Ura', w.ura, han('ura'));
+  if (han('aka')) html += `<div class="dgroup"><span class="dl">赤ドラ Aka</span><b>${han('aka')}</b></div>`;
+  const el = $('#dora3d');
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+function hideDoraBanner() {
+  $('#dora3d').classList.add('hidden');
 }
 
 // Tetsuya-style portraits of the three opponents along the top of the 3D view:

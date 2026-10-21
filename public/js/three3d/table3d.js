@@ -116,6 +116,165 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     o.blob.material.opacity = lift > 0.5 ? 0 : 0.42 * (1 - lift / 0.5);
   }
 
+  // ------------------------------------------------------- win reveal
+  // Tetsuya style: after the "Tsumo!"/"Ron!" call the winner's tiles drop
+  // face up one by one in front of them, then the dora indicators glow and
+  // the ura dora rise from the dead wall and turn over. Listeners get
+  // { phase: 'dora', result } and { phase: 'done' } (the score screen waits
+  // for 'done').
+  const WIN = { callMs: 900, tileMs: 80, dropMs: 240, doraMs: 2300 };
+  let win = null;
+  let winListener = () => {};
+  const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
+  const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
+
+  function clearWin() {
+    if (!win) return;
+    for (const it of [...win.items, ...win.ura]) {
+      scene.remove(it.mesh);
+      kit.dispose(it.mesh);
+    }
+    win = null;
+  }
+
+  function syncWin(v, ui, rel) {
+    if (!isAgari(v)) {
+      if (win) clearWin();
+      return;
+    }
+    const key = resultKey(v);
+    if (win && win.key === key) return;
+    clearWin();
+    const res = v.result;
+    const items = [];
+    let t = WIN.callMs;
+    res.wins.forEach((w) => {
+      const r = rel(w.seat);
+      const ids = [...w.hand, w.winTile];
+      const stand = place(r, 0, 0, 0, 'stand').q;
+      ids.forEach((id, i) => {
+        const x = fx(r === 0 ? 10 : 12) + i * W + W / 2 + (i === ids.length - 1 ? 0.45 : 0);
+        const mesh = makeTile(id);
+        mesh.visible = false;
+        scene.add(mesh);
+        items.push({ mesh, at: t + i * WIN.tileMs, target: place(r, x, D / 2, fz(93), 'up'), from: stand, win: i === ids.length - 1 });
+      });
+      t += ids.length * WIN.tileMs + 450;
+    });
+    // ura dora: they lie under the dora indicators; lift them out and turn them over
+    const ura = [];
+    const withUra = res.wins.find((w) => w.ura && w.ura.length);
+    if (withUra && v.wall) {
+      withUra.ura.forEach((id, i) => {
+        const slot = deadSlot(9 + i);
+        const from = slotPose(v, slot, rel);
+        const stack = (v.wall.breakStack + (slot >> 1)) % (4 * STACKS);
+        const ownerRel = rel((4 - Math.floor(stack / STACKS)) % 4);
+        const inward = new THREE.Vector3(0, 0, -1.9).applyQuaternion(qSeat[ownerRel]);
+        const faceUp = from.q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+        const mesh = makeTile(id);
+        mesh.visible = false;
+        scene.add(mesh);
+        ura.push({ mesh, slot, from, target: { p: from.p.clone().add(inward).setY(D / 2), q: faceUp }, at: t + 500 + i * 160 });
+      });
+    }
+    win = { key, t0: performance.now(), items, ura, doraAt: t, doneAt: t + WIN.doraMs, res, phase: 'tiles', doraIds: [...res.dora] };
+    // the winners' concealed hands and my overlay hand make way for the reveal
+    if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
+    world.forceView('overview');
+  }
+
+  const qa = new THREE.Quaternion();
+  function stepWin() {
+    if (!win) return;
+    const e = performance.now() - win.t0;
+    for (const it of win.items) {
+      if (e < it.at) continue;
+      it.mesh.visible = true;
+      const u = Math.min(1, (e - it.at) / WIN.dropMs);
+      const k = 1 - (1 - u) ** 3;
+      it.mesh.position.copy(it.target.p);
+      // falls over from standing, with a tiny bounce at the end
+      it.mesh.position.y += (1 - k) * 1.6 + Math.sin(Math.min(1, u * 1.15) * Math.PI) * 0.12 * (u > 0.85 ? 1 : 0);
+      qa.copy(it.from).slerp(it.target.q, k);
+      it.mesh.quaternion.copy(qa);
+      if (it.win) kit.style(it.mesh, 1, u >= 1 ? kit.glowColor() : 0);
+    }
+    if (e >= win.doraAt) {
+      // re-applied every frame: view updates restyle the table tiles
+      for (const id of win.doraIds) {
+        const o = objects.get(`t${id}`);
+        if (o) kit.style(o.obj, 1, 0xffc83a);
+      }
+    }
+    if (e >= win.doraAt && win.phase === 'tiles') {
+      win.phase = 'dora';
+      winListener({ phase: 'dora', result: win.res });
+    }
+    for (const it of win.ura) {
+      if (e < it.at) continue;
+      it.mesh.visible = true;
+      const wallTile = objects.get(`w${it.slot}`);
+      if (wallTile) wallTile.obj.visible = false;
+      const u = Math.min(1, (e - it.at) / 650);
+      const k = u * u * (3 - 2 * u);
+      it.mesh.position.lerpVectors(it.from.p, it.target.p, k);
+      it.mesh.position.y += Math.sin(k * Math.PI) * 1.4;
+      it.mesh.quaternion.copy(it.from.q).slerp(it.target.q, k);
+      kit.style(it.mesh, 1, u >= 1 ? 0xffc83a : 0);
+    }
+    if (e >= win.doneAt && win.phase === 'dora') {
+      win.phase = 'done';
+      world.forceView(null);
+      winListener({ phase: 'done' });
+    }
+  }
+
+  // ----------------------------------------------------- riichi sticks
+  // The server only marks a riichi once its discard went through without a
+  // ron, so the stick is placed exactly when "nobody called".
+  const stickTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 64;
+    const g = c.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#dfe4e6');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 512, 64);
+    g.fillStyle = '#d4202c';
+    g.beginPath();
+    g.arc(256, 32, 20, 0, Math.PI * 2);
+    g.fill();
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const stickGeo = new THREE.BoxGeometry(3.1, 0.1, 0.38);
+  const stickTop = new THREE.MeshPhongMaterial({ map: stickTex, shininess: 50 });
+  const stickSide = new THREE.MeshPhongMaterial({ color: 0xe8ecee, shininess: 50 });
+  const sticks = new Map(); // seat -> { mesh, target }
+  function syncSticks(v, rel) {
+    v.players.forEach((p, abs) => {
+      let st = sticks.get(abs);
+      if (p.riichi && !st) {
+        const mesh = new THREE.Mesh(stickGeo, [stickSide, stickSide, stickTop, stickSide, stickSide, stickSide]);
+        mesh.castShadow = true;
+        const target = place(rel(abs), 0, 0.36, 2.7, 'stand');
+        // tossed in from above the player's side, spinning into place
+        mesh.position.copy(place(rel(abs), 0.8, 4.5, 4.6, 'stand').p);
+        mesh.quaternion.copy(target.q).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 1.4));
+        scene.add(mesh);
+        st = { mesh, target };
+        sticks.set(abs, st);
+      } else if (!p.riichi && st) {
+        scene.remove(st.mesh);
+        sticks.delete(abs);
+      }
+    });
+  }
+
   const tmp = new THREE.Vector3();
   world.onTick((dt) => {
     const k = 1 - Math.exp(-dt * 11);
@@ -126,6 +285,12 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       o.obj.quaternion.slerp(t.q, k);
       updateBlob(o);
     }
+    const ks = 1 - Math.exp(-dt * 6);
+    for (const st of sticks.values()) {
+      st.mesh.position.lerp(st.target.p, ks);
+      st.mesh.quaternion.slerp(st.target.q, ks);
+    }
+    stepWin();
     placeCallouts();
   });
 
@@ -172,8 +337,10 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
 
     v.players.forEach((p, abs) => {
       const r = rel(abs);
-      // opponents' hands (the player's own hand is the screen overlay)
-      if (r !== 0) {
+      // opponents' hands (the player's own hand is the screen overlay);
+      // a winner's concealed hand is replaced by the face-up reveal
+      const revealed = isAgari(v) && v.result.wins.some((x) => x.seat === abs);
+      if (r !== 0 && !revealed) {
         for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, fx(12) + i * W + W / 2, H / 2, fz(95), 'stand'));
         if (p.hasDrawn) {
           put(`h${abs}:d`, null, place(r, fx(12) + p.handCount * W + W / 2 + 0.35, H / 2, fz(95), 'stand'));
@@ -209,7 +376,15 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         col++;
         const key = `t${d.tile}`;
         put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile });
-        if (!objects.has(key) && r === 0) {
+        if (!objects.has(key) && d.riichi) {
+          // riichi: the tile comes down from above, turning sideways as it lands
+          const from = r === 0 ? null : prevPos(`h${abs}:${d.tile % Math.max(1, p.handCount)}`);
+          const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+          spawns.set(key, {
+            p: (from ? from.p : target.p).clone().setY(3.4),
+            q: target.q.clone().premultiply(turn),
+          });
+        } else if (!objects.has(key) && r === 0) {
           // my discards come in from the hand overlay at the bottom of the screen
           spawns.set(key, place(0, target.p.x * 0.6, 4, fz(112), 'stand'));
         } else if (!objects.has(key)) {
@@ -244,6 +419,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     });
 
     sync(desired, spawns);
+    syncSticks(v, rel);
+    syncWin(v, ui, rel);
 
     // highlights: tsumogiri tiles dimmer, the latest discard glowing
     for (const ob of objects.values()) {
@@ -256,7 +433,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       const rect = renderer.domElement.getBoundingClientRect();
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height };
     }
-    hand.layout(v, ui, Infinity, spawn);
+    const iWon = isAgari(v) && v.result.wins.some((x) => x.seat === v.seat);
+    if (!iWon) hand.layout(v, ui, Infinity, spawn);
     drawCenter(v, rel);
   }
 
@@ -322,14 +500,6 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       c.font = '500 40px "Segoe UI", sans-serif';
       c.fillStyle = '#d8f4ff';
       c.fillText(`${p.name}${p.bot ? ' 🤖' : ''}${p.online ? '' : ' (off)'}`, 0, 395);
-      if (p.riichi) {
-        c.fillStyle = '#fff';
-        c.fillRect(-120, 250, 240, 18);
-        c.fillStyle = '#e01b2b';
-        c.beginPath();
-        c.arc(0, 259, 11, 0, Math.PI * 2);
-        c.fill();
-      }
       c.restore();
     });
   }
@@ -387,6 +557,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const dieGeo = new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.14);
 
   function startIntro(v, ui) {
+    clearWin();
     const rel = (abs) => (abs - v.seat + 4) % 4;
     const total = v.intro.total;
     // drop what is on the table from the previous hand
@@ -585,6 +756,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     },
     onIntro(cb) {
       introListener = cb;
+    },
+    onWin(cb) {
+      winListener = cb;
     },
     setCallouts(els) {
       calloutEls = els;

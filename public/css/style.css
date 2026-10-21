@@ -1219,3 +1219,38 @@ html[data-theme="tetsuya"] #partner-toggle { color: var(--ink); }
 html[data-theme="tetsuya"] #partner-toggle .hint, html[data-theme="tetsuya"] #partner .hint { color: var(--muted); }
 html[data-theme="tetsuya"] .ask:not(:empty) { border-radius: 3px; }
 html[data-theme="tetsuya"] #menu-btn { border-radius: 3px; }
+
+/* ------------------------------------------------------------ riichi / win calls */
+.callout span.t-riichi, .callout span.t-ron, .callout span.t-tsumo { font-size: calc(var(--u) * 7.5); }
+#hud3d .callout span.t-riichi, #hud3d .callout span.t-ron, #hud3d .callout span.t-tsumo { font-size: clamp(54px, 9vw, 120px); }
+.callout.show:has(.t-ron), .callout.show:has(.t-tsumo), .callout.show:has(.t-riichi) { animation-duration: 1.9s; }
+
+/* dora count during the 3D win reveal */
+#dora3d {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  padding: 12px 22px;
+  border-radius: 18px;
+  color: #0b3550;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .88), rgba(220, 244, 255, .7));
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(0, 50, 90, .35);
+}
+#dora3d.show { animation: dora-in .45s ease-out; }
+@keyframes dora-in { from { opacity: 0; transform: translate(-50%, -14px) scale(.92); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+#dora3d .dgroup { display: flex; align-items: center; gap: 4px; }
+#dora3d .dl { font-weight: 700; margin-right: 6px; white-space: nowrap; }
+#dora3d .tile { --w: 30px; }
+#dora3d b { margin-left: 8px; font-size: 28px; color: #0a82d6; }
+html[data-theme="tetsuya"] #dora3d {
+  color: #f1ede2;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(28, 36, 66, .96), rgba(12, 16, 32, .96));
+  border: 1px solid #5a6a9a;
+  box-shadow: 0 0 22px rgba(60, 110, 255, .45);
+}
+html[data-theme="tetsuya"] #dora3d b { color: #f2c94c; text-shadow: 0 2px 0 #000; font-family: Georgia, serif; }
