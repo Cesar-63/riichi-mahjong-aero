@@ -44,7 +44,16 @@ export async function handle(body, store, now = Date.now()) {
   if (!/^[a-f0-9]{16,64}$/.test(token)) return { status: 400, body: { error: 'token inválido' } };
   const k = keys(code);
 
-  if (body.hb) await store.hset(k.seen, token, String(now), ROOM_TTL);
+  // the heartbeat is written alongside the request, not before it
+  const hb = body.hb ? store.hset(k.seen, token, String(now), ROOM_TTL) : null;
+  try {
+    return await route(body, store, now, op, code, token, k);
+  } finally {
+    await hb;
+  }
+}
+
+async function route(body, store, now, op, code, token, k) {
 
   if (op === 'poll') {
     const meta = await store.get(k.meta);
@@ -52,12 +61,13 @@ export async function handle(body, store, now = Date.now()) {
       const [ver, dl] = meta.split(':').map(Number);
       if (ver === body.since && (!dl || now < dl)) return { status: 200, body: { same: true, version: ver, now } };
       if (dl && now >= dl) {
-        const r = await withRoom(store, code, now, () => false, { wait: false });
+        const r = await withRoom(store, code, now, () => false, { wait: false, beat: body.hb ? token : null });
         if (r) return { status: 200, body: viewFor(r.room, token, r.seen, now) };
       }
     }
-    const room = await load(store, code);
-    const seen = room.status === 'playing' ? await store.hgetall(k.seen) : {};
+    const [room, allSeen] = await Promise.all([load(store, code), store.hgetall(k.seen)]);
+    const seen = room.status === 'playing' ? allSeen : {};
+    if (body.hb && room.status === 'playing') seen[token] = String(now);
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
@@ -70,7 +80,7 @@ export async function handle(body, store, now = Date.now()) {
         error = e.message;
         return false;
       }
-    });
+    }, { beat: body.hb ? token : null });
     if (!r) return { status: 503, body: { error: 'sala ocupada, reintenta' } };
     const out = viewFor(r.room, token, r.seen, now);
     if (error) out.error = error;
@@ -84,33 +94,40 @@ async function load(store, code) {
   return raw ? JSON.parse(raw) : newRoom(code);
 }
 
-async function withRoom(store, code, now, fn, { wait = true } = {}) {
+// Runs fn on the room under the room lock. Two Redis round trips in all:
+// lock + read, then write + unlock (or just unlock when nothing changed).
+// `beat`: token whose heartbeat this request is writing at the same time.
+async function withRoom(store, code, now, fn, { wait = true, beat = null } = {}) {
   const k = keys(code);
   const lockId = Math.random().toString(36).slice(2);
-  let got = false;
-  for (let i = 0; i < (wait ? 60 : 1); i++) {
-    if (await store.setnx(k.lock, lockId, LOCK_MS)) {
-      got = true;
+  let got = null;
+  for (let i = 0; i < (wait ? 120 : 1); i++) {
+    const r = await store.lockLoad(k.lock, lockId, LOCK_MS, k.room, k.seen);
+    if (r.got) {
+      got = r;
       break;
     }
-    await new Promise((res) => setTimeout(res, 50 + Math.random() * 50));
+    await new Promise((res) => setTimeout(res, 15 + Math.random() * 25));
   }
   if (!got) return null;
+  let unlocked = false;
   try {
-    const room = await load(store, code);
-    const seen = await store.hgetall(k.seen);
+    const room = got.raw ? JSON.parse(got.raw) : newRoom(code);
+    const seen = got.seen;
+    if (beat) seen[beat] = String(now);
     let changed = fn(room, seen);
     if (room.status === 'playing') changed = processTimeouts(room, now, seen) || changed;
     if (changed) {
       room.version++;
-      await store.setMany([
+      await store.saveUnlock([
         [k.room, JSON.stringify(room), ROOM_TTL],
         [k.meta, `${room.version}:${room.deadline || 0}`, ROOM_TTL],
-      ]);
+      ], k.lock);
+      unlocked = true;
     }
     return { room, seen };
   } finally {
-    await store.del(k.lock);
+    if (!unlocked) await store.del(k.lock);
   }
 }
 

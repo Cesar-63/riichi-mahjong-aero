@@ -1,7 +1,7 @@
 import {
   renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
-import { WIND_KANJI } from './shared/tiles.js';
+import { WIND_KANJI, sortTiles } from './shared/tiles.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -52,7 +52,12 @@ async function api(op, extra = {}) {
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
   if (data.error) toast(data.error);
   if (data.now) state.clockOffset = data.now - Date.now();
-  if (!data.same && data.status) apply(data);
+  // while a discard is on its way, an older poll answer would put the tile back
+  const stale = op === 'poll' && state.pending && data.version <= state.pending.version;
+  if (!data.same && data.status && !stale) {
+    if (op === 'act') state.pending = null;
+    apply(data);
+  }
   return data;
 }
 
@@ -215,7 +220,7 @@ function ensure3d() {
     table3d = import('./three3d/table3d.js').then((m) => {
       const t = m.createTable3D($('#stage3d'), state.theme, {
         // a click on one of my 3D hand tiles
-        onPick: (id) => send(state.ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id }),
+        onPick: (id) => discard(id),
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
@@ -346,6 +351,37 @@ function hideModal() {
   $('#modal').classList.add('hidden');
 }
 
+// A discard shows at once: the predicted table (the tile out of the hand and
+// in the pond) is drawn right away and the server's answer replaces it; if
+// the server refuses, its answer puts the tile back.
+function predictDiscard(v, tile, riichi) {
+  const p = structuredClone(v);
+  const me = p.players[p.seat];
+  p.hand = sortTiles([...p.hand, ...(p.drawn !== null ? [p.drawn] : [])].filter((t) => t !== tile));
+  me.discards = [...me.discards, { tile, tsumogiri: p.drawn === tile, riichi, called: false }];
+  me.handCount = p.hand.length;
+  me.hasDrawn = false;
+  p.drawn = null;
+  p.options = null;
+  return p;
+}
+
+function discard(tile) {
+  const v = state.view;
+  const riichi = !!state.ui.riichiMode;
+  const o = v && v.options;
+  if (state.busy || !o || o.kind !== 'turn' || !(riichi ? o.riichi : o.discard).includes(tile)) return;
+  state.pending = { version: state.version };
+  showGame(predictDiscard(v, tile, riichi));
+  send(riichi ? { type: 'riichi', tile } : { type: 'discard', tile }).finally(() => {
+    // no usable answer (network error): back to the last real table
+    if (state.pending) {
+      state.pending = null;
+      if (state.view) showGame(state.view);
+    }
+  });
+}
+
 async function send(action) {
   if (state.busy) return;
   state.busy = true;
@@ -412,8 +448,7 @@ document.addEventListener('click', (e) => {
   const ui = state.ui;
   const tileEl = e.target.closest('.myhand .tile.can');
   if (tileEl && v && v.options && v.options.kind === 'turn') {
-    const id = Number(tileEl.dataset.id);
-    send(ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id });
+    discard(Number(tileEl.dataset.id));
     return;
   }
   const b = e.target.closest('[data-action]');

@@ -114,7 +114,7 @@ export function createHand3D({ world, kit, onPick }) {
   // tiles move at a steady speed (no easing), growing to full size as they arrive
   const goal = new THREE.Vector3();
   world.onTick((dt) => {
-    const step = size * 78 * dt;
+    const step = size * 156 * dt;
     for (const [id, t] of tiles) {
       if (t.wait > 0) {
         t.wait -= dt * 1000;

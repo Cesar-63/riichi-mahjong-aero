@@ -124,8 +124,8 @@ usa.
   mientras sube (un descarte ya va acostado boca arriba, o de lado si es de
   riichi, antes de llegar a los descartes); si termina parada, gira mientras
   baja (un robo solo se para al llegar a la mano). Tu mano 3D y el palito de
-  riichi también se mueven a velocidad constante. Son rápidos (un descarte
-  tarda unas dos décimas de segundo) y **las jugadas no se pisan**: el robo
+  riichi también se mueven a velocidad constante. Son casi inmediatos (un
+  descarte tarda una décima de segundo) y **las jugadas no se pisan**: el robo
   del siguiente jugador espera a que termine de caer el descarte anterior, y
   lo mismo las llamadas y el palito de riichi, aunque lleguen varias jugadas
   en la misma actualización del servidor.
@@ -177,9 +177,11 @@ Al empezar cada mano el servidor pausa los relojes y los bots durante
 `INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo giran en un anillo alrededor del
-   centro, cada una a su ritmo, acercándose y alejándose y dándose vuelta. Es
-   una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
+1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
+   el centro de la mesa (en Frutiger Aero la placa central se hunde en la
+   mesa mientras tanto y vuelve a subir con los muros), cada una a su ritmo,
+   acercándose y alejándose y dándose vuelta, mientras dos "manos" las
+   arremolinan. Es una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
    fichas se empujan y se deslizan unas contra otras (una esquina puede
    montarse un momento sobre la vecina, como pasa de verdad, pero nunca se
    atraviesan); al final se juntan y se enderezan para dejar lugar a los
@@ -306,7 +308,11 @@ test/                    node:test
 
 El estado completo de la partida es un objeto JSON. Cada request: toma un
 lock de la sala en Redis, carga el estado, aplica la acción y los
-temporizadores vencidos, y guarda. Cada jugador recibe solo su vista (nunca
+temporizadores vencidos, y guarda; son dos idas y vueltas a Redis (tomar el
+lock y leer en un pipeline, guardar y soltar el lock en otro). Al descartar,
+el cliente no espera al servidor: dibuja de inmediato la ficha fuera de la
+mano y en los descartes, y la respuesta del servidor la confirma (o, si la
+rechaza, la devuelve a la mano). Cada jugador recibe solo su vista (nunca
 las manos ajenas ni la pared).
 
 ## Limitaciones conocidas

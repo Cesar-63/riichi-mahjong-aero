@@ -1,13 +1,14 @@
 // Tile shuffle for the hand intro: a small 2D simulation (no three.js, so it
-// can be tested in Node). Tiles lie face down as rectangles and swirl round
-// the table in a ring, each at its own pace, drifting in and out and
-// turning; after every step overlapping rectangles are pushed apart along
-// their separating axis, so tiles jostle and slide against each other
-// instead of passing through one another. The push is soft while they
-// swirl (a corner may dip into a neighbour for a moment, as real tiles ride
-// over each other) and firm once the pile is squeezed. Before the walls are built the
-// ring opens into a square that stays inside the wall lines and the tiles
-// are squared up.
+// can be tested in Node). Tiles lie face down as rectangles in a disc that
+// spins, each at its own pace, drifting in and out and turning, while two
+// "hands" stir eddies through it; after every step overlapping rectangles
+// are pushed apart along their separating axis, so tiles jostle and slide
+// against each other instead of passing through one another. The push is
+// soft while they swirl (a corner may dip into a neighbour for a moment, as
+// real tiles ride over each other) and firm once the pile is squeezed.
+// Before the walls are built the disc opens into a square that stays inside
+// the wall lines and the tiles are squared up. `ring` may have an inner
+// radius (a hole in the middle) and `panel` a square to keep clear (0: none).
 
 export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, rand = Math.random }) {
   const ex = hw + gap / 2; // collision half extents (with a little air between tiles)
@@ -25,8 +26,8 @@ export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, 
   for (let z = -rOut; z <= rOut; z += sz) {
     for (let x = -rOut; x <= rOut; x += sx) {
       const r = Math.hypot(x, z);
-      if (r + reach > rOut || r - reach < rIn) continue;
-      if (Math.abs(x) < panel + sx / 2 && Math.abs(z) < panel + sz / 2) continue;
+      if (r + reach > rOut || (rIn > 0 && r - reach < rIn)) continue;
+      if (panel > 0 && Math.abs(x) < panel + sx / 2 && Math.abs(z) < panel + sz / 2) continue;
       cells.push([x, z]);
     }
   }
@@ -42,9 +43,11 @@ export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, 
       pace: 0.75 + rand() * 0.5, // relative angular speed
       spin: (rand() - 0.5) * 2.8, // own turning, rad/s
       wob: rand() * Math.PI * 2,
+      jf: 3 + rand() * 4, // wobble frequency
     });
   }
   let time = 0;
+  const phase = rand() * Math.PI * 2;
 
   const axes = (t) => {
     const c = Math.cos(t.yaw);
@@ -107,7 +110,7 @@ export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, 
     const fz = support(ax, 0, 1);
     t.x = Math.max(-half + fx, Math.min(half - fx, t.x));
     t.z = Math.max(-half + fz, Math.min(half - fz, t.z));
-    const m = separatePanel(t, ax);
+    const m = panel > 0 && separatePanel(t, ax);
     if (m) {
       t.x += m[0];
       t.z += m[1];
@@ -125,16 +128,33 @@ export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, 
   function substep(dt, stir, align) {
     time += dt;
     const live = tiles.filter((t) => t.active);
-    // the swirl picks up speed during the first moments
-    const omega = 1.3 * Math.min(1, time / 0.4) * stir;
-    const k = Math.min(1, dt * 8);
+    // the spin picks up speed during the first moments
+    const ramp = Math.min(1, time / 0.3) * stir;
+    const omega = 1.9 * ramp;
+    // two hands circling the other way, each dragging an eddy through the pile
+    const hands = [0, 1].map((h) => {
+      const a = phase + h * Math.PI - time * 2.1;
+      const R = 5.2 + Math.sin(time * 1.7 + h * 2) * 2.4;
+      return [Math.cos(a) * R, Math.sin(a) * R];
+    });
+    const k = Math.min(1, dt * 9);
     for (const t of live) {
       const r = Math.hypot(t.x, t.z) || 1e-6;
-      // round the table at its own pace, drifting in and out of its lane
-      const w = omega * t.pace * (1 + 0.3 * Math.sin(time * 1.9 + t.wob));
-      const drift = (t.home + Math.sin(time * 2.3 + t.wob) * 1.1 - r) * 2.2 * stir;
-      const fx = -t.z * w + (t.x / r) * drift;
-      const fz = t.x * w + (t.z / r) * drift;
+      // round the table at its own pace, drifting in and out
+      const w = omega * t.pace * (1 + 0.35 * Math.sin(time * 2.3 + t.wob));
+      const drift = (t.home + Math.sin(time * 2.7 + t.wob) * 1.6 - r) * 2.4 * ramp;
+      let fx = -t.z * w + (t.x / r) * drift;
+      let fz = t.x * w + (t.z / r) * drift;
+      for (const [hx, hz] of hands) {
+        const dx = t.x - hx;
+        const dz = t.z - hz;
+        const f = Math.exp(-(dx * dx + dz * dz) / 5) * 3.4 * ramp;
+        fx += -dz * f;
+        fz += dx * f;
+      }
+      // and a nervous wobble of its own
+      fx += Math.sin(time * t.jf + t.wob) * 2.4 * ramp;
+      fz += Math.cos(time * t.jf * 1.3 + t.wob) * 2.4 * ramp;
       t.vx += (fx - t.vx) * k;
       t.vz += (fz - t.vz) * k;
       t.px = t.x;

@@ -56,7 +56,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // comes straight down. It turns while it rises when it ends lying (so a
   // discard is already flat before it reaches the pond) and while it comes
   // down when it ends standing (a draw only stands up at the hand).
-  const SPEED = 48; // world units per second
+  const SPEED = 96; // world units per second
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -224,7 +224,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // result } and { phase: 'done' } (the score screen waits for 'done'). An
   // exhaustive draw lays every hand down the same way (syncDraw) and also
   // ends with 'done'.
-  const WIN = { callMs: 900, tileMs: 27, dropMs: 80, flyMs: 240, flyGap: 60, holdMs: 1800 };
+  const WIN = { callMs: 900, tileMs: 14, dropMs: 45, flyMs: 130, flyGap: 35, holdMs: 1800 };
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -232,7 +232,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 700, tileMs: 25, holdMs: 2200 };
+  const DRAW = { startMs: 700, tileMs: 13, holdMs: 2200 };
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -680,7 +680,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       const p = slotPose(v, drawSlot.slot, rel).p.clone().project(camera);
       const rect = renderer.domElement.getBoundingClientRect();
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
-      laneEnd = performance.now() + spawn.wait + 180; // its flight to the hand
+      laneEnd = performance.now() + spawn.wait + 90; // its flight to the hand
     }
     if (!laidDown(v).has(v.seat)) hand.layout(v, ui, Infinity, spawn);
     drawCenter(v, rel);
@@ -784,10 +784,17 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.5], push: [0.5, 0.57], dice: [0.57, 0.72], deal: [0.72, 0.97], flip: [0.95, 1] };
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  // The tiles swirl in a ring round the centre first, then the pile is
-  // pushed together (and squared up) inside the line where the walls get
-  // built.
-  const PILE = { ring: [4.9, 11.6], open: 13, closed: 10.2, panel: 3.45, squeeze: [0.2, 0.3] };
+  // The tiles spin in a disc over the whole middle of the table first (the
+  // Frutiger Aero centre panel sinks into the table meanwhile and comes back
+  // up with the walls), then the pile is pushed together (and squared up)
+  // inside the line where the walls get built.
+  const PILE = { radius: 10.8, open: 13, closed: 10.2, squeeze: [0.2, 0.3] };
+  const PANEL_DROP = 0.32;
+  function sinkPanel(p) {
+    const down = Math.min(clamp01(p / 0.03), 1 - clamp01(span(p, PHASES.push)));
+    panel.position.y = 0.15 - down * PANEL_DROP;
+    label.position.y = 0.31 - down * (PANEL_DROP + 0.06);
+  }
   const PRE_OUT = 2.6; // walls are built this far outside their final place
   const buildStart = (t) => PHASES.build[0] + t.order * 0.15;
   let intro = null;
@@ -869,7 +876,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     }
     if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
     const rnd = (a, b) => a + Math.random() * (b - a);
-    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: PILE.ring, square: PILE.open, panel: PILE.panel });
+    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, PILE.radius], square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
     introFlipped = v.dora[0];
     const tiles = [];
@@ -941,9 +948,10 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     const p = Math.min(1, (performance.now() - intro.t0) / intro.total);
     const tmpQ = new THREE.Quaternion();
     let myTiles = 0;
+    sinkPanel(p);
     if (p < PHASES.push[0]) {
       const q = clamp01(span(p, PILE.squeeze));
-      intro.pile.setArea({ ring: [PILE.ring[0] * (1 - q), PILE.ring[1] + q * 4], square: PILE.open - q * (PILE.open - PILE.closed) });
+      intro.pile.setArea({ ring: [0, PILE.radius + q * 5], square: PILE.open - q * (PILE.open - PILE.closed) });
       for (const t of intro.tiles) t.sim.active = p < buildStart(t);
       // the swirl slows down and squares the pile up before the walls are built
       intro.pile.step(dt || 1 / 60, 1 - q * 0.75, q);
@@ -1002,6 +1010,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       kit.dispose(t.obj);
     }
     for (const d of intro.dice) scene.remove(d.m);
+    sinkPanel(1);
     const pending = intro.pending;
     intro = null;
     world.forceView(null);
