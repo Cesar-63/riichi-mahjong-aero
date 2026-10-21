@@ -139,12 +139,20 @@ usa.
   pantalla, levemente inclinadas para que se vea el canto superior, y con el
   tamaño ajustado al ancho y alto de la pantalla. La mano siempre deja libre
   el lugar de la ficha robada, así no se corre cada vez que robas. La ficha
-  robada vuela desde su hueco del muro hasta ese lugar; durante el reparto la mano se llena a medida
+  robada vuela desde su hueco del muro hasta ese lugar. Al descartar de la
+  mano (tedashi), la ficha robada sube, pasa por encima de las demás y baja a
+  su lugar mientras las otras le hacen espacio, como en Tetsuya; durante el reparto la mano se llena a medida
   que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
+- **Cajón de puntos**: el botón **点棒 Puntos** hace que la cámara mire hacia
+  tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
+  10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
+  1 + 2 + 4 + 10). Encima del cajón aparece tu puntaje y alrededor el de los
+  demás en su posición (izquierda = kamicha, arriba = toimen, derecha =
+  shimocha), con la diferencia con el tuyo. Un toque lo cierra.
 - **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
   derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
   modo por equipos; el que tiene el turno brilla.

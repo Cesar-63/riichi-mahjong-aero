@@ -224,6 +224,11 @@ function ensure3d() {
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      t.onPoints(({ open }) => {
+        if (open) return;
+        $('#scores3d').classList.add('hidden');
+        $('#hud3d').classList.remove('points');
+      });
       t.onWin(({ phase, result }) => {
         if (phase === 'dora') showDoraBanner(result);
         if (phase === 'done' && state.ui.winFinish) state.ui.winFinish();
@@ -328,6 +333,42 @@ function roundInfoHTML(v) {
     <span>${v.honba}本場</span><span>供託 ${v.kyoutaku}</span><span>残り ${v.wallLeft}</span>
     <span class="mine"><em class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_KANJI[me.wind]}</em> ${me.score}</span>`;
 }
+
+// The table's scores as seen from my seat: me at the bottom, the others in
+// their places (left = kamicha, top = toimen, right = shimocha), with the
+// gap to my score.
+function scoresHTML(v) {
+  const me = v.players[v.seat];
+  const POS = ['bottom', 'right', 'top', 'left'];
+  const cards = [0, 1, 2, 3].map((r) => {
+    const abs = (v.seat + r) % 4;
+    const p = v.players[abs];
+    const diff = p.score - me.score;
+    const gap = r === 0 ? '' : `<small class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}</small>`;
+    return `<div class="sc ${POS[r]}${r === 0 ? ' me' : ''}">
+      <em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em>
+      <b>${escapeHTML(p.name)}</b><span>${p.score}</span>${gap}</div>`;
+  }).join('');
+  return `${cards}<div class="sc mid">${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局<small>本 ${v.honba} · 供 ${v.kyoutaku} · toca para cerrar</small></div>`;
+}
+
+function togglePoints() {
+  if (!table3d) return;
+  table3d.then((t) => {
+    if (t.pointsOpen()) {
+      t.closePoints();
+      return;
+    }
+    const v = state.view;
+    if (!v) return;
+    if (t.openPoints(v, () => {
+      $('#scores3d').innerHTML = scoresHTML(state.view || v);
+      $('#scores3d').classList.remove('hidden');
+    })) $('#hud3d').classList.add('points');
+  });
+}
+$('#hud3d .points-btn').addEventListener('click', togglePoints);
+$('#scores3d').addEventListener('click', togglePoints);
 
 // Buttons, timer and notices over the 3D canvas (the hand itself is 3D, see
 // three3d/hand3d.js).

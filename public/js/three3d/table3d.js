@@ -327,6 +327,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     const key = resultKey(v);
     if (win && win.key === key) return;
     clearWin();
+    closePoints();
     if (isRyuukyoku(v)) return syncDraw(v, ui, rel, key);
     const res = v.result;
     const items = [];
@@ -374,6 +375,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         const o = objects.get(`t${id}`);
         const from = o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : slotPose(v, deadSlot(4 + i), rel);
         flyer(id, from, i, t, 'dora');
+        // the indicator itself leaves the dead wall (a second winner's row
+        // gets a copy, the tile is already gone)
+        if (w === rows[0].w) flyers[flyers.length - 1].hide = `t${id}`;
       });
       t += res.dora.length * WIN.flyGap + WIN.flyMs;
       const doraLit = t;
@@ -454,10 +458,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     for (const it of win.flyers) {
       if (e < it.at) continue;
       it.mesh.visible = true;
-      if (it.slot !== undefined) {
-        const wallTile = objects.get(`w${it.slot}`);
-        if (wallTile) wallTile.obj.visible = false;
-      }
+      // the tile it lifts out of the dead wall is not left behind
+      const left = it.slot !== undefined ? objects.get(`w${it.slot}`) : it.hide ? objects.get(it.hide) : null;
+      if (left) left.obj.visible = false;
       // up out of the wall, across above everything, down into the row
       // (an ura dora starts face down, so it turns over as it rises)
       const u = Math.min(1, (e - it.at) / WIN.flyMs);
@@ -496,6 +499,124 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const stickTop = new THREE.MeshPhongMaterial({ map: stickTex, shininess: 50 });
   const stickSide = new THREE.MeshPhongMaterial({ color: 0xe8ecee, shininess: 50 });
   const sticks = new Map(); // seat -> { mesh, target }
+
+  // ------------------------------------------------------ points drawer
+  // A drawer slides out of the player's edge of the table with their point
+  // sticks in it (10000, 5000, 1000 and 100 compartments) while the camera
+  // looks down at it; the HUD then shows everyone's score.
+  const STICK_DOTS = {
+    10000: [['#d4202c', 0, 22], ...[-3, -2, 2, 3].map((k) => ['#1a1a1a', k * 34, 9])],
+    5000: [-2, -1, 0, 1, 2].map((k) => ['#1a1a1a', k * 30, 10]),
+    1000: [['#d4202c', 0, 20]],
+    100: [-3, -2, -1, 1, 2, 3].map((k) => ['#1a1a1a', k * 70, 7]),
+  };
+  const stickMats = {};
+  for (const [value, dots] of Object.entries(STICK_DOTS)) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 64;
+    const g = c.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#dfe4e6');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 512, 64);
+    for (const [color, x, r] of dots) {
+      g.fillStyle = color;
+      g.beginPath();
+      g.arc(256 + x, 32, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    const top = new THREE.MeshPhongMaterial({ map: t, shininess: 50 });
+    stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
+  }
+  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2, openZ: 15.5, y: -0.9, speed: 7 };
+  const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.7 });
+  const drawer = new THREE.Group();
+  {
+    const box = (w, h, d, x, y, z) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), drawerMat);
+      m.position.set(x, y, z);
+      m.castShadow = m.receiveShadow = true;
+      drawer.add(m);
+    };
+    const { w, d, h, wall } = DRAWER;
+    box(w, wall, d, 0, -h / 2 + wall / 2, 0); // bottom
+    box(wall, h, d, -w / 2 + wall / 2, 0, 0);
+    box(wall, h, d, w / 2 - wall / 2, 0, 0);
+    box(w, h, wall, 0, 0, -d / 2 + wall / 2);
+    box(w, h * 1.15, wall * 1.6, 0, 0.04, d / 2 - wall * 0.8); // front, a little taller
+    for (const x of [-w / 4, 0, w / 4]) box(0.06, h * 0.7, d - 2 * wall, x, -0.08, 0); // compartments
+  }
+  drawer.position.set(0, DRAWER.y, DRAWER.closedZ);
+  drawer.visible = false;
+  scene.add(drawer);
+  const drawerSticks = new THREE.Group();
+  drawer.add(drawerSticks);
+  const drawerStickGeo = new THREE.BoxGeometry(2.55, 0.08, 0.32);
+  let drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
+  let pointsListener = () => {};
+
+  // Sticks like a real tray: 25000 is 1 x 10000, 2 x 5000, 4 x 1000 and
+  // 10 x 100; more points go to 10000s, small change stays in 1000s/100s.
+  function stickCounts(score) {
+    let r = Math.max(0, Math.round(score / 100) * 100);
+    const n10k = Math.max(0, Math.floor((r - 15000) / 10000));
+    r -= n10k * 10000;
+    const n5k = Math.min(2, Math.floor(r / 5000));
+    r -= n5k * 5000;
+    const n1k = r >= 1000 ? Math.floor((r - 1000) / 1000) : 0;
+    r -= n1k * 1000;
+    return [n10k, n5k, n1k, r / 100];
+  }
+  function fillDrawer(score) {
+    drawerSticks.clear();
+    const counts = stickCounts(score);
+    [10000, 5000, 1000, 100].forEach((value, c) => {
+      const n = counts[c];
+      const cx = (c - 1.5) * (DRAWER.w / 4);
+      for (let j = 0; j < Math.min(n, 30); j++) {
+        const m = new THREE.Mesh(drawerStickGeo, stickMats[value]);
+        m.rotation.y = Math.PI / 2;
+        m.position.set(cx + ((j % 5) - 2) * 0.36, -DRAWER.h / 2 + DRAWER.wall + 0.04 + Math.floor(j / 5) * 0.085, 0);
+        m.castShadow = true;
+        drawerSticks.add(m);
+      }
+    });
+  }
+  // onShown: called once the drawer is out and the camera is on it
+  function openPoints(v, onShown) {
+    if (intro || win || !v) return false;
+    fillDrawer(v.players[v.seat].score);
+    drawer.visible = true;
+    drawerState = { open: true, goal: DRAWER.openZ, shown: onShown };
+    world.forceView('drawer');
+    // my hand steps aside while I look at the drawer
+    hand.layout(v, {}, 0);
+    return true;
+  }
+  function closePoints() {
+    if (!drawerState.open) return;
+    drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
+    world.forceView(intro || win ? 'overview' : null);
+    if (lastView && !intro && !win) update(...lastView);
+    pointsListener({ open: false });
+  }
+  world.onTick((dt) => {
+    if (!drawer.visible) return;
+    const z = drawer.position.z;
+    const step = DRAWER.speed * dt;
+    drawer.position.z = Math.abs(drawerState.goal - z) <= step ? drawerState.goal : z + Math.sign(drawerState.goal - z) * step;
+    if (drawer.position.z === drawerState.goal) {
+      if (drawerState.open && drawerState.shown) {
+        drawerState.shown();
+        drawerState.shown = null;
+      }
+      if (!drawerState.open) drawer.visible = false;
+    }
+  });
   function syncSticks(v, rel) {
     v.players.forEach((p, abs) => {
       let st = sticks.get(abs);
@@ -686,7 +807,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
       laneEnd = performance.now() + spawn.wait + 90; // its flight to the hand
     }
-    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, Infinity, spawn);
+    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, drawerState.open ? 0 : Infinity, spawn);
     drawCenter(v, rel);
   }
 
@@ -865,6 +986,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   }
 
   function startIntro(v, ui) {
+    closePoints();
     clearWin();
     const rel = (abs) => (abs - v.seat + 4) % 4;
     const total = v.intro.total;
@@ -883,6 +1005,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, PILE.radius], square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
     introFlipped = v.dora[0];
+    // the previous hand's riichi sticks were paid out
+    for (const st of sticks.values()) scene.remove(st.mesh);
+    sticks.clear();
     const tiles = [];
     for (let slot = 0; slot < 136; slot++) {
       const isDora = slot === deadSlot(4);
@@ -1039,6 +1164,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     kit.setLook(name);
     hand.setTheme(name);
     panelMat.color.setHex(l.panel);
+    drawerMat.color.setHex(name === 'tetsuya' ? 0x4a3420 : 0xeef8ff);
+    drawerMat.roughness = name === 'tetsuya' ? 0.7 : 0.25;
     themeName = name;
     panel.visible = label.visible = hasPanel();
     if (lastView) update(...lastView);
@@ -1068,6 +1195,12 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     onWin(cb) {
       winListener = cb;
     },
+    openPoints,
+    closePoints,
+    onPoints(cb) {
+      pointsListener = cb;
+    },
+    pointsOpen: () => drawerState.open,
     setCallouts(els) {
       calloutEls = els;
     },

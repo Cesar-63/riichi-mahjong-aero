@@ -44,6 +44,7 @@ export function createHand3D({ world, kit, onPick }) {
   let legal = new Set();
   let hover = null;
   let last = null;
+  let lastDrawn = null; // drawn tile of the previous layout
   let theme = 'aero';
 
   function fit() {
@@ -72,6 +73,9 @@ export function createHand3D({ world, kit, onPick }) {
     const o = v.options;
     const myTurn = o && o.kind === 'turn';
     legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
+    // tedashi: the tile just drawn now belongs inside the hand
+    const slotted = lastDrawn !== null && v.drawn === null && v.hand.includes(lastDrawn) ? lastDrawn : null;
+    lastDrawn = v.drawn;
     const seen = new Set();
     ids.forEach((id, i) => {
       seen.add(id);
@@ -97,6 +101,9 @@ export function createHand3D({ world, kit, onPick }) {
       }
       t.target = target;
       t.index = i;
+      // Tetsuya style: it rises, passes over the tiles in between and drops
+      // into its place while they make room (no hop when it simply ends last)
+      if (id === slotted && i < ids.length - 1) t.hop = { up: size * H * 1.05 };
       t.mesh.visible = i < visible;
       const glow = id === v.partnerRequest ? 0xff9a1a : 0;
       kit.style(t.mesh, myTurn && !legal.has(id) ? 0.6 : 1, glow);
@@ -126,6 +133,13 @@ export function createHand3D({ world, kit, onPick }) {
       const step = size * (t.fast ? 156 : 78) * dt;
       const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
+      if (t.hop) {
+        // up, across above the hand, then straight down
+        const p = t.mesh.position;
+        const top = t.target.y + t.hop.up;
+        if (Math.abs(p.x - t.target.x) > 0.5) goal.set(p.y < top - 0.5 ? p.x : t.target.x, top, 0);
+        else t.hop = null;
+      }
       const left = t.mesh.position.distanceTo(goal);
       if (left <= step) t.fast = false;
       if (left <= step) t.mesh.position.copy(goal);

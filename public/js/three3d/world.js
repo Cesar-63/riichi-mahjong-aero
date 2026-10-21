@@ -50,10 +50,12 @@ export function createWorld(container, initialTheme = 'aero') {
   const tickersEarly = [];
   const overlays = [];
   renderer.autoClear = false;
-  // Two camera views: 'player' (low, close to the player's side, Tetsuya
-  // style) and 'overview' (the whole table). Portrait screens always use the
-  // overview, since the low view would cut the table's width.
-  const views = { player: null, overview: null };
+  // Camera views: 'player' (low, close to the player's side, Tetsuya style),
+  // 'overview' (the whole table) and 'drawer' (looking down at the point
+  // stick drawer at the player's edge). Portrait screens use the overview
+  // instead of the player view, since the low view would cut the table's
+  // width.
+  const views = { player: null, overview: null, drawer: null };
   let mode = 'player';
   let forced = null;
   const look = new THREE.Vector3();
@@ -74,6 +76,10 @@ export function createWorld(container, initialTheme = 'aero') {
     views.player = portrait ? views.overview : {
       pos: new THREE.Vector3(0, 14.5, 24),
       target: new THREE.Vector3(0, -0.6, -2.8),
+    };
+    views.drawer = {
+      pos: new THREE.Vector3(0, portrait ? 13 : 9.5, portrait ? 23 : 21.5),
+      target: new THREE.Vector3(0, -1.1, 15.3),
     };
     camera.updateProjectionMatrix();
     if (!snapped) {
