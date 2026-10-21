@@ -1254,3 +1254,31 @@ html[data-theme="tetsuya"] #dora3d {
   box-shadow: 0 0 22px rgba(60, 110, 255, .45);
 }
 html[data-theme="tetsuya"] #dora3d b { color: #f2c94c; text-shadow: 0 2px 0 #000; font-family: Georgia, serif; }
+
+/* ------------------------------------------------------------ round info (3D, Tetsuya table has no centre panel) */
+#hud3d .roundinfo { display: none; }
+html[data-theme="tetsuya"] #hud3d .roundinfo {
+  position: absolute;
+  top: 58px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 3px;
+  border: 2px solid #3a4a7a;
+  background: rgba(10, 15, 34, .88);
+  box-shadow: 0 0 16px rgba(50, 110, 255, .45);
+  color: #e8eefc;
+  font-size: 14px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+html[data-theme="tetsuya"] #hud3d .roundinfo b { font-size: 18px; color: #fff; }
+html[data-theme="tetsuya"] #hud3d .roundinfo .mine { margin-top: 3px; font-weight: 700; color: #ffe27a; }
+html[data-theme="tetsuya"] #hud3d .roundinfo em { font-style: normal; color: #d8e4ff; }
+html[data-theme="tetsuya"] #hud3d .roundinfo em.oya { color: #ff8a8a; }
+@media (max-width: 640px) {
+  html[data-theme="tetsuya"] #hud3d .roundinfo { top: 52px; padding: 5px 8px; font-size: 12px; }
+  html[data-theme="tetsuya"] #hud3d .roundinfo b { font-size: 15px; }
+}

@@ -89,7 +89,10 @@ instante, sin recargar.
   penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
   brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
   una franja oscura con resplandor azul y avisos de llamada en letra blanca
-  con contorno negro.
+  con contorno negro. En 3D la mesa no tiene placa central: los dados quedan
+  toda la mano sobre el tapete a la derecha del oya (quien los tiene de su
+  lado reparte), y la ronda, los honba, los depósitos, las fichas que quedan
+  y tus puntos se ven en un recuadro arriba a la izquierda.
 
 ## Vista 3D
 
@@ -113,7 +116,15 @@ usa.
   de aire (muros, manos, descartes, llamadas y tu mano), así nunca se ven
   fundidas en un solo bloque.
 - Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
-  se desliza a su lugar, así robos, descartes y llamadas se animan solos.
+  viaja a su lugar, así robos, descartes y llamadas se animan solos.
+- **Movimientos firmes**: las fichas se mueven a velocidad constante por
+  tramos rectos, sin aceleraciones. Una ficha que cambia de lugar o se da
+  vuelta primero sube por encima de todo lo que hay en la mesa (muros
+  incluidos), cruza a esa altura y baja derecho. Si termina acostada, gira
+  mientras sube (un descarte ya va acostado boca arriba, o de lado si es de
+  riichi, antes de llegar a los descartes); si termina parada, gira mientras
+  baja (un robo solo se para al llegar a la mano). Tu mano 3D y el palito de
+  riichi también se mueven a velocidad constante.
 - **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
   normal (evita sombras despegadas), placa central opaca para que reciba
   sombras, y sombras de contacto suaves bajo cada ficha apoyada (estilo PS2),
@@ -136,13 +147,14 @@ usa.
 
 ### Animaciones de riichi y de victoria (3D)
 
-- **Riichi**: aviso grande "リーチ"; la ficha baja desde arriba girando hasta
-  quedar de lado en los descartes. Si nadie hace ron sobre ella (el servidor
-  recién entonces marca el riichi), un palito de 1000 puntos en 3D entra
-  girando y se acomoda en la placa central frente al jugador.
-- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador caen boca
-  arriba una por una frente a su asiento (la ganadora, separada y brillando) y
-  la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
+- **Riichi**: aviso grande "リーチ"; la ficha sale de la mano, se acuesta de
+  lado mientras sube y cae así en los descartes. Si nadie hace ron sobre ella
+  (el servidor recién entonces marca el riichi), un palito de 1000 puntos en
+  3D entra girando y se acomoda frente al jugador (en la placa central, o en
+  el tapete en el salón Tetsuya).
+- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador se tumban
+  boca arriba una por una, girando sobre su canto a ritmo parejo (la ganadora,
+  separada y brillando), y la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
   una fila con cartel **ドラ**: los indicadores de dora vuelan desde el muro
   muerto hasta ella; con riichi sigue el cartel **裏ドラ** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
@@ -150,6 +162,10 @@ usa.
   rosado: ura dora) y un cartel cuenta dora, ura y aka. Después se abre la
   pantalla de resultado. En 2D el resultado se abre tras un momento, para que
   se vea el aviso.
+- **Empate por agotamiento** (3D): todas las manos se tumban a la vez, ficha
+  por ficha: las que están en tenpai boca arriba con el cartel **テンパイ**, y
+  las noten boca abajo con **ノーテン**. Después se abre la pantalla de
+  resultado. Los empates abortivos van directo al resultado.
 
 ### Animación de inicio de cada mano
 
@@ -157,18 +173,21 @@ Al empezar cada mano el servidor pausa los relojes y los bots durante
 `INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo se revuelven sobre la mesa, empujadas
-   por dos "manos" que giran. Es una pequeña simulación con colisiones
-   (`public/js/three3d/shuffle.js`): las fichas chocan y se deslizan unas
-   contra otras en vez de atravesarse, y al final se juntan y se enderezan
-   para dejar lugar a los muros.
-2. **Armar los muros**: cada ficha salta de la pila (subiendo primero, para
-   pasar por encima de las demás) a las cuatro filas de pilas de dos, un poco
-   hacia afuera, primero la de abajo y encima la de arriba, y se empujan a su
+1. **Revolver**: las fichas boca abajo giran en un anillo alrededor del
+   centro, cada una a su ritmo, acercándose y alejándose y dándose vuelta. Es
+   una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
+   fichas se empujan y se deslizan unas contra otras (una esquina puede
+   montarse un momento sobre la vecina, como pasa de verdad, pero nunca se
+   atraviesan); al final se juntan y se enderezan para dejar lugar a los
+   muros.
+2. **Armar los muros**: cada ficha sube de la pila, cruza por encima de las
+   demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
+   primero la de abajo y encima la de arriba, y las filas se empujan a su
    lugar.
 3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
-   en la placa central mostrando la tirada real, que decide el corte del
-   muro.
+   mostrando la tirada real, que decide el corte del muro: en la placa
+   central (Frutiger Aero) o a la derecha del oya, donde se quedan toda la
+   mano (Tetsuya).
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
    uno y el primer robo del oya; cada bloque se levanta por encima de los
    muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y

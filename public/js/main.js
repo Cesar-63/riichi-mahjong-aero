@@ -179,8 +179,11 @@ function showGame(v) {
   }
   renderPartner(v, ui);
   // A win first plays its reveal (3D) or lets the call show (2D) before the
-  // score screen opens.
-  const winKey = v.phase === 'result' && v.result && v.result.type === 'agari' ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
+  // score screen opens; in 3D an exhaustive draw first lays the hands down
+  // (tenpai face up, noten face down).
+  const res = v.phase === 'result' ? v.result : null;
+  const revealed = res && (res.type === 'agari' || (state.view3d && res.type === 'draw' && !res.abortive));
+  const winKey = revealed ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
   if (winKey && ui.winStarted !== winKey) {
     ui.winStarted = winKey;
     const finish = () => {
@@ -312,11 +315,21 @@ function portraitsHTML(v) {
   }).join('');
 }
 
+// Round, sticks, wall and my own score (shown in the Tetsuya setting, whose
+// table has no centre panel).
+function roundInfoHTML(v) {
+  const me = v.players[v.seat];
+  return `<b>${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局</b>
+    <span>${v.honba}本場</span><span>供託 ${v.kyoutaku}</span><span>残り ${v.wallLeft}</span>
+    <span class="mine"><em class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_KANJI[me.wind]}</em> ${me.score}</span>`;
+}
+
 // Buttons, timer and notices over the 3D canvas (the hand itself is 3D, see
 // three3d/hand3d.js).
 function renderHud(v, ui) {
   const hud = $('#hud3d');
   setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
+  setIfChanged(hud.querySelector('.roundinfo'), roundInfoHTML(v));
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;

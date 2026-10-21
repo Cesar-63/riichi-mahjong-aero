@@ -44,6 +44,7 @@ export function createHand3D({ world, kit, onPick }) {
   let legal = new Set();
   let hover = null;
   let last = null;
+  let theme = 'aero';
 
   function fit() {
     const w = renderer.domElement.clientWidth || window.innerWidth;
@@ -104,16 +105,22 @@ export function createHand3D({ world, kit, onPick }) {
       }
     }
     band.scale.set(total + size * 1.6, size * H + size * 0.9, 1);
+    // no band while the hand is put away (intro, reveals)
+    band.visible = theme === 'tetsuya' && visible > 0;
     band.position.set(camera.right / 2, y, -400);
   }
 
+  // tiles move at a steady speed (no easing), growing to full size as they arrive
+  const goal = new THREE.Vector3();
   world.onTick((dt) => {
-    const k = 1 - Math.exp(-dt * 13);
+    const step = size * 26 * dt;
     for (const [id, t] of tiles) {
       const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
-      t.mesh.position.x += (t.target.x - t.mesh.position.x) * k;
-      t.mesh.position.y += (t.target.y + lift - t.mesh.position.y) * k;
-      t.scale += (size - t.scale) * k;
+      goal.set(t.target.x, t.target.y + lift, 0);
+      const left = t.mesh.position.distanceTo(goal);
+      if (left <= step) t.mesh.position.copy(goal);
+      else t.mesh.position.lerp(goal, step / left);
+      t.scale = left <= step ? size : t.scale + (size - t.scale) * Math.min(1, step / left);
       t.mesh.scale.setScalar(t.scale);
     }
   });
@@ -143,7 +150,8 @@ export function createHand3D({ world, kit, onPick }) {
   return {
     layout,
     setTheme(name) {
-      band.visible = name === 'tetsuya';
+      theme = name;
+      band.visible = name === 'tetsuya' && (!last || last[2] > 0);
       ambient.intensity = name === 'tetsuya' ? 0.6 : 0.75;
       key.color.setHex(name === 'tetsuya' ? 0xfff0d8 : 0xffffff);
     },

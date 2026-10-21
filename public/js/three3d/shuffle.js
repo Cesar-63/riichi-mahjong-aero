@@ -1,20 +1,31 @@
 // Tile shuffle for the hand intro: a small 2D simulation (no three.js, so it
-// can be tested in Node). Tiles lie face down as rectangles on the table and
-// are stirred by two "hands" circling around; after every step overlapping
-// rectangles are pushed apart along their separating axis, and every tile
-// is kept inside the playing area and off the centre panel, so tiles slide
-// against each other instead of passing through one another.
+// can be tested in Node). Tiles lie face down as rectangles and swirl round
+// the table in a ring, each at its own pace, drifting in and out and
+// turning; after every step overlapping rectangles are pushed apart along
+// their separating axis, so tiles jostle and slide against each other
+// instead of passing through one another. The push is soft while they
+// swirl (a corner may dip into a neighbour for a moment, as real tiles ride
+// over each other) and firm once the pile is squeezed. Before the walls are built the
+// ring opens into a square that stays inside the wall lines and the tiles
+// are squared up.
 
-export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = Math.random }) {
+export function createShuffle({ count, hw, hh, ring, square, panel, gap = 0.05, rand = Math.random }) {
   const ex = hw + gap / 2; // collision half extents (with a little air between tiles)
   const ez = hh + gap / 2;
+  // playing area: a ring (rIn..rOut) inside a square of half size `square`,
+  // never on the centre panel (square of half size `panel`)
+  let [rIn, rOut] = ring;
+  let half = square;
   const tiles = [];
-  // start on a shuffled grid inside the area, so nothing overlaps at frame 0
+  // start on a shuffled grid inside the ring, so nothing overlaps at frame 0
   const cells = [];
-  const sx = 2 * ex + 0.08;
-  const sz = 2 * ez + 0.08;
-  for (let z = -outer + sz / 2; z <= outer - sz / 2; z += sz) {
-    for (let x = -outer + sx / 2; x <= outer - sx / 2; x += sx) {
+  const sx = 2 * ex + 0.12;
+  const sz = 2 * ez + 0.12;
+  const reach = Math.hypot(ex, ez);
+  for (let z = -rOut; z <= rOut; z += sz) {
+    for (let x = -rOut; x <= rOut; x += sx) {
+      const r = Math.hypot(x, z);
+      if (r + reach > rOut || r - reach < rIn) continue;
       if (Math.abs(x) < panel + sx / 2 && Math.abs(z) < panel + sz / 2) continue;
       cells.push([x, z]);
     }
@@ -25,54 +36,35 @@ export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = 
   }
   for (let i = 0; i < count; i++) {
     const [x, z] = cells[i % cells.length];
-    tiles.push({ x, z, yaw: (rand() - 0.5) * 0.1, vx: 0, vz: 0, spin: 0, active: true });
+    tiles.push({
+      x, z, yaw: 0, vx: 0, vz: 0, active: true,
+      home: Math.hypot(x, z), // radius it drifts around
+      pace: 0.75 + rand() * 0.5, // relative angular speed
+      spin: (rand() - 0.5) * 2.8, // own turning, rad/s
+      wob: rand() * Math.PI * 2,
+    });
   }
-  const phase = rand() * Math.PI * 2;
   let time = 0;
-
-  // velocity of the stirring at (x, z): two hands sweeping circles
-  function field(x, z) {
-    // the whole pile turns, changing direction now and then ...
-    const w = 0.75 * Math.sin(time * 1.1 + phase);
-    let vx = -z * w;
-    let vz = x * w;
-    let curl = w;
-    // ... while two hands stir small circles in it
-    for (let h = 0; h < 2; h++) {
-      const a = phase + h * Math.PI + time * 0.9 * (h ? -1 : 1);
-      const R = 6.4 + Math.sin(time * 1.3 + h) * 1.4;
-      const dx = x - Math.cos(a) * R;
-      const dz = z - Math.sin(a) * R;
-      const f = Math.exp(-(dx * dx + dz * dz) / 6) * 1.6 * (h ? -1 : 1);
-      vx += -dz * f;
-      vz += dx * f;
-      curl += f * 0.8;
-    }
-    return [vx, vz, curl];
-  }
 
   const axes = (t) => {
     const c = Math.cos(t.yaw);
     const s = Math.sin(t.yaw);
     return [c, -s, s, c]; // local x axis (ux, uz), local z axis (vx, vz)
   };
-  // minimum translation pushing b out of a, or null
+  // reach of a rectangle along a unit direction
+  const support = (ax, nx, nz) => ex * Math.abs(ax[0] * nx + ax[1] * nz) + ez * Math.abs(ax[2] * nx + ax[3] * nz);
+
+  // minimum translation pushing b out of a: [x, z, depth], or null
   function separate(a, ax, b, bx) {
     const dx = b.x - a.x;
     const dz = b.z - a.z;
-    const reach = 2 * Math.hypot(ex, ez);
-    if (dx * dx + dz * dz > reach * reach) return null;
+    if (dx * dx + dz * dz > 4 * reach * reach) return null;
     let best = Infinity;
     let nx = 0;
     let nz = 0;
-    const list = [ax[0], ax[1], ax[2], ax[3], bx[0], bx[1], bx[2], bx[3]];
-    for (let k = 0; k < 8; k += 2) {
-      const px = list[k];
-      const pz = list[k + 1];
-      const ra = ex * Math.abs(ax[0] * px + ax[1] * pz) + ez * Math.abs(ax[2] * px + ax[3] * pz);
-      const rb = ex * Math.abs(bx[0] * px + bx[1] * pz) + ez * Math.abs(bx[2] * px + bx[3] * pz);
+    for (const [px, pz] of [[ax[0], ax[1]], [ax[2], ax[3]], [bx[0], bx[1]], [bx[2], bx[3]]]) {
       const d = dx * px + dz * pz;
-      const ov = ra + rb - Math.abs(d);
+      const ov = support(ax, px, pz) + support(bx, px, pz) - Math.abs(d);
       if (ov <= 0) return null;
       if (ov < best) {
         best = ov;
@@ -82,34 +74,15 @@ export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = 
     }
     return [nx * best, nz * best, best];
   }
-  const PANEL_AX = [1, 0, 0, 1];
-  function confine(t, ax) {
-    // footprint half sizes along world x / z
-    const fx = ex * Math.abs(ax[0]) + ez * Math.abs(ax[2]);
-    const fz = ex * Math.abs(ax[1]) + ez * Math.abs(ax[3]);
-    t.x = Math.max(-outer + fx, Math.min(outer - fx, t.x));
-    t.z = Math.max(-outer + fz, Math.min(outer - fz, t.z));
-    const m = separatePanel(t, ax);
-    if (m) {
-      t.x += m[0];
-      t.z += m[1];
-    }
-  }
-  // the centre panel: a square of half size `panel`
+
+  // the centre panel, a square of half size `panel`
   function separatePanel(t, ax) {
-    const dx = t.x;
-    const dz = t.z;
     let best = Infinity;
     let nx = 0;
     let nz = 0;
-    const list = [PANEL_AX[0], PANEL_AX[1], PANEL_AX[2], PANEL_AX[3], ax[0], ax[1], ax[2], ax[3]];
-    for (let k = 0; k < 8; k += 2) {
-      const px = list[k];
-      const pz = list[k + 1];
-      const ra = panel * (Math.abs(px) + Math.abs(pz));
-      const rb = ex * Math.abs(ax[0] * px + ax[1] * pz) + ez * Math.abs(ax[2] * px + ax[3] * pz);
-      const d = dx * px + dz * pz;
-      const ov = ra + rb - Math.abs(d);
+    for (const [px, pz] of [[1, 0], [0, 1], [ax[0], ax[1]], [ax[2], ax[3]]]) {
+      const d = t.x * px + t.z * pz;
+      const ov = panel * (Math.abs(px) + Math.abs(pz)) + support(ax, px, pz) - Math.abs(d);
       if (ov <= 0) return null;
       if (ov < best) {
         best = ov;
@@ -120,10 +93,31 @@ export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = 
     return [nx * best, nz * best];
   }
 
-  // Advance by dt seconds. `stir` (0..1) scales the hands' strength; `align`
-  // (0..1) squares the tiles up, so a tighter pile still fits.
+  function confine(t, ax) {
+    const r = Math.hypot(t.x, t.z) || 1e-6;
+    const nx = t.x / r;
+    const nz = t.z / r;
+    const e = support(ax, nx, nz);
+    const target = Math.min(Math.max(r, rIn + e), rOut - e);
+    if (target !== r) {
+      t.x = nx * target;
+      t.z = nz * target;
+    }
+    const fx = support(ax, 1, 0);
+    const fz = support(ax, 0, 1);
+    t.x = Math.max(-half + fx, Math.min(half - fx, t.x));
+    t.z = Math.max(-half + fz, Math.min(half - fz, t.z));
+    const m = separatePanel(t, ax);
+    if (m) {
+      t.x += m[0];
+      t.z += m[1];
+    }
+  }
+
+  // Advance by dt seconds. `stir` (0..1) scales the swirl; `align` (0..1)
+  // squares the tiles up, so a tighter pile still fits.
   function step(dt, stir = 1, align = 0) {
-    // small steps keep the pushes small (slow frames take two)
+    // small steps keep the pushes small (slow frames take several)
     dt = Math.min(dt, 1 / 15);
     const n = Math.ceil(dt * 50);
     for (let i = 0; i < n; i++) substep(dt / n, stir, align);
@@ -131,32 +125,40 @@ export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = 
   function substep(dt, stir, align) {
     time += dt;
     const live = tiles.filter((t) => t.active);
-    const k = Math.min(1, dt * 5);
+    // the swirl picks up speed during the first moments
+    const omega = 1.3 * Math.min(1, time / 0.4) * stir;
+    const k = Math.min(1, dt * 8);
     for (const t of live) {
-      const [fx, fz, curl] = field(t.x, t.z);
-      t.vx += (fx * stir - t.vx) * k;
-      t.vz += (fz * stir - t.vz) * k;
-      t.spin += (curl * stir - t.spin) * k;
+      const r = Math.hypot(t.x, t.z) || 1e-6;
+      // round the table at its own pace, drifting in and out of its lane
+      const w = omega * t.pace * (1 + 0.3 * Math.sin(time * 1.9 + t.wob));
+      const drift = (t.home + Math.sin(time * 2.3 + t.wob) * 1.1 - r) * 2.2 * stir;
+      const fx = -t.z * w + (t.x / r) * drift;
+      const fz = t.x * w + (t.z / r) * drift;
+      t.vx += (fx - t.vx) * k;
+      t.vz += (fz - t.vz) * k;
       t.px = t.x;
       t.pz = t.z;
       t.x += t.vx * dt;
       t.z += t.vz * dt;
-      t.yaw += t.spin * dt;
+      t.yaw += (t.spin * stir + w * 0.6) * dt;
       if (align) {
         const q = Math.PI / 2;
         t.yaw += (Math.round(t.yaw / q) * q - t.yaw) * Math.min(1, align * dt * 8);
       }
     }
-    for (let it = 0; it < (align ? 10 : 8); it++) {
+    // soft while swirling, firm when squaring up
+    const firm = 0.35 + 0.65 * align;
+    for (let it = 0; it < (align ? 10 : 3); it++) {
       const ax = live.map(axes);
       for (let i = 0; i < live.length; i++) {
         for (let j = i + 1; j < live.length; j++) {
           const m = separate(live[i], ax[i], live[j], ax[j]);
           if (!m) continue;
-          live[i].x -= m[0] / 2;
-          live[i].z -= m[1] / 2;
-          live[j].x += m[0] / 2;
-          live[j].z += m[1] / 2;
+          live[i].x -= (m[0] / 2) * firm;
+          live[i].z -= (m[1] / 2) * firm;
+          live[j].x += (m[0] / 2) * firm;
+          live[j].z += (m[1] / 2) * firm;
         }
       }
       live.forEach((t, i) => confine(t, ax[i]));
@@ -186,9 +188,10 @@ export function createShuffle({ count, hw, hh, outer, panel, gap = 0.05, rand = 
     tiles,
     step,
     maxOverlap,
-    // shrink or grow the square the pile must stay in
-    setOuter(v) {
-      outer = v;
+    // reshape the area: ring radii and the square's half size
+    setArea({ ring: r = [rIn, rOut], square: s = half }) {
+      [rIn, rOut] = r;
+      half = s;
     },
   };
 }
