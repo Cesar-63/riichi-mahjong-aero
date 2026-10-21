@@ -12,12 +12,12 @@ export function createHand3D({ world, kit, onPick }) {
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(0, 1, 1, 0, -2000, 2000);
   camera.position.z = 1000;
-  const ambient = new THREE.AmbientLight(0xffffff, 0.75);
-  const key = new THREE.DirectionalLight(0xffffff, 1.9);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  const key = new THREE.DirectionalLight(0xfff0d8, 1.9);
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 
-  // dark band behind the hand (Tetsuya setting only)
+  // dark band behind the hand
   const bandCanvas = document.createElement('canvas');
   bandCanvas.width = 512;
   bandCanvas.height = 128;
@@ -45,7 +45,6 @@ export function createHand3D({ world, kit, onPick }) {
   let hover = null;
   let last = null;
   let lastDrawn = null; // drawn tile of the previous layout
-  let theme = 'aero';
 
   function fit() {
     const w = renderer.domElement.clientWidth || window.innerWidth;
@@ -117,7 +116,7 @@ export function createHand3D({ world, kit, onPick }) {
     }
     band.scale.set(total + size * 1.6, size * H + size * 0.9, 1);
     // no band while the hand is put away (intro, reveals)
-    band.visible = theme === 'tetsuya' && visible > 0;
+    band.visible = visible > 0;
     band.position.set(camera.right / 2, y, -400);
   }
 
@@ -173,12 +172,6 @@ export function createHand3D({ world, kit, onPick }) {
   fit();
   return {
     layout,
-    setTheme(name) {
-      theme = name;
-      band.visible = name === 'tetsuya' && (!last || last[2] > 0);
-      ambient.intensity = name === 'tetsuya' ? 0.6 : 0.75;
-      key.color.setHex(name === 'tetsuya' ? 0xfff0d8 : 0xffffff);
-    },
     // test hook: screen point (top-left origin) of a hand tile
     tileOnScreen(id) {
       const t = tiles.get(id);
