@@ -56,7 +56,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // comes straight down. It turns while it rises when it ends lying (so a
   // discard is already flat before it reaches the pond) and while it comes
   // down when it ends standing (a draw only stands up at the hand).
-  const SPEED = 96; // world units per second
+  const SPEED = 48; // world units per second
+  const FAST = 96; // draws and discards: they have to feel immediate
+  const FAST_LANES = new Set(['discard', 'draw']);
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -121,7 +123,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         // a waiting discard would sit inside its hand: it shows when it sets off
         if (lane === 'discard' && m.o.wait > 0) m.o.obj.visible = false;
       }
-      at += (Math.max(...group.map((m) => m.o.path.total)) / SPEED) * 1000;
+      at += Math.max(...group.map((m) => m.o.path.total / m.o.path.speed)) * 1000;
     }
     laneEnd = at;
   }
@@ -142,12 +144,14 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         objects.set(key, o);
         if (!samePose(from, d.target)) {
           o.path = makePath(from, d.target, from);
+          o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
           o.dist = 0;
           o.wait = 0;
           if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
         o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
+        o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
         o.dist = 0;
         o.wait = 0;
         if (d.lane) moves.push({ o, lane: d.lane });
@@ -224,7 +228,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // result } and { phase: 'done' } (the score screen waits for 'done'). An
   // exhaustive draw lays every hand down the same way (syncDraw) and also
   // ends with 'done'.
-  const WIN = { callMs: 900, tileMs: 14, dropMs: 45, flyMs: 130, flyGap: 35, holdMs: 1800 };
+  const WIN = { callMs: 900, tileMs: 27, dropMs: 80, flyMs: 240, flyGap: 60, holdMs: 1800 };
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -232,7 +236,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 700, tileMs: 13, holdMs: 2200 };
+  const DRAW = { startMs: 700, tileMs: 25, holdMs: 2200 };
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -526,7 +530,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       if (o.path && o.wait > 0) o.wait -= dt * 1000;
       else if (o.path) {
         o.obj.visible = true;
-        o.dist += SPEED * dt;
+        o.dist += o.path.speed * dt;
         poseAt(o.path, o.dist, o.obj);
         if (o.dist >= o.path.total) o.path = null;
       }

@@ -62,9 +62,11 @@ export function createHand3D({ world, kit, onPick }) {
   function layout(v, ui, visible = Infinity, spawn = null) {
     last = [v, ui, visible, null];
     const ids = [...v.hand, ...(v.drawn !== null ? [v.drawn] : [])];
-    const gap = v.drawn !== null ? size * 0.45 : 0;
+    const gap = size * 0.45;
     const pitch = size * (1 + GAP * 1.5); // a visible line of air between tiles
-    const total = ids.length * pitch - (pitch - size) + gap;
+    // the hand is laid out as if it always held a drawn tile, so the slot for
+    // the draw stays free and the hand does not shift on every draw
+    const total = (v.hand.length + 1) * pitch - (pitch - size) + gap;
     const x0 = (camera.right - total) / 2 + size / 2;
     const y = 16 + (size * H) / 2;
     const o = v.options;
@@ -86,6 +88,7 @@ export function createHand3D({ world, kit, onPick }) {
           mesh.position.set(spawn.x, spawn.y, 0);
           t.scale = size * 0.45;
           t.wait = spawn.wait || 0; // until the previous play has landed
+          t.fast = true; // a draw flies in at draw speed
         } else {
           mesh.position.copy(target).add(new THREE.Vector3(0, size * 1.2, 0));
           t.scale = size;
@@ -114,15 +117,17 @@ export function createHand3D({ world, kit, onPick }) {
   // tiles move at a steady speed (no easing), growing to full size as they arrive
   const goal = new THREE.Vector3();
   world.onTick((dt) => {
-    const step = size * 156 * dt;
     for (const [id, t] of tiles) {
       if (t.wait > 0) {
         t.wait -= dt * 1000;
         continue;
       }
+      // a fresh draw flies twice as fast as the hand rearranging
+      const step = size * (t.fast ? 156 : 78) * dt;
       const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
       const left = t.mesh.position.distanceTo(goal);
+      if (left <= step) t.fast = false;
       if (left <= step) t.mesh.position.copy(goal);
       else t.mesh.position.lerp(goal, step / left);
       t.scale = left <= step ? size : t.scale + (size - t.scale) * Math.min(1, step / left);

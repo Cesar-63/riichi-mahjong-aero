@@ -124,8 +124,9 @@ usa.
   mientras sube (un descarte ya va acostado boca arriba, o de lado si es de
   riichi, antes de llegar a los descartes); si termina parada, gira mientras
   baja (un robo solo se para al llegar a la mano). Tu mano 3D y el palito de
-  riichi también se mueven a velocidad constante. Son casi inmediatos (un
-  descarte tarda una décima de segundo) y **las jugadas no se pisan**: el robo
+  riichi también se mueven a velocidad constante. Robar y descartar son casi
+  inmediatos (un descarte tarda una décima de segundo); llamadas, dora y el
+  resto van a la mitad de esa velocidad. **Las jugadas no se pisan**: el robo
   del siguiente jugador espera a que termine de caer el descarte anterior, y
   lo mismo las llamadas y el palito de riichi, aunque lleguen varias jugadas
   en la misma actualización del servidor.
@@ -136,8 +137,9 @@ usa.
 - Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
   una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
   pantalla, levemente inclinadas para que se vea el canto superior, y con el
-  tamaño ajustado al ancho y alto de la pantalla. La ficha robada vuela desde
-  su hueco del muro hasta la mano; durante el reparto la mano se llena a medida
+  tamaño ajustado al ancho y alto de la pantalla. La mano siempre deja libre
+  el lugar de la ficha robada, así no se corre cada vez que robas. La ficha
+  robada vuela desde su hueco del muro hasta ese lugar; durante el reparto la mano se llena a medida
   que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
