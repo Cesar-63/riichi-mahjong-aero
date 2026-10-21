@@ -43,13 +43,23 @@ function upstashStore(url, token) {
     setnx: async (k, v, px) => (await one('SET', k, v, 'NX', 'PX', String(px))) === 'OK',
     del: (k) => one('DEL', k),
     hset: (k, f, v, px) => pipeline([['HSET', k, f, v], ['PEXPIRE', k, String(px)]]),
-    hgetall: async (k) => {
-      const flat = (await one('HGETALL', k)) || [];
-      const obj = {};
-      for (let i = 0; i < flat.length; i += 2) obj[flat[i]] = flat[i + 1];
-      return obj;
+    hgetall: async (k) => hashOf(await one('HGETALL', k)),
+    // One round trip: take the lock and, if it was free, read the room and
+    // the heartbeats. Nobody else writes once the lock is ours, so what the
+    // same pipeline reads after the SET NX is current.
+    lockLoad: async (lockKey, lockId, px, roomKey, seenKey) => {
+      const [ok, raw, seen] = await pipeline([['SET', lockKey, lockId, 'NX', 'PX', String(px)], ['GET', roomKey], ['HGETALL', seenKey]]);
+      return ok === 'OK' ? { got: true, raw, seen: hashOf(seen) } : { got: false };
     },
+    // One round trip: write the entries and release the lock.
+    saveUnlock: (entries, lockKey) => pipeline([...entries.map(([k, v, px]) => ['SET', k, v, 'PX', String(px)]), ['DEL', lockKey]]),
   };
+}
+
+function hashOf(flat) {
+  const obj = {};
+  for (let i = 0; i < (flat || []).length; i += 2) obj[flat[i]] = flat[i + 1];
+  return obj;
 }
 
 function memoryStore() {
@@ -85,5 +95,14 @@ function memoryStore() {
       data.set(k, e);
     },
     hgetall: async (k) => ({ ...(live(k)?.v || {}) }),
+    lockLoad: async (lockKey, lockId, px, roomKey, seenKey) => {
+      if (live(lockKey)) return { got: false };
+      data.set(lockKey, { v: lockId, exp: Date.now() + px });
+      return { got: true, raw: live(roomKey)?.v ?? null, seen: { ...(live(seenKey)?.v || {}) } };
+    },
+    saveUnlock: async (entries, lockKey) => {
+      for (const [k, v, px] of entries) data.set(k, { v, exp: Date.now() + px });
+      data.delete(lockKey);
+    },
   };
 }

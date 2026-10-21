@@ -10,6 +10,7 @@ import { tileset } from '../render.js';
 export const W = 1; // width
 export const H = 4 / 3; // height (face long side)
 export const D = 0.74; // thickness
+export const GAP = 0.045; // air between neighbouring tiles, so they never fuse into one block
 const BACK_SHARE = 0.36; // part of the thickness in the back colour
 
 const LOOKS = {
@@ -75,6 +76,17 @@ export function createTileKit(renderer) {
     g.lineTo(w - r / 2, r / 2);
     g.stroke();
   }
+  // thin dark line along every edge, so neighbouring tiles always read as
+  // separate pieces (on every face, so it also shows on the sides)
+  function outline(g, w, h, color, lw) {
+    g.lineWidth = lw;
+    g.strokeStyle = color;
+    g.strokeRect(lw / 2, lw / 2, w - lw, h - lw);
+  }
+  const edges = canvasTex(64, 64);
+  edges.g.fillStyle = '#fff';
+  edges.g.fillRect(0, 0, 64, 64);
+  outline(edges.g, 64, 64, 'rgba(60, 46, 26, .7)', 4);
 
   const back = canvasTex(192, 256);
   function paintBack() {
@@ -86,6 +98,7 @@ export function createTileKit(renderer) {
     g.fillStyle = grad;
     g.fillRect(0, 0, 192, 256);
     bevel(g, 192, 256, 'rgba(255,255,255,.45)', 'rgba(0,0,0,.25)', 10);
+    outline(g, 192, 256, 'rgba(0,0,0,.5)', 4);
     back.t.needsUpdate = true;
   }
 
@@ -130,13 +143,14 @@ export function createTileKit(renderer) {
       }
     }
     bevel(g, 240, 320, 'rgba(255,255,255,.95)', 'rgba(120,100,60,.38)', 12);
+    outline(g, 240, 320, 'rgba(70,55,30,.6)', 5);
     f.t.needsUpdate = true;
   }
 
   // ---------------------------------------------------------- materials
   const phong = (opts) => new THREE.MeshPhongMaterial({ specular: 0x222222, shininess: look.shine, ...opts });
   const backMat = phong({ map: back.t });
-  const sideMat = phong({ vertexColors: true });
+  const sideMat = phong({ vertexColors: true, map: edges.t });
 
   function setLook(name) {
     look = LOOKS[name] || LOOKS.aero;

@@ -84,18 +84,24 @@ instante, sin recargar.
 - **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
   botones brillantes tipo Aqua.
 - **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
-  mesa de madera (con vetas) y tapete verde bajo una lámpara cálida y sillas en
+  mesa de madera (con vetas y el marco cortado en diagonal en las esquinas,
+  como un marco de cuadro) y tapete verde bajo una lámpara cálida y sillas en
   penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
   brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
   una franja oscura con resplandor azul y avisos de llamada en letra blanca
-  con contorno negro.
+  con contorno negro. En 3D la mesa no tiene placa central: los dados quedan
+  toda la mano sobre el tapete a la derecha del oya (quien los tiene de su
+  lado reparte), y la ronda, los honba, los depósitos, las fichas que quedan
+  y tus puntos se ven en un recuadro arriba a la izquierda.
 
-## Vista 3D (beta)
+## Vista 3D
 
-Prototipo con [three.js](https://threejs.org) (0.170, MIT, incluido en
-`public/vendor/three/`, sin build). Se activa en **☰ Menú → Vista 3D (beta)**
-o abriendo la página con `?3d=1` (`?3d=0` la desactiva); la elección se
-recuerda en el navegador. three.js solo se descarga cuando se usa.
+Hecha con [three.js](https://threejs.org) (0.170, MIT, incluido en
+`public/vendor/three/`, sin build). Es la vista por defecto; la vista 2.5D
+clásica se elige en el menú principal (**Vista**) o en **☰ Menú → Vista**
+durante la partida, o abriendo la página con `?3d=0` (`?3d=1` fuerza la 3D).
+La elección se recuerda en el navegador. three.js solo se descarga cuando se
+usa.
 
 - Pantalla completa en cualquier proporción (16:9, ultrawide, móvil vertical).
 - Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
@@ -105,9 +111,25 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
   redondeadas separadas, así no hay escalón entre el frente y el reverso). El
   canto usa colores por vértice (marfil hacia la cara y una franja del color
   del reverso atrás) y el bisel está pintado en las texturas, como se hacía en
-  PS2. Iluminación Phong mate, sin reflejos de entorno.
+  PS2. Iluminación Phong mate, sin reflejos de entorno. Cada cara lleva una
+  línea oscura fina en el borde y entre fichas vecinas queda siempre un poco
+  de aire (muros, manos, descartes, llamadas y tu mano), así nunca se ven
+  fundidas en un solo bloque.
 - Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
-  se desliza a su lugar, así robos, descartes y llamadas se animan solos.
+  viaja a su lugar, así robos, descartes y llamadas se animan solos.
+- **Movimientos firmes**: las fichas se mueven a velocidad constante por
+  tramos rectos, sin aceleraciones. Una ficha que cambia de lugar o se da
+  vuelta primero sube por encima de todo lo que hay en la mesa (muros
+  incluidos), cruza a esa altura y baja derecho. Si termina acostada, gira
+  mientras sube (un descarte ya va acostado boca arriba, o de lado si es de
+  riichi, antes de llegar a los descartes); si termina parada, gira mientras
+  baja (un robo solo se para al llegar a la mano). Tu mano 3D y el palito de
+  riichi también se mueven a velocidad constante. Robar y descartar son casi
+  inmediatos (un descarte tarda una décima de segundo); llamadas, dora y el
+  resto van a la mitad de esa velocidad. **Las jugadas no se pisan**: el robo
+  del siguiente jugador espera a que termine de caer el descarte anterior, y
+  lo mismo las llamadas y el palito de riichi, aunque lleguen varias jugadas
+  en la misma actualización del servidor.
 - **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
   normal (evita sombras despegadas), placa central opaca para que reciba
   sombras, y sombras de contacto suaves bajo cada ficha apoyada (estilo PS2),
@@ -115,13 +137,28 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
 - Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
   una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
   pantalla, levemente inclinadas para que se vea el canto superior, y con el
-  tamaño ajustado al ancho y alto de la pantalla. La ficha robada vuela desde
-  su hueco del muro hasta la mano; durante el reparto la mano se llena a medida
+  tamaño ajustado al ancho y alto de la pantalla. La mano siempre deja libre
+  el lugar de la ficha robada, así no se corre cada vez que robas. La ficha
+  robada vuela desde su hueco del muro hasta ese lugar. Al descartar de la
+  mano (tedashi), la ficha robada sube, pasa por encima de las demás y baja a
+  su lugar mientras las otras le hacen espacio, como en Tetsuya; durante el reparto la mano se llena a medida
   que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
+- **Cajón de puntos**: el botón **点棒 Puntos** (siempre a la izquierda, justo
+  encima de tu mano, como los botones de llamada a la derecha) hace que la
+  cámara mire hacia
+  tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
+  10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
+  1 + 2 + 4 + 10). Los palitos son los de un juego japonés tradicional,
+  blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
+  un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
+  chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
+  uno negro grande hacia cada extremo. Encima del cajón aparece tu puntaje y alrededor el de los
+  demás en su posición (izquierda = kamicha, arriba = toimen, derecha =
+  shimocha), con la diferencia con el tuyo. Un toque lo cierra.
 - **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
   derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
   modo por equipos; el que tiene el turno brilla.
@@ -130,16 +167,25 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
 
 ### Animaciones de riichi y de victoria (3D)
 
-- **Riichi**: aviso grande "リーチ"; la ficha baja desde arriba girando hasta
-  quedar de lado en los descartes. Si nadie hace ron sobre ella (el servidor
-  recién entonces marca el riichi), un palito de 1000 puntos en 3D entra
-  girando y se acomoda en la placa central frente al jugador.
-- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador caen boca
-  arriba una por una frente a su asiento (la ganadora, separada y brillando),
-  la cámara muestra la mesa entera, los indicadores de dora brillan y los de
-  ura dora salen de debajo del muro muerto y se voltean, con un cartel que
-  cuenta dora, ura y aka. Después se abre la pantalla de resultado. En 2D el
-  resultado se abre tras un momento, para que se vea el aviso.
+- **Riichi**: aviso grande "リーチ"; la ficha sale de la mano, se acuesta de
+  lado mientras sube y cae así en los descartes. Si nadie hace ron sobre ella
+  (el servidor recién entonces marca el riichi), un palito de 1000 puntos en
+  3D entra girando y se acomoda frente al jugador (en la placa central, o en
+  el tapete en el salón Tetsuya).
+- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador se tumban
+  boca arriba una por una, girando sobre su canto a ritmo parejo (la ganadora,
+  separada y brillando), y la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
+  una fila con cartel **ドラ**: los indicadores de dora vuelan desde el muro
+  muerto hasta ella; con riichi sigue el cartel **裏ドラ** y los ura dora salen
+  de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
+  fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
+  rosado: ura dora) y un cartel cuenta dora, ura y aka. Después se abre la
+  pantalla de resultado. En 2D el resultado se abre tras un momento, para que
+  se vea el aviso.
+- **Empate por agotamiento** (3D): todas las manos se tumban a la vez, ficha
+  por ficha: las que están en tenpai boca arriba con el cartel **テンパイ**, y
+  las noten boca abajo con **ノーテン**. Después se abre la pantalla de
+  resultado. Los empates abortivos van directo al resultado.
 
 ### Animación de inicio de cada mano
 
@@ -147,14 +193,28 @@ Al empezar cada mano el servidor pausa los relojes y los bots durante
 `INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo giran revueltas sobre la mesa.
-2. **Armar los muros**: forman las cuatro filas de pilas de dos, un poco hacia
-   afuera, y se empujan a su lugar.
-3. **Tirar los dados**: rebotan desde el lado del oya y caen mostrando la
-   tirada real, que decide el corte del muro.
+1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
+   el centro de la mesa (en Frutiger Aero la placa central se hunde en la
+   mesa mientras tanto y vuelve a subir con los muros), cada una a su ritmo,
+   acercándose y alejándose y dándose vuelta, mientras dos "manos" las
+   arremolinan. Es una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
+   fichas se empujan y se deslizan unas contra otras (una esquina puede
+   montarse un momento sobre la vecina, como pasa de verdad, pero nunca se
+   atraviesan); al final se juntan y se enderezan para dejar lugar a los
+   muros.
+2. **Armar los muros**: cada ficha sube de la pila, cruza por encima de las
+   demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
+   primero la de abajo y encima la de arriba, y las filas se empujan a su
+   lugar.
+3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
+   mostrando la tirada real, que decide el corte del muro: en la placa
+   central (Frutiger Aero) o a la derecha del oya, donde se quedan toda la
+   mano (Tetsuya).
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
-   uno y el primer robo del oya; tu mano se llena a medida que llegan tus
-   fichas. Al final se voltea el indicador de dora.
+   uno y el primer robo del oya; cada bloque se levanta por encima de los
+   muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y
+   tu mano se llena a medida que llegan tus fichas. Al final se voltea el
+   indicador de dora.
 
 En 2D se muestra un aviso con la fase y los dados rodando. Quien se conecta a
 mitad de la pausa ve la animación acortada.
@@ -217,7 +277,7 @@ invocación puede caer en una instancia distinta): Redis es obligatorio en
 producción.
 
 Variables opcionales: `TURN_SECONDS` (5), `BANK_SECONDS` (10),
-`RESULT_SECONDS` (12, tiempo para cerrar la pantalla de resultado).
+`RESULT_SECONDS` (16, tiempo para cerrar la pantalla de resultado).
 
 ### Costo aproximado
 
@@ -264,7 +324,11 @@ test/                    node:test
 
 El estado completo de la partida es un objeto JSON. Cada request: toma un
 lock de la sala en Redis, carga el estado, aplica la acción y los
-temporizadores vencidos, y guarda. Cada jugador recibe solo su vista (nunca
+temporizadores vencidos, y guarda; son dos idas y vueltas a Redis (tomar el
+lock y leer en un pipeline, guardar y soltar el lock en otro). Al descartar,
+el cliente no espera al servidor: dibuja de inmediato la ficha fuera de la
+mano y en los descartes, y la respuesta del servidor la confirma (o, si la
+rechaza, la devuelve a la mano). Cada jugador recibe solo su vista (nunca
 las manos ajenas ni la pared).
 
 ## Limitaciones conocidas

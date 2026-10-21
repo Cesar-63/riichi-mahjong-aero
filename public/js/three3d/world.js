@@ -50,10 +50,12 @@ export function createWorld(container, initialTheme = 'aero') {
   const tickersEarly = [];
   const overlays = [];
   renderer.autoClear = false;
-  // Two camera views: 'player' (low, close to the player's side, Tetsuya
-  // style) and 'overview' (the whole table). Portrait screens always use the
-  // overview, since the low view would cut the table's width.
-  const views = { player: null, overview: null };
+  // Camera views: 'player' (low, close to the player's side, Tetsuya style),
+  // 'overview' (the whole table) and 'drawer' (looking down at the point
+  // stick drawer at the player's edge). Portrait screens use the overview
+  // instead of the player view, since the low view would cut the table's
+  // width.
+  const views = { player: null, overview: null, drawer: null };
   let mode = 'player';
   let forced = null;
   const look = new THREE.Vector3();
@@ -74,6 +76,10 @@ export function createWorld(container, initialTheme = 'aero') {
     views.player = portrait ? views.overview : {
       pos: new THREE.Vector3(0, 14.5, 24),
       target: new THREE.Vector3(0, -0.6, -2.8),
+    };
+    views.drawer = {
+      pos: new THREE.Vector3(0, portrait ? 13 : 9.5, portrait ? 23 : 21.5),
+      target: new THREE.Vector3(0, -1.1, 15.3),
     };
     camera.updateProjectionMatrix();
     if (!snapped) {
@@ -248,6 +254,48 @@ function woodTexture(base, dark, light) {
   return tex;
 }
 
+// One side of a picture-frame style border: a trapezoid (inner edge `inner`
+// long, outer edge 2 * width longer) extruded to `height`, centred on its
+// own origin, with the outside along +z and a small rounded edge. The wood
+// grain runs along the rail, so it changes direction at every mitre.
+function mitredRail(inner, width, height) {
+  const a = inner / 2;
+  const b = inner / 2 + width;
+  const shape = new THREE.Shape([
+    new THREE.Vector2(-a, -width / 2),
+    new THREE.Vector2(a, -width / 2),
+    new THREE.Vector2(b, width / 2),
+    new THREE.Vector2(-b, width / 2),
+  ]);
+  const bevel = 0.07;
+  const L = 2 * b;
+  // u along the rail, v across it (top) or up its sides
+  const uvs = {
+    generateTopUV(geo, v, ia, ib, ic) {
+      return [ia, ib, ic].map((i) => new THREE.Vector2(v[i * 3] / L + 0.5, v[i * 3 + 1] / width + 0.5));
+    },
+    generateSideWallUV(geo, v, ia, ib, ic, id) {
+      return [ia, ib, ic, id].map((i) => new THREE.Vector2(
+        (v[i * 3] + v[i * 3 + 1]) / L + 0.5,
+        v[i * 3 + 2] / height,
+      ));
+    },
+  };
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: height - 2 * bevel,
+    bevelEnabled: true,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelOffset: -bevel,
+    bevelSegments: 2,
+    UVGenerator: uvs,
+  });
+  // shape y -> world z, extrusion -> height, centred like the old box
+  geo.rotateX(Math.PI / 2);
+  geo.translate(0, height / 2 - bevel, 0);
+  return geo;
+}
+
 function addParlour(group) {
   const felt = new THREE.Mesh(
     new THREE.BoxGeometry(TABLE, 0.8, TABLE),
@@ -256,7 +304,8 @@ function addParlour(group) {
   felt.position.y = -0.4;
   felt.receiveShadow = true;
   group.add(felt);
-  // wooden frame: four mitred-looking rails a little above the felt
+  // wooden frame: four rails a little above the felt, cut at 45 degrees so
+  // they meet in a diagonal (mitre) joint at every corner
   const railTex = woodTexture('#9a7448', '#5a3a1c', '#c49a64');
   railTex.repeat.set(2, 1);
   const wood = new THREE.MeshStandardMaterial({ map: railTex, roughness: 0.5, envMapIntensity: 0.6 });
@@ -264,8 +313,9 @@ function addParlour(group) {
   darkTex.repeat.set(2, 1);
   const darkWood = new THREE.MeshStandardMaterial({ map: darkTex, roughness: 0.65 });
   const R = 1.3;
+  const railGeo = mitredRail(TABLE, R, 1.3);
   for (let i = 0; i < 4; i++) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(TABLE + 2 * R, 1.3, R), wood);
+    const rail = new THREE.Mesh(railGeo, wood);
     const a = (i * Math.PI) / 2;
     rail.position.set(Math.sin(a) * (TABLE / 2 + R / 2), 0.05, Math.cos(a) * (TABLE / 2 + R / 2));
     rail.rotation.y = a;

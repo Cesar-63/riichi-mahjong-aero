@@ -1254,3 +1254,106 @@ html[data-theme="tetsuya"] #dora3d {
   box-shadow: 0 0 22px rgba(60, 110, 255, .45);
 }
 html[data-theme="tetsuya"] #dora3d b { color: #f2c94c; text-shadow: 0 2px 0 #000; font-family: Georgia, serif; }
+
+/* ------------------------------------------------------------ round info (3D, Tetsuya table has no centre panel) */
+#hud3d .roundinfo { display: none; }
+html[data-theme="tetsuya"] #hud3d .roundinfo {
+  position: absolute;
+  top: 58px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 3px;
+  border: 2px solid #3a4a7a;
+  background: rgba(10, 15, 34, .88);
+  box-shadow: 0 0 16px rgba(50, 110, 255, .45);
+  color: #e8eefc;
+  font-size: 14px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+html[data-theme="tetsuya"] #hud3d .roundinfo b { font-size: 18px; color: #fff; }
+html[data-theme="tetsuya"] #hud3d .roundinfo .mine { margin-top: 3px; font-weight: 700; color: #ffe27a; }
+html[data-theme="tetsuya"] #hud3d .roundinfo em { font-style: normal; color: #d8e4ff; }
+html[data-theme="tetsuya"] #hud3d .roundinfo em.oya { color: #ff8a8a; }
+@media (max-width: 640px) {
+  html[data-theme="tetsuya"] #hud3d .roundinfo { top: 52px; padding: 5px 8px; font-size: 12px; }
+  html[data-theme="tetsuya"] #hud3d .roundinfo b { font-size: 15px; }
+}
+
+/* ------------------------------------------------------------ points drawer (3D) */
+/* always there, on the left just above the hand, like the call buttons on the right */
+#hud3d .points-btn {
+  position: absolute;
+  left: 24px;
+  bottom: calc(var(--hand3d-h, 110px) + 14px);
+  pointer-events: auto;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 20px;
+}
+#hud3d .status3d { left: 190px; }
+/* the drawer stays in sight in the middle: my score floats right above it,
+   the others sit at the left, top and right edges */
+#scores3d { position: absolute; inset: 0; pointer-events: auto; cursor: pointer; }
+#scores3d.hidden { display: none; }
+#scores3d .sc {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 150px;
+  padding: 10px 16px;
+  text-align: center;
+  border-radius: 18px;
+  color: #0b3550;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .86), rgba(214, 242, 255, .7));
+  border: 1px solid rgba(255, 255, 255, .95);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 28px rgba(0, 50, 90, .3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: scores-in .22s ease-out both;
+}
+@keyframes scores-in { from { opacity: 0; translate: 0 8px; } }
+@media (prefers-reduced-motion: reduce) { #scores3d .sc { animation: none; } }
+#scores3d .bottom { left: 50%; top: 21%; transform: translateX(-50%); min-width: 200px; }
+#scores3d .top { left: 50%; top: 4%; transform: translateX(-50%); }
+#scores3d .left { left: 3%; top: 46%; transform: translateY(-50%); }
+#scores3d .right { right: 3%; top: 46%; transform: translateY(-50%); }
+#scores3d .mid { left: 50%; bottom: 4%; transform: translateX(-50%); flex-direction: row; gap: 10px; font-size: 16px; font-weight: 800; }
+#scores3d .sc b { font-size: 14px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#scores3d .sc span { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+#scores3d .sc em { font-style: normal; font-weight: 700; }
+#scores3d .sc em.oya { color: #c0261e; }
+#scores3d .sc small { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#scores3d .sc small.up { color: #c0261e; }
+#scores3d .sc small.down { color: #1d7a3a; }
+#scores3d .me span { font-size: 34px; }
+/* the opponents' portraits and the round box would sit on top of the cards */
+#hud3d.points .portraits, #hud3d.points .roundinfo, #hud3d.points .actions, #hud3d.points .status3d { visibility: hidden; }
+html[data-theme="tetsuya"] #scores3d .sc {
+  border-radius: 3px;
+  color: #e8eefc;
+  border: 2px solid #3a4a7a;
+  background: rgba(10, 15, 34, .92);
+  box-shadow: 0 0 22px rgba(50, 110, 255, .5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-theme="tetsuya"] #scores3d .me span { color: #ffe27a; }
+html[data-theme="tetsuya"] #scores3d .sc em.oya { color: #ff8a8a; }
+html[data-theme="tetsuya"] #scores3d .sc small.up { color: #ff8a8a; }
+html[data-theme="tetsuya"] #scores3d .sc small.down { color: #8fe0a0; }
+html[data-theme="tetsuya"] #hud3d .points-btn { border-radius: 3px; }
+@media (max-width: 640px) {
+  #hud3d .points-btn { left: 10px; padding: 7px 12px; font-size: 14px; }
+  #hud3d .status3d { left: 130px; }
+  #scores3d .sc { min-width: 0; padding: 6px 10px; }
+  #scores3d .bottom { min-width: 0; }
+  #scores3d .left, #scores3d .right { top: 62%; }
+  #scores3d .sc span { font-size: 18px; }
+  #scores3d .me span { font-size: 24px; }
+}

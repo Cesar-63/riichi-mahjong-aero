@@ -1,7 +1,7 @@
 import {
   renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
-import { WIND_KANJI } from './shared/tiles.js';
+import { WIND_KANJI, sortTiles } from './shared/tiles.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -26,10 +26,10 @@ const state = {
   room: store.get('mj.room') || 'publica',
   mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
   theme: store.get('mj.theme') === 'tetsuya' ? 'tetsuya' : 'aero',
-  // ?3d=1 / ?3d=0 in the URL overrides the saved choice
+  // 3D unless 2.5D was chosen; ?3d=1 / ?3d=0 in the URL overrides the saved choice
   view3d: new URLSearchParams(location.search).has('3d')
     ? new URLSearchParams(location.search).get('3d') !== '0'
-    : store.get('mj.3d') === '1',
+    : store.get('mj.3d') !== '0',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -52,7 +52,12 @@ async function api(op, extra = {}) {
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
   if (data.error) toast(data.error);
   if (data.now) state.clockOffset = data.now - Date.now();
-  if (!data.same && data.status) apply(data);
+  // while a discard is on its way, an older poll answer would put the tile back
+  const stale = op === 'poll' && state.pending && data.version <= state.pending.version;
+  if (!data.same && data.status && !stale) {
+    if (op === 'act') state.pending = null;
+    apply(data);
+  }
   return data;
 }
 
@@ -179,8 +184,11 @@ function showGame(v) {
   }
   renderPartner(v, ui);
   // A win first plays its reveal (3D) or lets the call show (2D) before the
-  // score screen opens.
-  const winKey = v.phase === 'result' && v.result && v.result.type === 'agari' ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
+  // score screen opens; in 3D an exhaustive draw first lays the hands down
+  // (tenpai face up, noten face down).
+  const res = v.phase === 'result' ? v.result : null;
+  const revealed = res && (res.type === 'agari' || (state.view3d && res.type === 'draw' && !res.abortive));
+  const winKey = revealed ? `${v.round}-${v.kyokuNum}-${v.honba}` : null;
   if (winKey && ui.winStarted !== winKey) {
     ui.winStarted = winKey;
     const finish = () => {
@@ -190,7 +198,7 @@ function showGame(v) {
       if (state.view) showGame(state.view);
     };
     // safety net in case the 3D reveal never reports back
-    setTimeout(finish, state.view3d ? 9000 : 1300);
+    setTimeout(finish, state.view3d ? 13000 : 1300);
     ui.winFinish = finish;
   }
   const holdModal = winKey && ui.winDone !== winKey;
@@ -212,10 +220,15 @@ function ensure3d() {
     table3d = import('./three3d/table3d.js').then((m) => {
       const t = m.createTable3D($('#stage3d'), state.theme, {
         // a click on one of my 3D hand tiles
-        onPick: (id) => send(state.ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id }),
+        onPick: (id) => discard(id),
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      t.onPoints(({ open }) => {
+        if (open) return;
+        $('#scores3d').classList.add('hidden');
+        $('#hud3d').classList.remove('points');
+      });
       t.onWin(({ phase, result }) => {
         if (phase === 'dora') showDoraBanner(result);
         if (phase === 'done' && state.ui.winFinish) state.ui.winFinish();
@@ -312,11 +325,57 @@ function portraitsHTML(v) {
   }).join('');
 }
 
+// Round, sticks, wall and my own score (shown in the Tetsuya setting, whose
+// table has no centre panel).
+function roundInfoHTML(v) {
+  const me = v.players[v.seat];
+  return `<b>${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局</b>
+    <span>${v.honba}本場</span><span>供託 ${v.kyoutaku}</span><span>残り ${v.wallLeft}</span>
+    <span class="mine"><em class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_KANJI[me.wind]}</em> ${me.score}</span>`;
+}
+
+// The table's scores as seen from my seat: me at the bottom, the others in
+// their places (left = kamicha, top = toimen, right = shimocha), with the
+// gap to my score.
+function scoresHTML(v) {
+  const me = v.players[v.seat];
+  const POS = ['bottom', 'right', 'top', 'left'];
+  const cards = [0, 1, 2, 3].map((r) => {
+    const abs = (v.seat + r) % 4;
+    const p = v.players[abs];
+    const diff = p.score - me.score;
+    const gap = r === 0 ? '' : `<small class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}</small>`;
+    return `<div class="sc ${POS[r]}${r === 0 ? ' me' : ''}">
+      <em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em>
+      <b>${escapeHTML(p.name)}</b><span>${p.score}</span>${gap}</div>`;
+  }).join('');
+  return `${cards}<div class="sc mid">${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局<small>本 ${v.honba} · 供 ${v.kyoutaku} · toca para cerrar</small></div>`;
+}
+
+function togglePoints() {
+  if (!table3d) return;
+  table3d.then((t) => {
+    if (t.pointsOpen()) {
+      t.closePoints();
+      return;
+    }
+    const v = state.view;
+    if (!v) return;
+    if (t.openPoints(v, () => {
+      $('#scores3d').innerHTML = scoresHTML(state.view || v);
+      $('#scores3d').classList.remove('hidden');
+    })) $('#hud3d').classList.add('points');
+  });
+}
+$('#hud3d .points-btn').addEventListener('click', togglePoints);
+$('#scores3d').addEventListener('click', togglePoints);
+
 // Buttons, timer and notices over the 3D canvas (the hand itself is 3D, see
 // three3d/hand3d.js).
 function renderHud(v, ui) {
   const hud = $('#hud3d');
   setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
+  setIfChanged(hud.querySelector('.roundinfo'), roundInfoHTML(v));
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
@@ -331,6 +390,37 @@ function showModal(html) {
 
 function hideModal() {
   $('#modal').classList.add('hidden');
+}
+
+// A discard shows at once: the predicted table (the tile out of the hand and
+// in the pond) is drawn right away and the server's answer replaces it; if
+// the server refuses, its answer puts the tile back.
+function predictDiscard(v, tile, riichi) {
+  const p = structuredClone(v);
+  const me = p.players[p.seat];
+  p.hand = sortTiles([...p.hand, ...(p.drawn !== null ? [p.drawn] : [])].filter((t) => t !== tile));
+  me.discards = [...me.discards, { tile, tsumogiri: p.drawn === tile, riichi, called: false }];
+  me.handCount = p.hand.length;
+  me.hasDrawn = false;
+  p.drawn = null;
+  p.options = null;
+  return p;
+}
+
+function discard(tile) {
+  const v = state.view;
+  const riichi = !!state.ui.riichiMode;
+  const o = v && v.options;
+  if (state.busy || !o || o.kind !== 'turn' || !(riichi ? o.riichi : o.discard).includes(tile)) return;
+  state.pending = { version: state.version };
+  showGame(predictDiscard(v, tile, riichi));
+  send(riichi ? { type: 'riichi', tile } : { type: 'discard', tile }).finally(() => {
+    // no usable answer (network error): back to the last real table
+    if (state.pending) {
+      state.pending = null;
+      if (state.view) showGame(state.view);
+    }
+  });
 }
 
 async function send(action) {
@@ -399,8 +489,7 @@ document.addEventListener('click', (e) => {
   const ui = state.ui;
   const tileEl = e.target.closest('.myhand .tile.can');
   if (tileEl && v && v.options && v.options.kind === 'turn') {
-    const id = Number(tileEl.dataset.id);
-    send(ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id });
+    discard(Number(tileEl.dataset.id));
     return;
   }
   const b = e.target.closest('[data-action]');
@@ -494,11 +583,16 @@ document.querySelectorAll('.theme-select').forEach((sel) => {
 });
 setTheme(state.theme);
 
-$('#m-3d').checked = state.view3d;
-$('#m-3d').addEventListener('change', (e) => {
-  state.view3d = e.target.checked;
-  store.set('mj.3d', state.view3d ? '1' : '0');
+// View (3D / 2.5D), chosen in the lobby or the in-game menu.
+function setView3d(on) {
+  state.view3d = on;
+  store.set('mj.3d', on ? '1' : '0');
+  document.querySelectorAll('.view-select').forEach((s) => { s.value = on ? '3d' : '2d'; });
   if (state.view) showGame(state.view);
+}
+document.querySelectorAll('.view-select').forEach((sel) => {
+  sel.value = state.view3d ? '3d' : '2d';
+  sel.addEventListener('change', () => setView3d(sel.value === '3d'));
 });
 
 // ------------------------------------------------------------------ menu
