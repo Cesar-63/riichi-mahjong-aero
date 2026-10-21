@@ -85,6 +85,7 @@ export function createHand3D({ world, kit, onPick }) {
         if (spawn && spawn.id === id) {
           mesh.position.set(spawn.x, spawn.y, 0);
           t.scale = size * 0.45;
+          t.wait = spawn.wait || 0; // until the previous play has landed
         } else {
           mesh.position.copy(target).add(new THREE.Vector3(0, size * 1.2, 0));
           t.scale = size;
@@ -113,8 +114,12 @@ export function createHand3D({ world, kit, onPick }) {
   // tiles move at a steady speed (no easing), growing to full size as they arrive
   const goal = new THREE.Vector3();
   world.onTick((dt) => {
-    const step = size * 26 * dt;
+    const step = size * 78 * dt;
     for (const [id, t] of tiles) {
+      if (t.wait > 0) {
+        t.wait -= dt * 1000;
+        continue;
+      }
       const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
       const left = t.mesh.position.distanceTo(goal);

@@ -56,7 +56,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // comes straight down. It turns while it rises when it ends lying (so a
   // discard is already flat before it reaches the pond) and while it comes
   // down when it ends standing (a draw only stands up at the hand).
-  const SPEED = 16; // world units per second
+  const SPEED = 48; // world units per second
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -104,7 +104,32 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const objects = new Map(); // key -> { obj, target: {p, q}, lift }
   let me = 0;
 
+  // Plays never overlap: the moves of one play (a discard, a call, a draw)
+  // wait until the previous play's moves have landed, even when a single
+  // update brings several plays at once. Moves without a lane (a hand or
+  // pond closing a gap) start right away.
+  const LANES = ['discard', 'call', 'draw'];
+  let laneEnd = 0; // performance.now() when the last queued play lands
+  function queuePlays(moves) {
+    const now = performance.now();
+    let at = Math.max(now, laneEnd);
+    for (const lane of LANES) {
+      const group = moves.filter((m) => m.lane === lane);
+      if (!group.length) continue;
+      for (const m of group) {
+        m.o.wait = at - now;
+        // a waiting discard would sit inside its hand: it shows when it sets off
+        if (lane === 'discard' && m.o.wait > 0) m.o.obj.visible = false;
+      }
+      at += (Math.max(...group.map((m) => m.o.path.total)) / SPEED) * 1000;
+    }
+    laneEnd = at;
+  }
+  // how long a new play has to wait for the ones already moving
+  const laneWait = () => Math.max(0, laneEnd - performance.now());
+
   function sync(desired, spawns) {
+    const moves = [];
     for (const [key, d] of desired) {
       let o = objects.get(key);
       if (!o) {
@@ -118,10 +143,14 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         if (!samePose(from, d.target)) {
           o.path = makePath(from, d.target, from);
           o.dist = 0;
+          o.wait = 0;
+          if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
         o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
         o.dist = 0;
+        o.wait = 0;
+        if (d.lane) moves.push({ o, lane: d.lane });
       }
       o.target = d.target;
       o.flags = d.flags || {};
@@ -137,6 +166,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         objects.delete(key);
       }
     }
+    queuePlays(moves);
   }
 
   // Contact shadows (PS2 style blob shadows): a soft dark patch on the table
@@ -194,7 +224,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // result } and { phase: 'done' } (the score screen waits for 'done'). An
   // exhaustive draw lays every hand down the same way (syncDraw) and also
   // ends with 'done'.
-  const WIN = { callMs: 900, tileMs: 80, dropMs: 240, flyMs: 700, flyGap: 170, holdMs: 1500 };
+  const WIN = { callMs: 900, tileMs: 27, dropMs: 80, flyMs: 240, flyGap: 60, holdMs: 1800 };
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -202,7 +232,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 700, tileMs: 70, holdMs: 1900 };
+  const DRAW = { startMs: 700, tileMs: 25, holdMs: 2200 };
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -480,7 +510,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         mesh.position.copy(from.p);
         mesh.quaternion.copy(from.q);
         scene.add(mesh);
-        st = { mesh, target, path: makePath(from, target, { hy: null, turnAll: true }), dist: 0 };
+        // it comes in once the riichi discard has landed
+        st = { mesh, target, path: makePath(from, target, { hy: null, turnAll: true }), dist: 0, wait: laneWait() };
+        mesh.visible = false;
         sticks.set(abs, st);
       } else if (!p.riichi && st) {
         scene.remove(st.mesh);
@@ -491,7 +523,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
 
   world.onTick((dt) => {
     for (const o of objects.values()) {
-      if (o.path) {
+      if (o.path && o.wait > 0) o.wait -= dt * 1000;
+      else if (o.path) {
+        o.obj.visible = true;
         o.dist += SPEED * dt;
         poseAt(o.path, o.dist, o.obj);
         if (o.dist >= o.path.total) o.path = null;
@@ -499,6 +533,11 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       updateBlob(o);
     }
     for (const st of sticks.values()) {
+      if (st.wait > 0) {
+        st.wait -= dt * 1000;
+        continue;
+      }
+      st.mesh.visible = true;
       if (!st.path) continue;
       st.dist += SPEED * 0.6 * dt;
       poseAt(st.path, st.dist, st.mesh);
@@ -523,7 +562,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     const rel = (abs) => (abs - me + 4) % 4;
     const desired = new Map();
     const spawns = new Map();
-    const put = (key, id, target, flags) => desired.set(key, { id, target, flags });
+    const put = (key, id, target, flags, lane) => desired.set(key, { id, target, flags, lane });
     const prevPos = (key) => {
       const o = objects.get(key);
       return o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : null;
@@ -541,7 +580,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         const pose = slotPose(v, slot, rel);
         if (dora.has(slot)) {
           const flipped = { p: pose.p.clone().setY(D * 1.5), q: pose.q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI)) };
-          put(`t${dora.get(slot)}`, dora.get(slot), flipped);
+          put(`t${dora.get(slot)}`, dora.get(slot), flipped, null, 'call');
           // a new indicator turns over in place (the intro already turned the first one)
           if (dora.get(slot) !== introFlipped) spawns.set(`t${dora.get(slot)}`, pose);
         } else put(`w${slot}`, null, pose);
@@ -557,7 +596,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       if (r !== 0 && !laidDown(v).has(abs)) {
         for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fz(95), 'stand'));
         if (p.hasDrawn) {
-          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fz(95), 'stand'));
+          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fz(95), 'stand'), null, 'draw');
           if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
         }
       }
@@ -589,7 +628,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         x += width + 0.1;
         col++;
         const key = `t${d.tile}`;
-        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile });
+        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : 'discard');
         // a discard lies down flat as soon as it leaves the hand (a riichi
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
@@ -618,8 +657,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
           const width = t.pose === 'side' ? H : W;
           mx -= width;
           const z = fz(95) + (t.pose === 'side' ? H / 2 - W / 2 : 0);
-          put(`t${t.id}`, t.id, place(r, mx + width / 2, D / 2, z, t.pose));
-          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'));
+          put(`t${t.id}`, t.id, place(r, mx + width / 2, D / 2, z, t.pose), null, 'call');
+          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'call');
           mx -= GAP + 0.02;
         }
         mx -= 0.35;
@@ -640,7 +679,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     if (drawSlot && drawSlot.seat === v.seat && v.drawn !== null) {
       const p = slotPose(v, drawSlot.slot, rel).p.clone().project(camera);
       const rect = renderer.domElement.getBoundingClientRect();
-      spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height };
+      spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
+      laneEnd = performance.now() + spawn.wait + 180; // its flight to the hand
     }
     if (!laidDown(v).has(v.seat)) hand.layout(v, ui, Infinity, spawn);
     drawCenter(v, rel);

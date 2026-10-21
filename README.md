@@ -124,7 +124,11 @@ usa.
   mientras sube (un descarte ya va acostado boca arriba, o de lado si es de
   riichi, antes de llegar a los descartes); si termina parada, gira mientras
   baja (un robo solo se para al llegar a la mano). Tu mano 3D y el palito de
-  riichi también se mueven a velocidad constante.
+  riichi también se mueven a velocidad constante. Son rápidos (un descarte
+  tarda unas dos décimas de segundo) y **las jugadas no se pisan**: el robo
+  del siguiente jugador espera a que termine de caer el descarte anterior, y
+  lo mismo las llamadas y el palito de riichi, aunque lleguen varias jugadas
+  en la misma actualización del servidor.
 - **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
   normal (evita sombras despegadas), placa central opaca para que reciba
   sombras, y sombras de contacto suaves bajo cada ficha apoyada (estilo PS2),
