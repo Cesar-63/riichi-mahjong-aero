@@ -2,94 +2,27 @@
 // board. Every tile is an object with a stable key (tile id, wall slot, or
 // hidden-hand index) that eases towards a target transform each frame, so
 // draws, discards and calls animate by themselves. The player's own hand is
-// not part of the scene: like Tenhou's 3D view it is an overlay facing the
-// screen (see renderHud in main.js).
+// not lying on the table: like Tenhou's 3D view it faces the screen, as 3D
+// tiles in an overlay scene (hand3d.js).
 import { createWorld } from './world.js';
-import {
-  tileType, isAka, suitOf, numOf, imageName, deadSlot, HONOR_KANJI, SUIT_KANJI, WIND_KANJI,
-} from '../shared/tiles.js';
-import { tileset } from '../render.js';
+import { createTileKit, W, H, D } from './tiles3d.js';
+import { createHand3D } from './hand3d.js';
+import { deadSlot, WIND_KANJI } from '../shared/tiles.js';
 
-const W = 1; // tile width
-const H = 4 / 3; // tile height (face long side)
-const D = 0.78; // tile thickness
 const S = 1 / 4.1; // world units per 2.5D board unit
 const fx = (x) => (x - 50) * S; // 2.5D board coords -> seat-local world coords
 const fz = (y) => (y - 50) * S;
 const STACKS = 17;
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
-export function createTable3D(container, theme = 'aero') {
+export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const world = createWorld(container, theme);
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
-  const bodyGeo = new RoundedBoxGeometry(W, H, D * 0.62, 4, 0.12);
-  const backGeo = new RoundedBoxGeometry(W, H, D * 0.42, 4, 0.12);
-  const faceGeo = new THREE.PlaneGeometry(W * 0.86, H * 0.86);
-  const ivory = new THREE.MeshPhysicalMaterial({ color: 0xf7f1df, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
-  const aqua = new THREE.MeshPhysicalMaterial({ color: 0x1d97e6, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05, sheen: 0.5, sheenColor: new THREE.Color(0x9ff2ff) });
-  const IVORY = ivory.color.clone();
-  const faceTextures = new Map();
-
-  function faceTexture(id) {
-    const key = imageName(id);
-    if (faceTextures.has(key)) return faceTextures.get(key);
-    const canvas = document.createElement('canvas');
-    canvas.width = 192;
-    canvas.height = 256;
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
-    const ctx = canvas.getContext('2d');
-    if (tileset.mode === 'img') {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        tex.needsUpdate = true;
-      };
-      img.src = `${tileset.dir}${key}.${tileset.ext}`;
-    } else {
-      const t = tileType(id);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 120px serif';
-      const red = isAka(id) || (t < 9) || t === 33;
-      ctx.fillStyle = red ? '#c0261e' : t < 18 ? '#1d4ea3' : t < 27 || t === 32 ? '#1d7a3a' : '#111';
-      if (t >= 27) ctx.fillText(HONOR_KANJI[t - 27], 96, 128);
-      else {
-        ctx.fillText(String(numOf(t)), 96, 88);
-        ctx.font = 'bold 80px serif';
-        ctx.fillText(SUIT_KANJI[suitOf(t)], 96, 190);
-      }
-    }
-    faceTextures.set(key, tex);
-    return tex;
-  }
-
-  // A tile is a group: ivory body + coloured back + face decal. Materials
-  // are per tile so it can be dimmed or highlighted on its own.
-  function makeTile(id) {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(bodyGeo, ivory.clone());
-    body.position.z = D * 0.19;
-    const back = new THREE.Mesh(backGeo, aqua);
-    back.position.z = -D * 0.28;
-    for (const m of [body, back]) {
-      m.castShadow = true;
-      m.receiveShadow = true;
-      g.add(m);
-    }
-    if (id !== null) {
-      const face = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ map: faceTexture(id), transparent: true, roughness: 0.4 }));
-      face.position.z = D * 0.5 + 0.004;
-      g.add(face);
-      g.userData.face = face;
-    }
-    g.userData.body = body;
-    g.userData.id = id;
-    return g;
-  }
+  const kit = createTileKit(renderer);
+  const makeTile = kit.makeTile;
+  const hand = createHand3D({ world, kit, onPick: (id) => onPick && onPick(id) });
 
   // -------------------------------------------------------------- transforms
   const qSeat = SEAT_ANGLE.map((a) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a));
@@ -128,10 +61,59 @@ export function createTable3D(container, theme = 'aero') {
     for (const [key, o] of objects) {
       if (!desired.has(key)) {
         scene.remove(o.obj);
-        o.obj.traverse((m) => { if (m.material && m.material !== aqua) m.material.dispose?.(); });
+        kit.dispose(o.obj);
+        if (o.blob) {
+          scene.remove(o.blob);
+          o.blob.material.dispose();
+        }
         objects.delete(key);
       }
     }
+  }
+
+  // Contact shadows (PS2 style blob shadows): a soft dark patch on the table
+  // under every tile resting on it, sized to its footprint, fading as it lifts.
+  const blobTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(32, 32, 6, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(0.55, 'rgba(0,0,0,.75)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  })();
+  const blobGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const axes = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const SIZE = [W, H, D];
+  function updateBlob(o) {
+    if (!o.blob) {
+      o.blob = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0 }));
+      o.blob.renderOrder = 1;
+      scene.add(o.blob);
+    }
+    const q = o.obj.quaternion;
+    axes[0].set(1, 0, 0).applyQuaternion(q);
+    axes[1].set(0, 1, 0).applyQuaternion(q);
+    axes[2].set(0, 0, 1).applyQuaternion(q);
+    let ex = 0;
+    let ey = 0;
+    let ez = 0;
+    axes.forEach((a, i) => {
+      ex += Math.abs(a.x) * SIZE[i];
+      ey += Math.abs(a.y) * SIZE[i];
+      ez += Math.abs(a.z) * SIZE[i];
+    });
+    const bottom = o.obj.position.y - ey / 2;
+    const onPanel = Math.abs(o.obj.position.x) < 3.3 && Math.abs(o.obj.position.z) < 3.3;
+    const floor = onPanel ? 0.3 : 0;
+    // only the lowest tile of a stack touches the table
+    const lift = Math.max(0, bottom - floor);
+    o.blob.position.set(o.obj.position.x, floor + 0.012, o.obj.position.z);
+    o.blob.scale.set(ex * 1.35 + lift * 0.4, 1, ez * 1.35 + lift * 0.4);
+    o.blob.material.opacity = lift > 0.5 ? 0 : 0.42 * (1 - lift / 0.5);
   }
 
   const tmp = new THREE.Vector3();
@@ -142,6 +124,7 @@ export function createTable3D(container, theme = 'aero') {
       tmp.copy(t.p);
       o.obj.position.lerp(tmp, k);
       o.obj.quaternion.slerp(t.q, k);
+      updateBlob(o);
     }
     placeCallouts();
   });
@@ -264,22 +247,23 @@ export function createTable3D(container, theme = 'aero') {
 
     // highlights: tsumogiri tiles dimmer, the latest discard glowing
     for (const ob of objects.values()) {
-      const { body, face } = ob.obj.userData;
-      const f = ob.flags;
-      const tint = f.tg ? 0.82 : 1;
-      body.material.color.copy(IVORY).multiplyScalar(tint);
-      if (face) face.material.color.setScalar(tint);
-      const glow = f.last ? lastGlow : 0x000000;
-      body.material.emissive.setHex(glow);
-      body.material.emissiveIntensity = glow ? 0.55 : 0;
+      kit.style(ob.obj, ob.flags.tg ? 0.8 : 1, ob.flags.last ? kit.glowColor() : 0);
     }
+    // my hand: a freshly drawn tile flies in from its wall slot
+    let spawn = null;
+    if (drawSlot && drawSlot.seat === v.seat && v.drawn !== null) {
+      const p = slotPose(v, drawSlot.slot, rel).p.clone().project(camera);
+      const rect = renderer.domElement.getBoundingClientRect();
+      spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height };
+    }
+    hand.layout(v, ui, Infinity, spawn);
     drawCenter(v, rel);
   }
 
   // ---------------------------------------------------------- center panel
-  let lastGlow = 0x2bd8ff;
   let lastView = null;
-  const panelMat = new THREE.MeshPhysicalMaterial({ color: 0x06404f, transparent: true, opacity: 0.72, roughness: 0.08, clearcoat: 1, envMapIntensity: 1.4 });
+  // opaque, so tiles lying on it shadow it like the felt
+  const panelMat = new THREE.MeshPhongMaterial({ color: 0x06404f, specular: 0x333333, shininess: 60 });
   const centerCanvas = document.createElement('canvas');
   centerCanvas.width = centerCanvas.height = 1024;
   const centerTex = new THREE.CanvasTexture(centerCanvas);
@@ -408,6 +392,11 @@ export function createTable3D(container, theme = 'aero') {
     // drop what is on the table from the previous hand
     for (const [key, o] of objects) {
       scene.remove(o.obj);
+      kit.dispose(o.obj);
+      if (o.blob) {
+        scene.remove(o.blob);
+        o.blob.material.dispose();
+      }
       objects.delete(key);
     }
     if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
@@ -439,7 +428,7 @@ export function createTable3D(container, theme = 'aero') {
     const deal = [];
     const handTarget = (abs, i) => {
       const r = rel(abs);
-      if (r === 0) return { p: place(0, fx(30) + i * 0.7, 5, fz(118), 'stand').p, q: place(0, 0, 0, 0, 'stand').q, mine: true };
+      if (r === 0) return { p: place(0, (i - 6.5) * 0.9, 6, fz(112), 'stand').p, q: place(0, 0, 0, 0, 'stand').q, mine: true };
       const x = fx(12) + i * W + W / 2 + (i === 13 ? 0.35 : 0);
       return place(r, x, H / 2, fz(95), 'stand');
     };
@@ -474,7 +463,8 @@ export function createTable3D(container, theme = 'aero') {
     });
     drawCenter(v, rel);
     world.forceView('overview');
-    intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, myDealt: -1 };
+    intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, myDealt: -1, v, ui };
+    hand.layout(v, ui, 0);
     introListener({ active: true, myTiles: 0 });
   }
 
@@ -536,13 +526,17 @@ export function createTable3D(container, theme = 'aero') {
     }
     if (myTiles !== intro.myDealt) {
       intro.myDealt = myTiles;
+      hand.layout(...(intro.pending || [intro.v, intro.ui]), myTiles);
       introListener({ active: true, myTiles });
     }
     if (p >= 1) endIntro();
   }
 
   function endIntro() {
-    for (const t of intro.tiles) scene.remove(t.obj);
+    for (const t of intro.tiles) {
+      scene.remove(t.obj);
+      kit.dispose(t.obj);
+    }
     for (const d of intro.dice) scene.remove(d.m);
     const pending = intro.pending;
     intro = null;
@@ -560,18 +554,14 @@ export function createTable3D(container, theme = 'aero') {
 
   // Per-setting look of tile backs and the centre panel.
   const LOOKS = {
-    aero: { back: 0x1d97e6, roughness: 0.18, clearcoat: 1, sheen: 0.5, panel: 0x06404f, panelOpacity: 0.72, glow: 0x2bd8ff },
-    tetsuya: { back: 0xd9ad55, roughness: 0.42, clearcoat: 0.35, sheen: 0, panel: 0x141414, panelOpacity: 0.82, glow: 0xff9a2a },
+    aero: { panel: 0x0a4a58 },
+    tetsuya: { panel: 0x1a1a1a },
   };
   world.onTheme((name) => {
     const l = LOOKS[name] || LOOKS.aero;
-    aqua.color.setHex(l.back);
-    aqua.roughness = l.roughness;
-    aqua.clearcoat = l.clearcoat;
-    aqua.sheen = l.sheen;
+    kit.setLook(name);
+    hand.setTheme(name);
     panelMat.color.setHex(l.panel);
-    panelMat.opacity = l.panelOpacity;
-    lastGlow = l.glow;
     if (lastView) update(...lastView);
   });
 

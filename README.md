@@ -101,12 +101,23 @@ recuerda en el navegador. three.js solo se descarga cuando se usa.
 - Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
   cielo luminoso sobre un mar de nubes, con islas de pasto flotantes y
   burbujas de jabón iridiscentes; los reflejos salen del propio cielo.
-- Fichas 3D (cuerpo marfil, reverso aguamarina, cara con la imagen del set),
-  muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
+- **Fichas estilo PS2**: cada ficha es una sola caja casi recta (sin piezas
+  redondeadas separadas, así no hay escalón entre el frente y el reverso). El
+  canto usa colores por vértice (marfil hacia la cara y una franja del color
+  del reverso atrás) y el bisel está pintado en las texturas, como se hacía en
+  PS2. Iluminación Phong mate, sin reflejos de entorno.
+- Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
   se desliza a su lugar, así robos, descartes y llamadas se animan solos.
-- Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: es una fila de
-  fichas grandes al pie de la pantalla, mirando hacia ti. La ficha robada
-  vuela desde su hueco del muro 3D hasta la mano.
+- **Sombras**: mapa de sombras ajustado a la mesa sin desplazamiento por
+  normal (evita sombras despegadas), placa central opaca para que reciba
+  sombras, y sombras de contacto suaves bajo cada ficha apoyada (estilo PS2),
+  que se desvanecen cuando la ficha se levanta.
+- Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
+  una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
+  pantalla, levemente inclinadas para que se vea el canto superior, y con el
+  tamaño ajustado al ancho y alto de la pantalla. La ficha robada vuela desde
+  su hueco del muro hasta la mano; durante el reparto la mano se llena a medida
+  que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la

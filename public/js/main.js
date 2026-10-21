@@ -1,5 +1,5 @@
 import {
-  renderBoard, renderPartner, renderHand, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
+  renderBoard, renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
 import { WIND_KANJI } from './shared/tiles.js';
 
@@ -169,7 +169,6 @@ function showGame(v) {
     ensure3d().then((t) => {
       if (state.view !== v) return;
       t.update(v, ui);
-      flyDrawToHand(t, v, ui);
     });
     showCallouts($('#hud3d'), v, ui);
   } else {
@@ -194,14 +193,12 @@ let table3d = null;
 function ensure3d() {
   if (!table3d) {
     table3d = import('./three3d/table3d.js').then((m) => {
-      const t = m.createTable3D($('#stage3d'), state.theme);
-      t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
-      // during the deal animation the hand overlay fills in as my tiles arrive
-      t.onIntro(({ active, myTiles }) => {
-        state.ui.introTiles = active ? myTiles : null;
-        $('#hud3d').classList.toggle('intro', active);
-        applyIntroHand();
+      const t = m.createTable3D($('#stage3d'), state.theme, {
+        // a click on one of my 3D hand tiles
+        onPick: (id) => send(state.ui.riichiMode ? { type: 'riichi', tile: id } : { type: 'discard', tile: id }),
       });
+      t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
+      t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
       return t;
     });
   }
@@ -249,39 +246,6 @@ function intro2d(v, ui) {
   }, 120);
 }
 
-function applyIntroHand() {
-  const n = state.ui.introTiles;
-  [...document.querySelectorAll('#hud3d .myhand .tile')].forEach((el, i) => {
-    el.style.visibility = n === null || n === undefined || i < n ? '' : 'hidden';
-  });
-}
-
-// The tile just drawn flies from its slot in the 3D wall to the hand overlay.
-function flyDrawToHand(t, v, ui) {
-  const d = v.wall && v.wall.lastDraw;
-  if (!d || d.n === ui.lastDrawHud) return;
-  const first = ui.lastDrawHud === undefined;
-  ui.lastDrawHud = d.n;
-  if (first || v.intro || d.seat !== v.seat || v.drawn === null || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const to = $(`#hud3d .myhand [data-id="${v.drawn}"]`);
-  const from = t.slotOnScreen(v, d.slot);
-  if (!to || !from) return;
-  const b = to.getBoundingClientRect();
-  const fly = document.createElement('div');
-  fly.className = 'flytile';
-  const w = b.width * 0.55;
-  Object.assign(fly.style, { left: `${from.x - w / 2}px`, top: `${from.y - w * 0.66}px`, width: `${w}px`, height: `${w * 1.33}px` });
-  document.body.appendChild(fly);
-  to.style.visibility = 'hidden';
-  fly.animate([
-    { transform: 'translate(0, 0) scale(1)' },
-    { transform: `translate(${b.left - from.x + w / 2}px, ${b.top - from.y + w * 0.66}px) scale(${b.width / w})` },
-  ], { duration: 420, easing: 'cubic-bezier(.3, .7, .3, 1)' }).onfinish = () => {
-    fly.remove();
-    to.style.visibility = '';
-  };
-}
-
 // Tetsuya-style portraits of the three opponents along the top of the 3D view:
 // left = kamicha, centre = toimen, right = shimocha.
 const AVATAR = [['#ffb199', '#ff5e7e'], ['#8fe3ff', '#2a8fe6'], ['#b9f58a', '#2fae2c'], ['#ffe08a', '#f08a12']];
@@ -307,13 +271,11 @@ function portraitsHTML(v) {
   }).join('');
 }
 
-// Buttons, timer, notices and the player's own hand over the 3D canvas
-// (Tenhou style: the hand faces the screen instead of lying on the table).
+// Buttons, timer and notices over the 3D canvas (the hand itself is 3D, see
+// three3d/hand3d.js).
 function renderHud(v, ui) {
   const hud = $('#hud3d');
   setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
-  renderHand(hud.querySelector('.myhand'), v, ui);
-  applyIntroHand();
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;

@@ -48,6 +48,8 @@ export function createWorld(container, initialTheme = 'aero') {
   const clock = new THREE.Clock();
   const tickers = [];
   const tickersEarly = [];
+  const overlays = [];
+  renderer.autoClear = false;
   // Two camera views: 'player' (low, close to the player's side, Tetsuya
   // style) and 'overview' (the whole table). Portrait screens always use the
   // overview, since the low view would cut the table's width.
@@ -99,7 +101,13 @@ export function createWorld(container, initialTheme = 'aero') {
     if (!still) for (const f of animate) f(dt, t);
     for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
+    renderer.clear();
     renderer.render(scene, camera);
+    // overlays (the player's hand) are drawn on top with their own depth
+    for (const [s2, c2] of overlays) {
+      renderer.clearDepth();
+      renderer.render(s2, c2);
+    }
   });
 
   return {
@@ -107,6 +115,7 @@ export function createWorld(container, initialTheme = 'aero') {
     setView: (m) => { mode = m; },
     forceView: (m) => { forced = m; },
     setTheme,
+    addOverlay: (s2, c2) => overlays.push([s2, c2]),
     onTheme: (f) => { themeListeners.push(f); f(current); },
   };
 }
@@ -256,9 +265,10 @@ function addParlour(group) {
   lamp.target.position.set(0, 0, 0);
   lamp.castShadow = true;
   lamp.shadow.mapSize.set(2048, 2048);
-  lamp.shadow.bias = -0.0004;
-  lamp.shadow.normalBias = 0.02;
-  lamp.shadow.radius = 5;
+  lamp.shadow.bias = -0.00025;
+  lamp.shadow.normalBias = 0;
+  lamp.shadow.camera.near = 12;
+  lamp.shadow.camera.far = 60;
   group.add(lamp, lamp.target);
 }
 
@@ -470,9 +480,8 @@ function addLights(scene) {
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const c = sun.shadow.camera;
-  c.left = -16; c.right = 16; c.top = 16; c.bottom = -16; c.near = 5; c.far = 60;
-  sun.shadow.bias = -0.0004;
-  sun.shadow.normalBias = 0.02;
-  sun.shadow.radius = 4;
+  c.left = -15; c.right = 15; c.top = 15; c.bottom = -15; c.near = 10; c.far = 50;
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0;
   scene.add(sun);
 }
