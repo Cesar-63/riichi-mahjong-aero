@@ -214,17 +214,21 @@ primera partida.
   lado mientras sube y cae así en los descartes. Si nadie hace ron sobre ella
   (el servidor recién entonces marca el riichi), un palito de 1000 puntos en
   3D entra girando y se acomoda en el tapete frente al jugador.
-- **Victoria**: aviso grande "¡Tsumo!"/"¡Ron!"; las fichas del ganador se tumban
-  boca arriba una por una, girando sobre su canto a ritmo parejo (la ganadora,
-  separada y brillando), y la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
+- **Victoria**: aviso grande "¡Tsumo!"/"¡Ron!"; la mano del ganador queda
+  parada sobre la mesa (la mano oculta de un rival se convierte en ella; la
+  tuya, que no está en la mesa, se apoya ficha por ficha), espera un instante
+  y las fichas caen boca arriba una tras otra, cada una girando sobre su
+  canto trasero, así ninguna atraviesa la mesa. En un ron, la ficha ganadora
+  vuela desde los descartes hasta su lugar, separada y brillando. La cámara
+  muestra la mesa entera. Luego, justo delante de esa mano, se arma
   una fila con cartel **Dora**: los indicadores de dora vuelan desde el muro
   muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
   rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
   baja detrás del ganador a su mano y se abre la hoja de resultado.
-- **Empate por agotamiento**: todas las manos se tumban a la vez, ficha
-  por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
+- **Empate por agotamiento**: todas las manos quedan paradas sobre la mesa y
+  luego se tumban a la vez, ficha por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
   estaban, así no chocan en las esquinas con la mano del vecino. Después se
   abre la pantalla de resultado. Los empates abortivos van directo al

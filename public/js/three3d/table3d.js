@@ -228,8 +228,12 @@ export function createTable3D(container, { onPick } = {}) {
   }
 
   // ------------------------------------------------------- win reveal
-  // Tetsuya style: after the "Tsumo!"/"Ron!" call the winner's tiles tip
-  // over face up one by one in front of them. Then the dora indicators fly from
+  // Tetsuya style: at the "Tsumo!"/"Ron!" call the winner's hand stands on
+  // the table (an opponent's hidden hand simply turns into it; mine, which
+  // is not on the table, is set down there tile by tile), waits a moment and
+  // then the tiles fall over face up one after the other, each turning
+  // about its back bottom edge, so no tile ever dips into the table. A ron
+  // tile flies over from the pond into its place. Then the dora indicators fly from
   // the dead wall to a labelled row right in front of that hand, the ura
   // dora (riichi only) are lifted from under them, turned over and laid next
   // to them, and every tile of the hand they make dora lights up: gold for
@@ -237,7 +241,9 @@ export function createTable3D(container, { onPick } = {}) {
   // result } and { phase: 'done' } (the score screen waits for 'done'). An
   // exhaustive draw lays every hand down the same way (syncDraw) and also
   // ends with 'done'.
-  const WIN = { callMs: 900, tileMs: 27, dropMs: 80, flyMs: 240, flyGap: 60, holdMs: 1800 };
+  // placeMs/placeGap: my hand set down standing; fallAt: the first tile
+  // starts to fall; tileMs between tiles falling; dropMs: one fall
+  const WIN = { callMs: 900, placeMs: 150, placeGap: 18, fallAt: 1500, tileMs: 45, dropMs: 240, flyMs: 240, flyGap: 60, holdMs: 1800 };
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -245,7 +251,7 @@ export function createTable3D(container, { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 700, tileMs: 25, holdMs: 2200 };
+  const DRAW = { startMs: 900, tileMs: 40, holdMs: 2200 };
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -309,6 +315,15 @@ export function createTable3D(container, { onPick } = {}) {
     const a = tip.angle * (1 - u);
     obj.position.copy(tip.arm).applyAxisAngle(tip.axis, a).add(tip.pivot);
     obj.quaternion.copy(qTip.setFromAxisAngle(tip.axis, a)).multiply(tip.target.q);
+  }
+  // One tile of a hand being shown: standing from standAt (dropping the
+  // last bit onto the table if it was not there before), falling over
+  // (face up or down) from fallAt.
+  function revealTile(r, id, x, faceUp, standAt, fallAt) {
+    const mesh = makeTile(id);
+    mesh.visible = false;
+    scene.add(mesh);
+    return { mesh, id, standAt, fallAt, tip: tipOver(r, x, faceUp), placed: r === 0 };
   }
   const revealZ = (faceUp) => (faceUp ? fz(95) - H / 2 - D / 2 : fz(95) + H / 2 + D / 2);
 
@@ -383,21 +398,27 @@ export function createTable3D(container, { onPick } = {}) {
     const flyers = [];
     const labels = [];
     const doraTypes = new Set(res.dora.map((d) => doraFromIndicator(tileType(d))));
-    let t = WIN.callMs;
-    // first every winner's hand tips over, then each one gets its dora row
+    let t = WIN.fallAt;
+    // first every winner's hand stands and falls over, then each one gets its dora row
     const rows = res.wins.map((w) => {
       const r = rel(w.seat);
       const ids = [...w.hand, w.winTile];
       const x0 = r === 0 ? 10 : 12;
+      // a ron tile comes from the pond (it was never in the hand)
+      const pond = !w.tsumo ? objects.get(`t${w.winTile}`) : null;
       const hand = ids.map((id, i) => {
-        const mesh = makeTile(id);
-        mesh.visible = false;
-        scene.add(mesh);
-        const it = { mesh, id, at: t + i * WIN.tileMs, tip: tipOver(r, rowX(x0, i) + (i === ids.length - 1 ? 0.45 : 0), true), win: i === ids.length - 1 };
+        const last = i === ids.length - 1;
+        const it = revealTile(r, id, rowX(x0, i) + (last ? 0.35 : 0), true, r === 0 ? i * WIN.placeGap : 0, t + i * WIN.tileMs);
+        it.win = last;
+        if (last && pond) {
+          it.fly = { path: makePath({ p: pond.obj.position.clone(), q: pond.obj.quaternion.clone() }, it.tip.target), hide: `t${w.winTile}` };
+          // it lands as the tile before it falls
+          it.fallAt = t + (i - 1) * WIN.tileMs + WIN.dropMs * 0.5;
+        }
         items.push(it);
         return it;
       });
-      t += ids.length * WIN.tileMs + 450;
+      t += ids.length * WIN.tileMs + WIN.dropMs + 300;
       return { w, r, x0, hand };
     });
     const doraAt = t;
@@ -476,15 +497,12 @@ export function createTable3D(container, { onPick } = {}) {
       const ids = up ? res.hands[abs] || [] : abs === v.seat ? v.hand : Array.from({ length: p.handCount }, () => null);
       const x0 = r === 0 ? 10 : 12;
       ids.forEach((id, i) => {
-        const mesh = makeTile(id);
-        mesh.visible = false;
-        scene.add(mesh);
-        items.push({ mesh, id, at: DRAW.startMs + i * DRAW.tileMs, tip: tipOver(r, rowX(x0, i), up) });
+        items.push(revealTile(r, id, rowX(x0, i), up, r === 0 ? i * WIN.placeGap : 0, DRAW.startMs + i * DRAW.tileMs));
       });
       const z = up ? revealZ(true) + H / 2 + 0.6 : revealZ(false) - H / 2 - 0.55;
-      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs);
+      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs + WIN.dropMs);
     });
-    const last = Math.max(0, ...items.map((it) => it.at));
+    const last = Math.max(0, ...items.map((it) => it.fallAt));
     win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
     hand.layout(v, ui, 0);
     world.forceView('overview');
@@ -494,10 +512,32 @@ export function createTable3D(container, { onPick } = {}) {
     if (!win) return;
     const e = performance.now() - win.t0;
     for (const it of win.items) {
-      if (e < it.at) continue;
-      it.mesh.visible = true;
-      tipPose(it.tip, Math.min(1, (e - it.at) / WIN.dropMs), it.mesh);
-      const done = e - it.at >= WIN.dropMs;
+      let done;
+      if (it.fly) {
+        // the ron tile: out of the pond, over everything, down in its place
+        if (e < it.fallAt) continue;
+        const pond = objects.get(it.fly.hide);
+        if (pond) pond.obj.visible = false;
+        it.mesh.visible = true;
+        const dist = ((e - it.fallAt) / 1000) * FAST;
+        poseAt(it.fly.path, dist, it.mesh);
+        done = dist >= it.fly.path.total;
+      } else {
+        if (e < it.standAt) continue;
+        it.mesh.visible = true;
+        if (e < it.fallAt) {
+          // standing; mine is set down on the table first
+          tipPose(it.tip, 0, it.mesh);
+          const set = it.placed ? Math.min(1, (e - it.standAt) / WIN.placeMs) : 1;
+          it.mesh.position.y += (1 - set) * 0.8;
+          kit.style(it.mesh, 1, 0);
+          continue;
+        }
+        // falling over, faster and faster
+        const u = Math.min(1, (e - it.fallAt) / WIN.dropMs);
+        tipPose(it.tip, u * u, it.mesh);
+        done = u >= 1;
+      }
       const glow = it.glow && e >= it.glow.at ? it.glow.color : it.win && done ? kit.glowColor() : 0;
       kit.style(it.mesh, 1, glow);
     }
