@@ -207,8 +207,10 @@ primera partida.
   baja detrás del ganador a su mano y se abre la hoja de resultado.
 - **Empate por agotamiento**: todas las manos se tumban a la vez, ficha
   por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
-  las noten boca abajo con **Noten**. Después se abre la pantalla de
-  resultado. Los empates abortivos van directo al resultado.
+  las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
+  estaban, así no chocan en las esquinas con la mano del vecino. Después se
+  abre la pantalla de resultado. Los empates abortivos van directo al
+  resultado.
 
 ### Animación de inicio de cada mano
 

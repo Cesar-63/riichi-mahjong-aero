@@ -815,11 +815,12 @@ export function createTable3D(container, { onPick } = {}) {
           if (from) spawns.set(key, from);
         }
       });
-      // melds, right-justified next to the hand, first meld outermost; once
-      // the hand is laid down they slide into its line (the dora row of a
-      // win goes in front of both)
+      // melds, right-justified next to the hand, first meld outermost; a
+      // winner's slide into the line of the laid-down hand (the dora row goes
+      // in front of both). Not in a draw: with every hand laid down, they
+      // would run into the next player's hand at the corner.
       let mx = fx(r === 0 ? 98 : 97);
-      const meldZ = laid.has(abs) ? revealZ(true) : fz(95);
+      const meldZ = isAgari(v) && laid.has(abs) ? revealZ(true) : fz(95);
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
         let parts;
