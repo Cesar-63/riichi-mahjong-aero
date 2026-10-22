@@ -866,15 +866,16 @@ export function createTable3D(container, { onPick } = {}) {
   const DIE = 0.45;
   const dieGeo = new RoundedBoxGeometry(DIE, DIE, DIE, 3, 0.07);
 
-  // Where the dice come to rest, in the dealer's frame: on the felt at the
-  // dealer's right, clear of every pond, where they stay for the whole hand
-  // to show who deals. The turn is fixed per hand so the thrown dice and the
+  // Where the dice come to rest, in the dealer's frame: together on the felt
+  // at the dealer's right, clear of every pond, where they stay for the whole
+  // hand to show who deals. The turn is fixed per hand so the thrown dice and the
   // resting ones match.
   function diceRest(v, i) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
-    const local = new THREE.Vector3(i ? 5.5 : 4.6, DIE / 2, i ? 5.1 : 4.3);
+    // side by side and squared with each other (a quarter turn keeps them so)
+    const local = new THREE.Vector3(5 + (i ? 1 : -1) * (DIE / 2 + 0.02), DIE / 2, 4.6);
     const up = DIE_NORMALS[DIE_FACES.indexOf(v.wall.dice[i])];
-    const yaw = ((v.round * 7 + v.kyokuNum * 13 + v.honba * 5 + i * 3) % 10) * 0.63;
+    const yaw = (((v.round * 7 + v.kyokuNum * 13 + v.honba * 5 + i * 3) % 4) * Math.PI) / 2;
     const q = qSeat[dealerRel].clone()
       .multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, yaw))
       .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));

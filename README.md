@@ -186,7 +186,7 @@ las 136 fichas y la mesa vista entera:
    lugar.
 3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
    a la derecha del oya mostrando la tirada real, que decide el corte del
-   muro, y se quedan ahí toda la mano.
+   muro, y se quedan ahí toda la mano, juntos y alineados.
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
    uno y el primer robo del oya; cada bloque se levanta por encima de los
    muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y
