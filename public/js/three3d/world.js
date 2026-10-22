@@ -29,7 +29,7 @@ export function createWorld(container) {
   scene.background = new THREE.Color(0x080706);
   scene.fog = new THREE.Fog(0x080706, 60, 140);
   // a parlour lit by one weak lamp: kept on the dim side
-  renderer.toneMappingExposure = 0.86;
+  renderer.toneMappingExposure = 0.95;
 
   const clock = new THREE.Clock();
   const tickers = [];
@@ -321,9 +321,9 @@ function addParlour(group) {
   group.add(floor);
 
   // one warm, weak lamp over the table, fading out softly towards the edges
-  group.add(new THREE.HemisphereLight(0xffdcb0, 0x0a0806, 0.2));
-  group.add(new THREE.AmbientLight(0xffe6c8, 0.06));
-  const lamp = new THREE.SpotLight(0xffd9a6, 700, 90, Math.PI / 4.2, 0.8, 1.6);
+  group.add(new THREE.HemisphereLight(0xffdcb0, 0x0a0806, 0.26));
+  group.add(new THREE.AmbientLight(0xffe6c8, 0.08));
+  const lamp = new THREE.SpotLight(0xffd9a6, 820, 90, Math.PI / 4.2, 0.75, 1.6);
   lamp.position.set(0, 34, 4);
   lamp.target.position.set(0, 0, 0);
   lamp.castShadow = true;
