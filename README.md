@@ -47,15 +47,22 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    En el menú, **Descartar con un solo clic** descarta al primer clic. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
-     ofreciendo.
    - **Descartar con un solo clic** (queda guardado en el navegador).
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
      todos los humanos abandonan, la sala se libera.
-4. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
+4. **Juego automático** (tres botones al centro del borde izquierdo, como en
+   Mahjong Soul; un clic los activa o desactiva y duran la partida):
+   - **Ganar auto**: declara ron o tsumo apenas se puede.
+   - **No llamar**: pasa los chi, pon y kan sobre los descartes de los
+     rivales. Tu propio kan, riichi o tsumo no se tocan, y el ron se sigue
+     ofreciendo.
+   - **Tsumogiri**: descarta cada ficha que robas (sin "Ganar auto", un
+     tsumo posible se deja para que decidas).
+   Los tres juntos juegan como en riichi.
+5. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
 ## Muro y robos
