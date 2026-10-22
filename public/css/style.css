@@ -518,8 +518,10 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #stage3d canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; }
 #hud3d { position: fixed; inset: 0; z-index: 4; pointer-events: none; --u: 9px; }
 #hud3d :is(.actions, .ask, .bottom-left) { pointer-events: auto; }
-/* things that fold up with the band when the camera shows the whole table */
-#hud3d .band, .seatcard, #menu, #hud3d .roundinfo { transition: transform .35s ease, visibility .35s; }
+/* things that fold up with the band when the camera shows the whole table
+   (the menu and the round chit stay put: moving the cursor up to the menu
+   folds the band, and a button running away from the cursor can't be hit) */
+#hud3d .band, .seatcard { transition: transform .35s ease, visibility .35s; }
 
 /* Top band: a dark strip whose frames hide the chairs behind the
    opponents. It folds away (cursor in the top half: whole table). */
@@ -582,7 +584,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #game.v-overview .seatcard { transform: translateY(calc(-132 * var(--px))); }
 #game.v-overview .seatcard.top { transform: translateY(calc(-124 * var(--px))); }
 
-/* menu button and the round chit, under the left frame */
+/* menu button and the round chit, under the left frame, always there */
 #menu {
   position: fixed;
   left: calc(14 * var(--px));
@@ -632,8 +634,6 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #hud3d .roundinfo .round small { font-family: var(--f-body); font-size: .72em; font-weight: 700; }
 #hud3d .roundinfo b { color: var(--ink); }
 #hud3d .roundinfo b.oya { color: var(--red-ink); }
-#game.v-overview #menu { transform: translateY(calc(-126 * var(--px))); }
-#game.v-overview #hud3d .roundinfo { transform: translateY(calc(-126 * var(--px))) rotate(-.8deg); }
 
 /* bottom: Puntos and the timer on the left, the calls on the right */
 #hud3d .bottom-left, #hud3d .actions {
@@ -822,8 +822,8 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
   /* the name gets a line of its own */
   .seatcard .plaque b { order: -1; flex: 1 1 100%; }
   .seatcard .plaque .score { margin-left: auto; }
-  #menu { left: 8px; top: 8px; transform: none !important; }
-  #hud3d .roundinfo { left: 8px; top: 56px; transform: rotate(-.8deg) !important; padding: 4px 8px; }
+  #menu { left: 8px; top: 8px; }
+  #hud3d .roundinfo { left: 8px; top: 56px; padding: 4px 8px; }
   #hud3d .bottom-left { left: 8px; }
   #hud3d .actions { right: 8px; gap: 8px; }
   .act { min-width: 60px; padding: 6px 10px 4px; }

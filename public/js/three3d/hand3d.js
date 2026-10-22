@@ -164,7 +164,9 @@ export function createHand3D({ world, kit, onPick }) {
     renderer.domElement.style.cursor = hover !== null && legal.has(hover) ? 'pointer' : '';
   });
   renderer.domElement.addEventListener('pointerleave', () => { hover = null; });
-  renderer.domElement.addEventListener('click', (ev) => {
+  // on press, not on release: the discard starts as soon as the button goes down
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
     const id = pick(ev);
     if (id !== null && legal.has(id)) onPick(id);
   });

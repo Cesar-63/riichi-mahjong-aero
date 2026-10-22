@@ -105,7 +105,8 @@ Pantallas:
   entera (cursor en la mitad superior) la franja se pliega hacia arriba y
   quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
   ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
-  puntos. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
+  puntos. Estos dos no se mueven cuando la franja se pliega, así el menú
+  no se escapa al ir a hacerle clic. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
   botones de llamada (Ron y Tsumo con un sello 和).
 - **Resultado de la mano**: una hoja oscura cubre la parte de arriba con la
   ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
@@ -208,7 +209,7 @@ primera partida.
 ### Animación de inicio de cada mano
 
 Al empezar cada mano el servidor pausa los relojes y los bots durante
-`INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la mesa reproduce, con
+`INTRO_SECONDS` (7 s por defecto; 0 la desactiva) y la mesa reproduce, con
 las 136 fichas y la mesa vista entera:
 
 1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
@@ -223,9 +224,11 @@ las 136 fichas y la mesa vista entera:
    demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
    primero la de abajo y encima la de arriba, y las filas se empujan a su
    lugar.
-3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
-   a la derecha del oya mostrando la tirada real, que decide el corte del
-   muro, y se quedan ahí toda la mano, juntos y alineados.
+3. **Tirar los dados**: el oya lanza los dos dados desde su lado hacia el
+   centro de la mesa, cada mano en otra dirección; ruedan, rebotan y se
+   detienen donde caen, en cualquier ángulo, mostrando la tirada real, que
+   decide el corte del muro. Luego se levantan y se acomodan a la derecha del
+   oya, juntos y alineados, donde se quedan toda la mano.
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
    uno y el primer robo del oya; cada bloque se levanta por encima de los
    muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y

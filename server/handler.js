@@ -12,7 +12,7 @@ export const TIMING = {
   autoMs: 700, // forced riichi tsumogiri
   botMs: 600, // test-mode bot thinking time
   // pause at the start of every hand for the shuffle/wall/dice/deal animation
-  introMs: Number(env.INTRO_SECONDS ?? 6) * 1000,
+  introMs: Number(env.INTRO_SECONDS ?? 7) * 1000,
   offlineMs: 1500, // decision time for disconnected players
   offlineAfterMs: 10000,
 };

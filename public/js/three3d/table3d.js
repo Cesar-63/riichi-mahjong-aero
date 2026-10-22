@@ -54,7 +54,9 @@ export function createTable3D(container, { onPick } = {}) {
   // down when it ends standing (a draw only stands up at the hand).
   const SPEED = 48; // world units per second
   const FAST = 96; // draws and discards: they have to feel immediate
+  const MINE = 150; // my own discard answers my click
   const FAST_LANES = new Set(['discard', 'draw']);
+  const laneSpeed = (lane) => (lane === 'mine' ? MINE : FAST_LANES.has(lane) ? FAST : SPEED);
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -110,6 +112,18 @@ export function createTable3D(container, { onPick } = {}) {
   let laneEnd = 0; // performance.now() when the last queued play lands
   function queuePlays(moves) {
     const now = performance.now();
+    // My own discard never waits: whatever is still moving lands at once
+    // and the tile leaves the moment I click.
+    if (moves.some((m) => m.lane === 'mine')) {
+      for (const o of objects.values()) {
+        if (!o.path || moves.some((m) => m.o === o)) continue;
+        poseAt(o.path, o.path.total, o.obj);
+        o.obj.visible = true;
+        o.path = null;
+      }
+      laneEnd = now;
+      for (const m of moves) if (m.lane === 'mine') m.lane = 'discard';
+    }
     let at = Math.max(now, laneEnd);
     for (const lane of LANES) {
       const group = moves.filter((m) => m.lane === lane);
@@ -140,14 +154,14 @@ export function createTable3D(container, { onPick } = {}) {
         objects.set(key, o);
         if (!samePose(from, d.target)) {
           o.path = makePath(from, d.target, from);
-          o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
+          o.path.speed = laneSpeed(d.lane);
           o.dist = 0;
           o.wait = 0;
           if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
         o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
-        o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
+        o.path.speed = laneSpeed(d.lane);
         o.dist = 0;
         o.wait = 0;
         if (d.lane) moves.push({ o, lane: d.lane });
@@ -765,12 +779,12 @@ export function createTable3D(container, { onPick } = {}) {
         x += width + 0.1;
         col++;
         const key = `t${d.tile}`;
-        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : 'discard');
+        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : r === 0 ? 'mine' : 'discard');
         // a discard lies down flat as soon as it leaves the hand (a riichi
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
           // my discards come in from the hand overlay at the bottom of the screen
-          spawns.set(key, place(0, target.p.x * 0.6, 4, fz(112), 'stand'));
+          spawns.set(key, place(0, target.p.x * 0.6, 2.6, fz(104), 'stand'));
         } else if (!objects.has(key)) {
           // opponents' discards leave from their hand: drawn slot for tsumogiri, else inside the hand
           const from = d.tsumogiri ? prevPos(`h${abs}:d`) : prevPos(`h${abs}:${d.tile % Math.max(1, p.handCount)}`);
@@ -843,14 +857,18 @@ export function createTable3D(container, { onPick } = {}) {
   // ------------------------------------------------------------ hand intro
   // At the start of every hand the server pauses the clocks (view.intro) and
   // the table plays: 1) shuffle face down, 2) build the walls a little outward
-  // and push them into place, 3) throw the dice, 4) deal in blocks of four
+  // and push them into place, 3) throw the dice into the middle and then
+  // set them together at the dealer's right, 4) deal in blocks of four
   // (4-4-4 then 1, plus the dealer's draw) and flip the dora indicator. It
   // uses its own temporary tiles that end exactly where the normal view puts
   // them, so the hand-over is seamless. Tiles never pass through each other:
   // the shuffle is a small collision simulation (shuffle.js), and every move
   // over other tiles lifts first, travels high enough to clear them and only
   // then comes down.
-  const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.5], push: [0.5, 0.57], dice: [0.57, 0.72], deal: [0.72, 0.97], flip: [0.95, 1] };
+  const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.48], push: [0.48, 0.55], dice: [0.55, 0.77], deal: [0.77, 0.97], flip: [0.95, 1] };
+  // within the dice phase: the throw, a moment lying where they fell, then
+  // they are picked up and set together at the dealer's right
+  const DICE = { landed: 0.6, pickUp: 0.7 };
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   // The tiles spin in a disc over the whole middle of the table first, then
@@ -991,15 +1009,34 @@ export function createTable3D(container, { onPick } = {}) {
         t.deal = { t0: d.t0, dur: 0.06, lift: 2.2 + (n % 3) * 0.7, to: handTarget(d.abs, d.first + k), mine: rel(d.abs) === 0 };
       });
     });
-    // dice: thrown from the dealer's side, they land showing the real roll
+    // dice: the dealer throws them into the middle of the table, a
+    // different way every hand, and they land showing the real roll at any
+    // angle; then they are lifted and set side by side at the dealer's right
     const dealerRel = rel(v.dealer);
+    const toWorld = (vec) => vec.applyQuaternion(qSeat[dealerRel]);
+    const from0 = new THREE.Vector3(rnd(-1.5, 3.5), 3.2, 8.4); // over the dealer's wall
+    const aim = new THREE.Vector3(rnd(-2.2, 2.2), 0, rnd(-2, 1.5));
+    const dir = aim.clone().sub(from0).setY(0).normalize();
+    const side = new THREE.Vector3(-dir.z, 0, dir.x);
     const dice = v.wall.dice.map((value, i) => {
       const m = new THREE.Mesh(dieGeo, dieMats);
       m.castShadow = true;
       scene.add(m);
       const rest = diceRest(v, i);
-      const from = new THREE.Vector3(i ? 3.6 : 2.9, 3.2, 7).applyQuaternion(qSeat[dealerRel]);
-      return { m, from, to: rest.p, q: rest.q, axis: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(), turns: rnd(5, 8) };
+      const from = toWorld(from0.clone().addScaledVector(side, i ? 0.3 : -0.3));
+      const land = toWorld(aim.clone()
+        .addScaledVector(side, (i ? 0.55 : -0.55) + rnd(-0.2, 0.2))
+        .addScaledVector(dir, rnd(-0.7, 0.7))
+        .setY(DIE / 2));
+      const up = DIE_NORMALS[DIE_FACES.indexOf(value)];
+      const landQ = new THREE.Quaternion().setFromAxisAngle(Y_AXIS, rnd(0, Math.PI * 2))
+        .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));
+      return {
+        m, from, land, landQ,
+        gather: makePath({ p: land, q: landQ }, rest, { hy: DIE / 2 + 1.4, turnAll: true }),
+        axis: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(),
+        turns: rnd(4, 7),
+      };
     });
     world.forceView('overview');
     intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, pile, myDealt: -1, v, ui };
@@ -1051,13 +1088,22 @@ export function createTable3D(container, { onPick } = {}) {
         poseAt(t.flip, clamp01(span(p, PHASES.flip)) * t.flip.total, o);
       }
     }
+    const diceU = clamp01(span(p, PHASES.dice));
     for (const d of intro.dice) {
-      const u = Math.max(0, Math.min(1, span(p, PHASES.dice)));
       d.m.visible = p >= PHASES.dice[0];
-      d.m.position.lerpVectors(d.from, d.to, 1 - (1 - u) ** 2);
-      // three bounces, each lower
-      d.m.position.y = d.to.y + Math.abs(Math.sin(u * Math.PI * 3)) * (1 - u) ** 1.5 * 1.6 + (1 - u) * (d.from.y - d.to.y) * 0.35;
-      d.m.quaternion.copy(d.q).multiply(tmpQ.setFromAxisAngle(d.axis, (1 - u) ** 2 * d.turns * Math.PI * 2));
+      if (diceU < DICE.landed) {
+        // the throw: sliding to a stop with three bounces, each lower, and
+        // a roll that dies out on the real face
+        const u = diceU / DICE.landed;
+        d.m.position.lerpVectors(d.from, d.land, 1 - (1 - u) ** 2);
+        d.m.position.y = d.land.y + Math.abs(Math.sin(u * Math.PI * 3)) * (1 - u) ** 1.5 * 1.6 + (1 - u) * (d.from.y - d.land.y) * 0.35;
+        d.m.quaternion.copy(d.landQ).multiply(tmpQ.setFromAxisAngle(d.axis, (1 - u) ** 2 * d.turns * Math.PI * 2));
+      } else {
+        // picked up and set in place at the usual steady speed
+        const at = PHASES.dice[0] + DICE.pickUp * (PHASES.dice[1] - PHASES.dice[0]);
+        const secs = Math.max(0, p - at) * intro.total / 1000;
+        poseAt(d.gather, secs * SPEED, d.m);
+      }
     }
     if (myTiles !== intro.myDealt) {
       intro.myDealt = myTiles;
