@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -95,6 +95,9 @@ const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 
 function showLobby(data) {
   state.view = null;
+  // automatic play is per game
+  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+  showAutoButtons();
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
   hideModal();
@@ -223,8 +226,55 @@ function showGame(v) {
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room), 'final');
   else hideModal();
 
-  if (v.options && v.options.kind === 'response' && ui.noCalls && !v.options.ron) send({ type: 'pass' });
+  autoPlay(v, ui);
   tick();
+}
+
+// Automatic play, toggled from the left edge as in Mahjong Soul: win as
+// soon as possible, pass chi/pon/kan on the others' discards (my own kan,
+// riichi or tsumo are untouched) and discard every drawn tile. All three
+// together play like a riichi. Each decision is acted on once.
+function autoPlay(v, ui) {
+  const o = v.options;
+  if (!o || state.busy || ui.autoKey === ui.optKey) return;
+  const act = (action) => {
+    ui.autoKey = ui.optKey;
+    send(action);
+  };
+  if (o.kind === 'response') {
+    if (o.ron) {
+      if (ui.autoWin) act({ type: 'ron' });
+    } else if (ui.noCalls) act({ type: 'pass' });
+    return;
+  }
+  if (o.tsumo) {
+    // without automatic wins the choice stays with the player
+    if (ui.autoWin) act({ type: 'tsumo' });
+    return;
+  }
+  if (ui.autoTsumogiri && v.drawn !== null && o.discard.includes(v.drawn)) {
+    const key = ui.optKey;
+    ui.autoKey = key;
+    // let the drawn tile land in the hand first
+    setTimeout(() => {
+      if (ui.optKey !== key || !state.view) return;
+      if (state.busy) ui.autoKey = null;
+      else discard(v.drawn);
+    }, 350);
+  }
+}
+
+function showAutoButtons() {
+  for (const b of document.querySelectorAll('#hud3d [data-auto]')) b.setAttribute('aria-pressed', String(!!state.ui[b.dataset.auto]));
+}
+for (const b of document.querySelectorAll('#hud3d [data-auto]')) {
+  b.addEventListener('click', () => {
+    state.ui[b.dataset.auto] = !state.ui[b.dataset.auto];
+    showAutoButtons();
+    // a pending decision is taken right away
+    state.ui.autoKey = null;
+    if (state.view) autoPlay(state.view, state.ui);
+  });
 }
 
 // ------------------------------------------------------------------ 3D view
@@ -539,10 +589,6 @@ $('#partner-toggle').addEventListener('click', () => {
   state.ui.partnerOpen = !state.ui.partnerOpen;
   store.set('mj.partnerOpen', state.ui.partnerOpen ? '1' : '0');
   if (state.view) renderPartner(state.view, state.ui);
-});
-
-$('#nocalls').addEventListener('change', (e) => {
-  state.ui.noCalls = e.target.checked;
 });
 
 // Discard style: click to pick a tile up and again to discard it (the

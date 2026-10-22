@@ -517,7 +517,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #stage3d { position: fixed; inset: 0; z-index: 1; }
 #stage3d canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; }
 #hud3d { position: fixed; inset: 0; z-index: 4; pointer-events: none; --u: 9px; }
-#hud3d :is(.actions, .ask, .bottom-left) { pointer-events: auto; }
+#hud3d :is(.actions, .ask, .bottom-left, .autobar) { pointer-events: auto; }
 /* things that fold up with the band when the camera shows the whole table
    (the menu and the round chit stay put: moving the cursor up to the menu
    folds the band, and a button running away from the cursor can't be hit) */
@@ -635,6 +635,28 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #hud3d .roundinfo b { color: var(--ink); }
 #hud3d .roundinfo b.oya { color: var(--red-ink); }
 
+/* automatic play toggles, in the middle of the left edge (Mahjong Soul
+   style); a pressed one is stamped with a red edge */
+#hud3d .autobar {
+  position: absolute;
+  left: max(8px, calc(14 * var(--px)));
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 108px;
+}
+.paper.auto { flex-direction: column; align-items: center; gap: 0; padding: 6px 8px 5px; transform: none; opacity: .82; }
+.paper.auto .es { font-size: 16px; }
+.paper.auto .jp { font-size: 10px; color: #5b5242; }
+.paper.auto[aria-pressed="true"] {
+  opacity: 1;
+  background-color: #f1e3c0;
+  box-shadow: inset 0 0 0 2px var(--red), 0 4px 6px rgba(0, 0, 0, .45);
+}
+.paper.auto[aria-pressed="true"] .es { color: var(--red-ink); }
+
 /* bottom: Puntos and the timer on the left, the calls on the right */
 #hud3d .bottom-left, #hud3d .actions {
   position: absolute;
@@ -710,7 +732,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #hud3d .ask .tile { --w: 26px; }
 #hud3d.intro :is(.actions, .status3d) { visibility: hidden; }
 /* the drawer has the screen to itself */
-#hud3d.points :is(.band, .portraits, .roundinfo, .actions, .status3d) { visibility: hidden; }
+#hud3d.points :is(.band, .portraits, .roundinfo, .actions, .status3d, .autobar) { visibility: hidden; }
 #game:has(#hud3d.points) #menu { visibility: hidden; }
 
 /* calls shouted at the table: thick mincho lit from behind */
@@ -825,6 +847,8 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
   #menu { left: 8px; top: 8px; }
   #hud3d .roundinfo { left: 8px; top: 56px; padding: 4px 8px; }
   #hud3d .bottom-left { left: 8px; }
+  #hud3d .autobar { width: 84px; gap: 6px; }
+  .paper.auto .es { font-size: 13px; }
   #hud3d .actions { right: 8px; gap: 8px; }
   .act { min-width: 60px; padding: 6px 10px 4px; }
   .act .es { font-size: 19px; }
@@ -847,7 +871,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
   box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4px var(--navy-inner), 0 12px 30px rgba(0, 0, 0, .6);
 }
 #partner.docked { top: 50%; transform: translateY(-50%); }
-#partner.docked.left { left: 12px; }
+#partner.docked.left { left: 130px; } /* beside the automatic play toggles */
 #partner.docked.right { right: 12px; }
 #partner.floating { top: 54px; left: 50%; transform: translateX(-50%); }
 #partner-toggle {
@@ -876,7 +900,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 /* A dark sheet over the top of the screen; the camera frames the winning
    hand on the felt underneath. Wooden plaques with the scores at the bottom. */
 #modal.result { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask) { visibility: hidden; }
+body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { visibility: hidden; }
 .r-sheet {
   position: absolute;
   left: 0;
