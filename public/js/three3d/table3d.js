@@ -1167,7 +1167,10 @@ export function createTable3D(container, { onPick } = {}) {
 
   // Mouse over the top half of the screen (or a touch there) shows the whole
   // table; the bottom half (or a touch there) goes back to the player view.
-  const pickView = (y) => world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
+  const pickView = (y) => {
+    // carrying a tile up to discard it does not move the camera
+    if (!hand.dragging()) world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
+  };
   window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
   window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
 
@@ -1202,6 +1205,8 @@ export function createTable3D(container, { onPick } = {}) {
     pointsOpen: () => drawerState.open,
     // discard with a single click (default: click to pick up, click again)
     setOneClick: hand.setOneClick,
+    // keep the hand sorted (default) or as the player arranges it
+    setAutoSort: hand.setAutoSort,
     // the camera view in use: 'player', 'overview', 'drawer' or 'free'
     onView: world.onView,
     setCallouts(els) {

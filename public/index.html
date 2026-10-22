@@ -114,9 +114,13 @@
         <div class="status3d"><span class="furiten-slot"></span><span class="timer"></span></div>
       </div>
       <div class="autobar" role="group" aria-label="Juego automático">
-        <button class="paper auto" type="button" data-auto="autoWin" aria-pressed="false" title="Declara ron o tsumo apenas se puede"><span class="es">Ganar auto</span><span class="jp">自動和了</span></button>
-        <button class="paper auto" type="button" data-auto="noCalls" aria-pressed="false" title="Pasa chi, pon y kan sobre los descartes de los rivales (el ron se sigue ofreciendo)"><span class="es">No llamar</span><span class="jp">鳴きなし</span></button>
-        <button class="paper auto" type="button" data-auto="autoTsumogiri" aria-pressed="false" title="Descarta cada ficha que robas"><span class="es">Tsumogiri</span><span class="jp">ツモ切り</span></button>
+        <div class="auto-list">
+          <button class="auto" type="button" data-auto="autoSort" aria-pressed="true" title="Auto ordenar: la mano se ordena sola (igual puedes arrastrar fichas; al soltarlas vuelven a su lugar)"><b>A</b><span class="lbl">Auto ordenar</span></button>
+          <button class="auto" type="button" data-auto="autoWin" aria-pressed="false" title="Auto ron: declara ron o tsumo apenas se puede"><b>R</b><span class="lbl">Auto ron</span></button>
+          <button class="auto" type="button" data-auto="noCalls" aria-pressed="false" title="Saltar llamadas: pasa los chi, pon y kan sobre los descartes de los rivales (el ron se sigue ofreciendo)"><b>C</b><span class="lbl">Saltar llamadas</span></button>
+          <button class="auto" type="button" data-auto="autoTsumogiri" aria-pressed="false" title="Auto descarte: descarta cada ficha que robas"><b>D</b><span class="lbl">Auto descarte</span></button>
+        </div>
+        <button class="auto-toggle" type="button" aria-expanded="false" aria-label="Mostrar los nombres"><svg width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1 L7 7 L1 13" stroke="currentColor" stroke-width="2" fill="none"/></svg></button>
       </div>
       <div id="scores3d" class="hidden" role="dialog" aria-label="Puntos de la mesa"></div>
       <div class="ask"></div>
