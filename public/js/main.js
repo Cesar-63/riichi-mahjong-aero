@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -95,6 +95,9 @@ const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 
 function showLobby(data) {
   state.view = null;
+  // automatic play is per game (sorting is a preference and stays)
+  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+  showAutoButtons();
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
   hideModal();
@@ -223,9 +226,71 @@ function showGame(v) {
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room), 'final');
   else hideModal();
 
-  if (v.options && v.options.kind === 'response' && ui.noCalls && !v.options.ron) send({ type: 'pass' });
+  autoPlay(v, ui);
   tick();
 }
+
+// Automatic play, toggled from the sidebar on the left edge as in Mahjong
+// Soul: R wins as soon as possible, C passes chi/pon/kan on the others'
+// discards (my own kan, riichi or tsumo are untouched), D discards every
+// drawn tile. All three together play like a riichi. Each decision is acted
+// on once. A (auto sort) is on top of them.
+function autoPlay(v, ui) {
+  const o = v.options;
+  if (!o || state.busy || ui.autoKey === ui.optKey) return;
+  const act = (action) => {
+    ui.autoKey = ui.optKey;
+    send(action);
+  };
+  if (o.kind === 'response') {
+    if (o.ron) {
+      if (ui.autoWin) act({ type: 'ron' });
+    } else if (ui.noCalls) act({ type: 'pass' });
+    return;
+  }
+  if (o.tsumo) {
+    // without automatic wins the choice stays with the player
+    if (ui.autoWin) act({ type: 'tsumo' });
+    return;
+  }
+  if (ui.autoTsumogiri && v.drawn !== null && o.discard.includes(v.drawn)) {
+    const key = ui.optKey;
+    ui.autoKey = key;
+    // let the drawn tile land in the hand first
+    setTimeout(() => {
+      if (ui.optKey !== key || !state.view) return;
+      if (state.busy) ui.autoKey = null;
+      else discard(v.drawn);
+    }, 350);
+  }
+}
+
+// the sidebar shows only the letters until its arrow opens it
+$('#hud3d .auto-toggle').addEventListener('click', (e) => {
+  const open = $('#hud3d .autobar').classList.toggle('open');
+  e.currentTarget.setAttribute('aria-expanded', String(open));
+  e.currentTarget.setAttribute('aria-label', open ? 'Ocultar los nombres' : 'Mostrar los nombres');
+});
+
+function showAutoButtons() {
+  for (const b of document.querySelectorAll('#hud3d [data-auto]')) b.setAttribute('aria-pressed', String(!!state.ui[b.dataset.auto]));
+}
+for (const b of document.querySelectorAll('#hud3d [data-auto]')) {
+  b.addEventListener('click', () => {
+    const key = b.dataset.auto;
+    state.ui[key] = !state.ui[key];
+    showAutoButtons();
+    if (key === 'autoSort') {
+      store.set('mj.autoSort', state.ui.autoSort ? '1' : '0');
+      if (table3d) table3d.then((t) => t.setAutoSort(state.ui.autoSort));
+      return;
+    }
+    // a pending decision is taken right away
+    state.ui.autoKey = null;
+    if (state.view) autoPlay(state.view, state.ui);
+  });
+}
+showAutoButtons();
 
 // ------------------------------------------------------------------ 3D view
 
@@ -240,6 +305,7 @@ function ensure3d() {
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.setOneClick(state.ui.oneClick);
+      t.setAutoSort(state.ui.autoSort);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
       // the top band folds away while the camera shows the whole table
       t.onView((name) => {
@@ -539,10 +605,6 @@ $('#partner-toggle').addEventListener('click', () => {
   state.ui.partnerOpen = !state.ui.partnerOpen;
   store.set('mj.partnerOpen', state.ui.partnerOpen ? '1' : '0');
   if (state.view) renderPartner(state.view, state.ui);
-});
-
-$('#nocalls').addEventListener('change', (e) => {
-  state.ui.noCalls = e.target.checked;
 });
 
 // Discard style: click to pick a tile up and again to discard it (the
