@@ -14,7 +14,8 @@ export const GAP = 0.045; // air between neighbouring tiles, so they never fuse 
 const BACK_SHARE = 0.36; // part of the thickness in the back colour
 
 // parlour tiles: yellow backs, ivory bodies
-const look = { back: '#d8ab52', backHi: '#f4d78a', backLo: '#9c7228', ivory: '#f2ecda', ivoryLo: '#cfc3a2', glow: 0xff9a2a, shine: 18 };
+// muted, aged colours: the parlour is not brightly lit
+const look = { back: '#c49c4e', backHi: '#dcbf7e', backLo: '#8a6426', ivory: '#e9e1c9', ivoryLo: '#c3b593', glow: 0xff9a2a, shine: 14 };
 
 export function createTileKit(renderer) {
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -119,7 +120,7 @@ export function createTileKit(renderer) {
   function paintFace(f) {
     const { g } = f;
     const grad = g.createLinearGradient(0, 0, 60, 320);
-    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0, '#f5efdd');
     grad.addColorStop(0.5, look.ivory);
     grad.addColorStop(1, look.ivoryLo);
     g.fillStyle = grad;
@@ -145,7 +146,7 @@ export function createTileKit(renderer) {
   }
 
   // ---------------------------------------------------------- materials
-  const phong = (opts) => new THREE.MeshPhongMaterial({ specular: 0x222222, shininess: look.shine, ...opts });
+  const phong = (opts) => new THREE.MeshPhongMaterial({ specular: 0x151515, shininess: look.shine, ...opts });
   const backMat = phong({ map: back.t });
   const sideMat = phong({ vertexColors: true, map: edges.t });
 

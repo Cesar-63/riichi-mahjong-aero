@@ -16,7 +16,7 @@
   --ink: #1d1a14;
   --ink-soft: #4f4737;
   --cream: #efe7d2;
-  --paper: #e9e0c5;
+  --paper: #ded3b5; /* aged, under a dim lamp */
   --paper-grain:
     repeating-linear-gradient(17deg, rgba(120, 100, 60, .07) 0 1px, transparent 1px 6px),
     repeating-linear-gradient(-28deg, rgba(255, 255, 255, .25) 0 1px, transparent 1px 9px);
@@ -116,7 +116,7 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
 /* a sheet of paper lying on something (rules, menu) */
 .sheet {
   color: var(--ink);
-  background-color: #ece4cc;
+  background-color: #e0d6ba;
   background-image: var(--paper-grain);
   border: none;
   border-radius: 2px;
@@ -226,7 +226,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
   margin-top: 8px;
   padding: 28px 30px 24px 28px;
   color: #26221a;
-  background: #e7dfc6;
+  background: #ddd3b8;
   transform: rotate(-1.4deg);
   box-shadow: 0 10px 22px rgba(20, 18, 6, .45), inset 0 0 40px rgba(120, 100, 50, .25);
 }
@@ -1112,7 +1112,7 @@ body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { vis
   width: min(820px, 100%);
   padding: 30px 40px 26px;
   color: #231f17;
-  background-color: #ece4cc;
+  background-color: #e0d6ba;
   background-image: var(--paper-grain);
   transform: rotate(-.6deg);
   box-shadow: 0 14px 28px rgba(20, 18, 6, .5), inset 0 0 50px rgba(120, 100, 50, .22);

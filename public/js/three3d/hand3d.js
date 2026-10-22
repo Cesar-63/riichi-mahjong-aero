@@ -12,8 +12,9 @@ export function createHand3D({ world, kit, onPick }) {
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(0, 1, 1, 0, -2000, 2000);
   camera.position.z = 1000;
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-  const key = new THREE.DirectionalLight(0xfff0d8, 1.9);
+  // the same warm, low lamp light as the table
+  const ambient = new THREE.AmbientLight(0xffecd4, 0.5);
+  const key = new THREE.DirectionalLight(0xffdcb0, 1.55);
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 

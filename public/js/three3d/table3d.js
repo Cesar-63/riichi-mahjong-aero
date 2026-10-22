@@ -580,7 +580,7 @@ export function createTable3D(container, { onPick } = {}) {
   // The server only marks a riichi once its discard went through without a
   // ron, so the stick is placed exactly when "nobody called".
   const stickGeo = new THREE.BoxGeometry(3.1, 0.1, 0.38);
-  const stickSide = new THREE.MeshPhongMaterial({ color: 0xe8ecee, shininess: 50 });
+  const stickSide = new THREE.MeshPhongMaterial({ color: 0xd8d6cc, shininess: 20 });
   const sticks = new Map(); // seat -> { mesh, target }
 
   // ------------------------------------------------------ points drawer
@@ -626,11 +626,11 @@ export function createTable3D(container, { onPick } = {}) {
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    const top = new THREE.MeshPhongMaterial({ map: t, shininess: 50 });
+    const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
   const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2, openZ: 15.5, y: -0.9, speed: 7 };
-  const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.7 });
+  const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
     const box = (w, h, d, x, y, z) => {
@@ -979,7 +979,7 @@ export function createTable3D(container, { onPick } = {}) {
   // BoxGeometry face order: +x, -x, +y, -y, +z, -z (opposite faces add up to 7)
   const DIE_FACES = [3, 4, 1, 6, 2, 5];
   const DIE_NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((n) => new THREE.Vector3(...n));
-  const dieMats = DIE_FACES.map((n) => new THREE.MeshPhysicalMaterial({ map: pipTexture(n), roughness: 0.25, clearcoat: 1 }));
+  const dieMats = DIE_FACES.map((n) => new THREE.MeshPhysicalMaterial({ map: pipTexture(n), roughness: 0.4, clearcoat: 0.3 }));
   const DIE = 0.45;
   const dieGeo = new RoundedBoxGeometry(DIE, DIE, DIE, 3, 0.07);
 
