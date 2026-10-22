@@ -352,6 +352,15 @@ export function createTable3D(container, { onPick } = {}) {
     return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
+  // Seat-local z of the line a winner's calls slide into: the revealed
+  // hand's, or a little nearer the owner when the player on their right won
+  // too (double ron), since that player's revealed hand starts at the very
+  // corner where the calls end.
+  function winMeldZ(v, abs) {
+    const next = (abs + 1) % 4;
+    return v.result.wins.some((w) => w.seat === next) ? revealZ(true) + 0.52 : revealZ(true);
+  }
+
   // seats whose concealed hand is laid down on the table right now
   function laidDown(v) {
     if (isAgari(v)) return new Set(v.result.wins.map((w) => w.seat));
@@ -393,8 +402,9 @@ export function createTable3D(container, { onPick } = {}) {
     });
     const doraAt = t;
     for (const { w, r, x0, hand } of rows) {
-      // the row lies just in front of the revealed hand (towards its owner)
-      const z = revealZ(true) + H + 0.22;
+      // the row lies just in front of the revealed hand and its calls
+      // (towards their owner)
+      const z = Math.max(revealZ(true) + H + 0.22, winMeldZ(v, w.seat) + H + 0.12);
       const ura = w.ura || [];
       const uraTypes = new Set(ura.map((d) => doraFromIndicator(tileType(d))));
       let x = fx(x0);
@@ -820,7 +830,7 @@ export function createTable3D(container, { onPick } = {}) {
       // in front of both). Not in a draw: with every hand laid down, they
       // would run into the next player's hand at the corner.
       let mx = fx(r === 0 ? 98 : 97);
-      const meldZ = isAgari(v) && laid.has(abs) ? revealZ(true) : fz(95);
+      const meldZ = isAgari(v) && laid.has(abs) ? winMeldZ(v, abs) : fz(95);
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
         let parts;
