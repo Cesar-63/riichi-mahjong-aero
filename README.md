@@ -115,8 +115,9 @@ Pantallas:
   ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
   sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
   三倍満, Yakuman 役満) cruzado por un trazo de luz, y los yaku escritos a
-  mano. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada y la
-  fila de dora y ura dora. Al pie, una tablilla por jugador con su puntaje y
+  mano. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada, sus
+  fichas llamadas (que se corren a la misma línea de la mano) y la fila de
+  dora y ura dora, alejándose lo necesario para que todo quepa a lo ancho. Al pie, una tablilla por jugador con su puntaje y
   lo que ganó o perdió, y **Aceptar**. Los empates usan la misma hoja
   ("Empate" y quién quedó en tenpai), con la mesa entera de fondo.
 - **Fin de la partida**: la hoja de papel **Resultados** con puesto, puntos y
@@ -206,8 +207,10 @@ primera partida.
   baja detrás del ganador a su mano y se abre la hoja de resultado.
 - **Empate por agotamiento**: todas las manos se tumban a la vez, ficha
   por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
-  las noten boca abajo con **Noten**. Después se abre la pantalla de
-  resultado. Los empates abortivos van directo al resultado.
+  las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
+  estaban, así no chocan en las esquinas con la mano del vecino. Después se
+  abre la pantalla de resultado. Los empates abortivos van directo al
+  resultado.
 
 ### Animación de inicio de cada mano
 

@@ -322,17 +322,34 @@ export function createTable3D(container, { onPick } = {}) {
     labels.push({ mesh, at });
   }
 
-  // Camera behind seat r looking down at its revealed hand (centred on the
-  // seat-local x cx), placed so the hand and its dora row sit in the lower
-  // part of the screen. Narrow screens step back until the hand fits.
-  function handFrame(r, cx) {
-    const z = revealZ(true);
-    const fit = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
-    const k = Math.max(1, 0.66 / fit) * 1.12;
-    return {
-      pos: new THREE.Vector3(cx, 11 * k, z + 10 * k).applyQuaternion(qSeat[r]),
-      target: new THREE.Vector3(cx, 0, z - 4 * k).applyQuaternion(qSeat[r]),
-    };
+  // Camera behind seat r looking down at everything the win laid out
+  // there (world points: the hand, its calls and the dora row), far enough
+  // back for all of it to fit the screen's width, and aimed so it sits in
+  // the lower part of the screen, under the score sheet.
+  const FRAME = { tilt: Math.atan2(11, 10), minDist: 16.6, low: 0.79 };
+  function handFrame(r, points) {
+    const toLocal = qSeat[r].clone().invert();
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    for (const pt of points) {
+      const l = pt.clone().applyQuaternion(toLocal);
+      x0 = Math.min(x0, l.x);
+      x1 = Math.max(x1, l.x);
+      z0 = Math.min(z0, l.z);
+      z1 = Math.max(z1, l.z);
+    }
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const halfW = (x1 - x0) / 2 + 1.4;
+    const dist = Math.max(FRAME.minDist, (halfW / (tanV * camera.aspect)) * 1.08);
+    const pos = new THREE.Vector3(cx, dist * Math.sin(FRAME.tilt), cz + dist * Math.cos(FRAME.tilt));
+    // look a little beyond the hand so it shows at FRAME.low of the height
+    const down = FRAME.tilt - Math.atan((FRAME.low - 0.5) * 2 * tanV);
+    const target = new THREE.Vector3(cx, 0, pos.z - pos.y / Math.tan(down));
+    return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
   // seats whose concealed hand is laid down on the table right now
@@ -374,8 +391,6 @@ export function createTable3D(container, { onPick } = {}) {
       t += ids.length * WIN.tileMs + 450;
       return { w, r, x0, hand };
     });
-    // the score screen then frames the first winner's hand and dora row
-    const frame = handFrame(rows[0].r, fx(rows[0].x0) + (rows[0].hand.length * PITCH) / 2);
     const doraAt = t;
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand (towards its owner)
@@ -392,7 +407,7 @@ export function createTable3D(container, { onPick } = {}) {
         mesh.visible = false;
         scene.add(mesh);
         const target = place(r, x + W / 2, D / 2, z, 'up');
-        flyers.push({ mesh, path: makePath(from, target), at: at + n * WIN.flyGap, kind });
+        flyers.push({ mesh, path: makePath(from, target), at: at + n * WIN.flyGap, kind, seat: w.seat });
         x += PITCH;
       };
       lbl('Dora', '#ffd75a', t);
@@ -424,6 +439,14 @@ export function createTable3D(container, { onPick } = {}) {
       }
       t += 350;
     }
+    // the score screen then frames the first winner's hand, calls and dora row
+    const first = rows[0];
+    const framed = [
+      ...first.hand.map((it) => it.tip.target.p),
+      ...flyers.filter((f) => f.seat === first.w.seat).map((f) => f.path.pts[f.path.pts.length - 1]),
+      ...first.w.melds.flatMap((m) => m.tiles).map((id) => objects.get(`t${id}`)).filter(Boolean).map((o) => o.target.p),
+    ];
+    const frame = handFrame(first.r, framed);
     win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame };
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
@@ -740,11 +763,12 @@ export function createTable3D(container, { onPick } = {}) {
     const drawSlot = w && w.lastDraw && w.lastDraw.n !== ui.lastDraw3d ? w.lastDraw : null;
     if (w && w.lastDraw) ui.lastDraw3d = w.lastDraw.n;
 
+    const laid = laidDown(v);
     v.players.forEach((p, abs) => {
       const r = rel(abs);
       // opponents' hands (the player's own hand is the screen overlay);
       // a winner's concealed hand is replaced by the face-up reveal
-      if (r !== 0 && !laidDown(v).has(abs)) {
+      if (r !== 0 && !laid.has(abs)) {
         for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fz(95), 'stand'));
         if (p.hasDrawn) {
           put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fz(95), 'stand'), null, 'draw');
@@ -791,8 +815,12 @@ export function createTable3D(container, { onPick } = {}) {
           if (from) spawns.set(key, from);
         }
       });
-      // melds, right-justified next to the hand, first meld outermost
+      // melds, right-justified next to the hand, first meld outermost; a
+      // winner's slide into the line of the laid-down hand (the dora row goes
+      // in front of both). Not in a draw: with every hand laid down, they
+      // would run into the next player's hand at the corner.
       let mx = fx(r === 0 ? 98 : 97);
+      const meldZ = isAgari(v) && laid.has(abs) ? revealZ(true) : fz(95);
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
         let parts;
@@ -807,7 +835,7 @@ export function createTable3D(container, { onPick } = {}) {
           const t = parts[i];
           const width = t.pose === 'side' ? H : W;
           mx -= width;
-          const z = fz(95) + (t.pose === 'side' ? H / 2 - W / 2 : 0);
+          const z = meldZ + (t.pose === 'side' ? H / 2 - W / 2 : 0);
           put(`t${t.id}`, t.id, place(r, mx + width / 2, D / 2, z, t.pose), null, 'call');
           if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'call');
           mx -= GAP + 0.02;
