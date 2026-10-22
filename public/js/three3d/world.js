@@ -25,10 +25,11 @@ export function createWorld(container) {
   envScene.add(gradientDome([0x050403, 0x16110c, 0x2a2118], new THREE.Vector3(0, 1, 0), 0xfff0d0, 0.9));
   addParlour(scene);
   scene.environment = pmrem.fromScene(envScene, 0.02).texture;
-  scene.environmentIntensity = 0.6;
+  scene.environmentIntensity = 0.35;
   scene.background = new THREE.Color(0x080706);
   scene.fog = new THREE.Fog(0x080706, 60, 140);
-  renderer.toneMappingExposure = 1.05;
+  // a parlour lit by one weak lamp: kept on the dim side
+  renderer.toneMappingExposure = 0.95;
 
   const clock = new THREE.Clock();
   const tickers = [];
@@ -154,9 +155,9 @@ function feltTexture() {
   c.width = c.height = 512;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(256, 256, 30, 256, 256, 360);
-  grad.addColorStop(0, '#3f6a3a');
-  grad.addColorStop(0.45, '#5b8a52');
-  grad.addColorStop(1, '#4f7c47');
+  grad.addColorStop(0, '#33573a');
+  grad.addColorStop(0.45, '#46704a');
+  grad.addColorStop(1, '#3d6342');
   g.fillStyle = grad;
   g.fillRect(0, 0, 512, 512);
   const img = g.getImageData(0, 0, 512, 512);
@@ -267,13 +268,14 @@ function addParlour(group) {
   felt.receiveShadow = true;
   group.add(felt);
   // wooden frame: four rails a little above the felt, cut at 45 degrees so
-  // they meet in a diagonal (mitre) joint at every corner
-  const railTex = woodTexture('#9a7448', '#5a3a1c', '#c49a64');
+  // they meet in a diagonal (mitre) joint at every corner; plain unvarnished
+  // wood, matte and a little grey
+  const railTex = woodTexture('#7f6446', '#4e3824', '#9c7f5c');
   railTex.repeat.set(2, 1);
-  const wood = new THREE.MeshStandardMaterial({ map: railTex, roughness: 0.5, envMapIntensity: 0.6 });
+  const wood = new THREE.MeshStandardMaterial({ map: railTex, roughness: 0.92, envMapIntensity: 0.08 });
   const darkTex = woodTexture('#43301e', '#1e140a', '#6a4c2e');
   darkTex.repeat.set(2, 1);
-  const darkWood = new THREE.MeshStandardMaterial({ map: darkTex, roughness: 0.65 });
+  const darkWood = new THREE.MeshStandardMaterial({ map: darkTex, roughness: 0.9, envMapIntensity: 0.1 });
   const R = 1.3;
   const railGeo = mitredRail(TABLE, R, 1.3);
   for (let i = 0; i < 4; i++) {
@@ -318,9 +320,10 @@ function addParlour(group) {
   floor.receiveShadow = true;
   group.add(floor);
 
-  group.add(new THREE.HemisphereLight(0xffe9c8, 0x0d0a08, 0.35));
-  group.add(new THREE.AmbientLight(0xffffff, 0.12));
-  const lamp = new THREE.SpotLight(0xfff1d6, 900, 90, Math.PI / 4.2, 0.55, 1.6);
+  // one warm, weak lamp over the table, fading out softly towards the edges
+  group.add(new THREE.HemisphereLight(0xffdcb0, 0x0a0806, 0.26));
+  group.add(new THREE.AmbientLight(0xffe6c8, 0.08));
+  const lamp = new THREE.SpotLight(0xffd9a6, 820, 90, Math.PI / 4.2, 0.75, 1.6);
   lamp.position.set(0, 34, 4);
   lamp.target.position.set(0, 0, 0);
   lamp.castShadow = true;

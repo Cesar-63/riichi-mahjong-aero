@@ -89,10 +89,12 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Ambientación: salón Tetsuya
 
-Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa de madera (con
-vetas y el marco cortado en diagonal en las esquinas, como un marco de
-cuadro) y tapete verde bajo una lámpara cálida, con sillas en penumbra, y
-fichas de reverso amarillo. La mesa no tiene placa central: los dados quedan
+Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa de madera sin
+barnizar (mate, con vetas y el marco cortado en diagonal en las esquinas,
+como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
+y débil cuya luz se apaga hacia los bordes, con sillas en penumbra, y fichas
+de reverso amarillo envejecido. Colores y brillos van más bien apagados,
+también el papel de la interfaz. La mesa no tiene placa central: los dados quedan
 toda la mano sobre el tapete a la derecha del oya (quien los tiene de su lado
 reparte).
 
