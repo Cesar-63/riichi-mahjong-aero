@@ -12,12 +12,12 @@ export function createHand3D({ world, kit, onPick }) {
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(0, 1, 1, 0, -2000, 2000);
   camera.position.z = 1000;
-  const ambient = new THREE.AmbientLight(0xffffff, 0.75);
-  const key = new THREE.DirectionalLight(0xffffff, 1.9);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  const key = new THREE.DirectionalLight(0xfff0d8, 1.9);
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 
-  // dark band behind the hand (Tetsuya setting only)
+  // dark band behind the hand
   const bandCanvas = document.createElement('canvas');
   bandCanvas.width = 512;
   bandCanvas.height = 128;
@@ -43,9 +43,14 @@ export function createHand3D({ world, kit, onPick }) {
   let size = 60; // px per tile width
   let legal = new Set();
   let hover = null;
+  // Discarding takes two clicks by default, as in most mahjong games: the
+  // first one picks the tile up, a second one on it discards it (a click on
+  // another tile picks that one instead). With oneClick a single click
+  // discards the tile under the cursor.
+  let oneClick = false;
+  let selected = null;
   let last = null;
   let lastDrawn = null; // drawn tile of the previous layout
-  let theme = 'aero';
 
   function fit() {
     const w = renderer.domElement.clientWidth || window.innerWidth;
@@ -73,6 +78,7 @@ export function createHand3D({ world, kit, onPick }) {
     const o = v.options;
     const myTurn = o && o.kind === 'turn';
     legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
+    if (!legal.has(selected)) selected = null;
     // tedashi: the tile just drawn now belongs inside the hand
     const slotted = lastDrawn !== null && v.drawn === null && v.hand.includes(lastDrawn) ? lastDrawn : null;
     lastDrawn = v.drawn;
@@ -117,7 +123,7 @@ export function createHand3D({ world, kit, onPick }) {
     }
     band.scale.set(total + size * 1.6, size * H + size * 0.9, 1);
     // no band while the hand is put away (intro, reveals)
-    band.visible = theme === 'tetsuya' && visible > 0;
+    band.visible = visible > 0;
     band.position.set(camera.right / 2, y, -400);
   }
 
@@ -131,7 +137,7 @@ export function createHand3D({ world, kit, onPick }) {
       }
       // a fresh draw flies twice as fast as the hand rearranging
       const step = size * (t.fast ? 156 : 78) * dt;
-      const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
+      const lift = selected === id ? size * 0.38 : hover === id && legal.has(id) ? size * (oneClick ? 0.22 : 0.1) : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
       if (t.hop) {
         // up, across above the hand, then straight down
@@ -165,19 +171,26 @@ export function createHand3D({ world, kit, onPick }) {
     renderer.domElement.style.cursor = hover !== null && legal.has(hover) ? 'pointer' : '';
   });
   renderer.domElement.addEventListener('pointerleave', () => { hover = null; });
-  renderer.domElement.addEventListener('click', (ev) => {
+  // on press, not on release: the discard starts as soon as the button goes down
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
     const id = pick(ev);
-    if (id !== null && legal.has(id)) onPick(id);
+    if (id === null || !legal.has(id)) {
+      selected = null;
+      return;
+    }
+    if (oneClick || selected === id) {
+      selected = null;
+      onPick(id);
+    } else selected = id;
   });
 
   fit();
   return {
     layout,
-    setTheme(name) {
-      theme = name;
-      band.visible = name === 'tetsuya' && (!last || last[2] > 0);
-      ambient.intensity = name === 'tetsuya' ? 0.6 : 0.75;
-      key.color.setHex(name === 'tetsuya' ? 0xfff0d8 : 0xffffff);
+    setOneClick(on) {
+      oneClick = !!on;
+      selected = null;
     },
     // test hook: screen point (top-left origin) of a hand tile
     tileOnScreen(id) {

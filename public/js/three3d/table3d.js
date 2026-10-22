@@ -8,7 +8,7 @@ import { createWorld } from './world.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
-import { deadSlot, WIND_KANJI, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
+import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
 const fx = (x) => (x - 50) * S; // 2.5D board coords -> seat-local world coords
@@ -20,12 +20,8 @@ const PITCH = W + GAP; // distance between neighbouring tiles in a row
 const rowX = (x0, i) => fx(x0) + i * PITCH + W / 2;
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
-export function createTable3D(container, theme = 'aero', { onPick } = {}) {
-  const world = createWorld(container, theme);
-  let themeName = theme;
-  // the centre panel (round, scores) is only part of the Frutiger Aero table;
-  // the Tetsuya table is bare felt and the dice stay by the dealer instead
-  const hasPanel = () => themeName !== 'tetsuya';
+export function createTable3D(container, { onPick } = {}) {
+  const world = createWorld(container);
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -58,7 +54,9 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // down when it ends standing (a draw only stands up at the hand).
   const SPEED = 48; // world units per second
   const FAST = 96; // draws and discards: they have to feel immediate
+  const MINE = 150; // my own discard answers my click
   const FAST_LANES = new Set(['discard', 'draw']);
+  const laneSpeed = (lane) => (lane === 'mine' ? MINE : FAST_LANES.has(lane) ? FAST : SPEED);
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -114,6 +112,18 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   let laneEnd = 0; // performance.now() when the last queued play lands
   function queuePlays(moves) {
     const now = performance.now();
+    // My own discard never waits: whatever is still moving lands at once
+    // and the tile leaves the moment I click.
+    if (moves.some((m) => m.lane === 'mine')) {
+      for (const o of objects.values()) {
+        if (!o.path || moves.some((m) => m.o === o)) continue;
+        poseAt(o.path, o.path.total, o.obj);
+        o.obj.visible = true;
+        o.path = null;
+      }
+      laneEnd = now;
+      for (const m of moves) if (m.lane === 'mine') m.lane = 'discard';
+    }
     let at = Math.max(now, laneEnd);
     for (const lane of LANES) {
       const group = moves.filter((m) => m.lane === lane);
@@ -144,14 +154,14 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         objects.set(key, o);
         if (!samePose(from, d.target)) {
           o.path = makePath(from, d.target, from);
-          o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
+          o.path.speed = laneSpeed(d.lane);
           o.dist = 0;
           o.wait = 0;
           if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
         o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
-        o.path.speed = FAST_LANES.has(d.lane) ? FAST : SPEED;
+        o.path.speed = laneSpeed(d.lane);
         o.dist = 0;
         o.wait = 0;
         if (d.lane) moves.push({ o, lane: d.lane });
@@ -209,8 +219,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       ez += Math.abs(a.z) * SIZE[i];
     });
     const bottom = o.obj.position.y - ey / 2;
-    const onPanel = hasPanel() && Math.abs(o.obj.position.x) < 3.3 && Math.abs(o.obj.position.z) < 3.3;
-    const floor = onPanel ? 0.3 : 0;
+    const floor = 0;
     // only the lowest tile of a stack touches the table
     const lift = Math.max(0, bottom - floor);
     o.blob.position.set(o.obj.position.x, floor + 0.012, o.obj.position.z);
@@ -254,7 +263,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       g.lineWidth = 5;
       g.stroke();
       g.fillStyle = color;
-      g.font = 'bold 50px "Segoe UI", "Hiragino Sans", sans-serif';
+      g.font = '46px "Kaushan Script", "Zen Kaku Gothic New", sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.fillText(text, 128, 50);
@@ -280,6 +289,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     }
     for (const o of objects.values()) o.obj.visible = true;
     win = null;
+    if (!intro) world.forceView(null);
   }
 
   // A hand tipping over in place: the standing tile turns about its bottom
@@ -310,6 +320,19 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     mesh.visible = false;
     scene.add(mesh);
     labels.push({ mesh, at });
+  }
+
+  // Camera behind seat r looking down at its revealed hand (centred on the
+  // seat-local x cx), placed so the hand and its dora row sit in the lower
+  // part of the screen. Narrow screens step back until the hand fits.
+  function handFrame(r, cx) {
+    const z = revealZ(true);
+    const fit = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    const k = Math.max(1, 0.66 / fit) * 1.12;
+    return {
+      pos: new THREE.Vector3(cx, 11 * k, z + 10 * k).applyQuaternion(qSeat[r]),
+      target: new THREE.Vector3(cx, 0, z - 4 * k).applyQuaternion(qSeat[r]),
+    };
   }
 
   // seats whose concealed hand is laid down on the table right now
@@ -351,6 +374,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       t += ids.length * WIN.tileMs + 450;
       return { w, r, x0, hand };
     });
+    // the score screen then frames the first winner's hand and dora row
+    const frame = handFrame(rows[0].r, fx(rows[0].x0) + (rows[0].hand.length * PITCH) / 2);
     const doraAt = t;
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand (towards its owner)
@@ -370,7 +395,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         flyers.push({ mesh, path: makePath(from, target), at: at + n * WIN.flyGap, kind });
         x += PITCH;
       };
-      lbl('ドラ', '#ffd75a', t);
+      lbl('Dora', '#ffd75a', t);
       res.dora.forEach((id, i) => {
         const o = objects.get(`t${id}`);
         const from = o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : slotPose(v, deadSlot(4 + i), rel);
@@ -383,7 +408,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       const doraLit = t;
       if (ura.length) {
         x += 0.4;
-        lbl('裏ドラ', '#ff8ad8', t);
+        lbl('Ura', '#ff8ad8', t);
         ura.forEach((id, i) => {
           const slot = deadSlot(9 + i);
           flyer(id, slotPose(v, slot, rel), i, t, 'ura');
@@ -399,7 +424,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       }
       t += 350;
     }
-    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles' };
+    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame };
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
     world.forceView('overview');
@@ -424,7 +449,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         items.push({ mesh, id, at: DRAW.startMs + i * DRAW.tileMs, tip: tipOver(r, rowX(x0, i), up) });
       });
       const z = up ? revealZ(true) + H / 2 + 0.6 : revealZ(false) - H / 2 - 0.55;
-      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'テンパイ' : 'ノーテン', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs);
+      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs);
     });
     const last = Math.max(0, ...items.map((it) => it.at));
     win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
@@ -469,7 +494,11 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     }
     if (e >= win.doneAt && win.phase === 'dora') {
       win.phase = 'done';
-      world.forceView(null);
+      // a win: close on the hand, from behind its owner (the score sheet
+      // covers the top of the screen); a draw keeps the whole table
+      world.forceView(win.frame || 'overview');
+      // my own standing hand leaves the screen to the score sheet
+      if (lastView) hand.layout(lastView[0], {}, 0);
       winListener({ phase: 'done' });
     }
   }
@@ -617,8 +646,8 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   function syncSticks(v, rel) {
     v.players.forEach((p, abs) => {
       let st = sticks.get(abs);
-      // on the centre panel, or on the felt where there is none
-      const target = place(rel(abs), 0, hasPanel() ? 0.36 : 0.06, 2.7, 'stand');
+      // on the felt in front of the player
+      const target = place(rel(abs), 0, 0.06, 2.7, 'stand');
       if (st && p.riichi && !samePose(st.target, target)) {
         st.path = makePath({ p: st.mesh.position.clone(), q: st.mesh.quaternion.clone() }, target, { hy: null, turnAll: true });
         st.dist = 0;
@@ -750,12 +779,12 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         x += width + 0.1;
         col++;
         const key = `t${d.tile}`;
-        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : 'discard');
+        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : r === 0 ? 'mine' : 'discard');
         // a discard lies down flat as soon as it leaves the hand (a riichi
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
           // my discards come in from the hand overlay at the bottom of the screen
-          spawns.set(key, place(0, target.p.x * 0.6, 4, fz(112), 'stand'));
+          spawns.set(key, place(0, target.p.x * 0.6, 2.6, fz(104), 'stand'));
         } else if (!objects.has(key)) {
           // opponents' discards leave from their hand: drawn slot for tsumogiri, else inside the hand
           const from = d.tsumogiri ? prevPos(`h${abs}:d`) : prevPos(`h${abs}:${d.tile % Math.max(1, p.handCount)}`);
@@ -804,79 +833,11 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
       laneEnd = performance.now() + spawn.wait + 90; // its flight to the hand
     }
-    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, drawerState.open ? 0 : Infinity, spawn);
-    drawCenter(v, rel);
+    const away = drawerState.open || (win && win.phase === 'done');
+    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, away ? 0 : Infinity, spawn);
   }
 
-  // ---------------------------------------------------------- center panel
   let lastView = null;
-  // opaque, so tiles lying on it shadow it like the felt
-  const panelMat = new THREE.MeshPhongMaterial({ color: 0x06404f, specular: 0x333333, shininess: 60 });
-  const centerCanvas = document.createElement('canvas');
-  centerCanvas.width = centerCanvas.height = 1024;
-  const centerTex = new THREE.CanvasTexture(centerCanvas);
-  centerTex.colorSpace = THREE.SRGBColorSpace;
-  const panel = new THREE.Mesh(
-    new RoundedBoxGeometry(6.6, 0.3, 6.6, 4, 0.25),
-    panelMat,
-  );
-  panel.position.y = 0.15;
-  scene.add(panel);
-  const label = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 6.4), new THREE.MeshBasicMaterial({ map: centerTex, transparent: true, toneMapped: false }));
-  label.rotation.x = -Math.PI / 2;
-  label.position.y = 0.31;
-  scene.add(label);
-  let centerKey = '';
-
-  function drawCenter(v, rel) {
-    if (!hasPanel()) {
-      centerKey = '';
-      return;
-    }
-    const key = JSON.stringify([v.round, v.kyokuNum, v.honba, v.kyoutaku, v.wallLeft, v.turn, v.phase, v.dora,
-      v.players.map((p) => [p.name, p.score, p.wind, p.riichi, p.online]), v.wall && v.wall.dice]);
-    if (key === centerKey) return;
-    centerKey = key;
-    const c = centerCanvas.getContext('2d');
-    c.clearRect(0, 0, 1024, 1024);
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.shadowColor = 'rgba(0, 20, 40, .9)';
-    c.shadowBlur = 10;
-    c.fillStyle = '#fff';
-    c.font = 'bold 96px "Segoe UI", sans-serif';
-    c.fillText(`${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局`, 512, 400);
-    c.font = '600 46px "Segoe UI", sans-serif';
-    c.fillStyle = '#e6fbff';
-    c.fillText(`本 ${v.honba}   供 ${v.kyoutaku}${v.wall ? `   🎲 ${v.wall.dice.join('+')}` : ''}`, 512, 490);
-    c.fillStyle = '#fff27a';
-    c.font = 'bold 56px "Segoe UI", sans-serif';
-    c.fillText(`残り ${v.wallLeft}`, 512, 575);
-    v.players.forEach((p, abs) => {
-      const r = rel(abs);
-      c.save();
-      c.translate(512, 512);
-      c.rotate([0, -Math.PI / 2, Math.PI, Math.PI / 2][r]);
-      const turn = v.turn === abs && v.phase === 'turn';
-      if (turn) {
-        const g = c.createLinearGradient(-220, 0, 220, 0);
-        g.addColorStop(0, 'rgba(127,246,255,0)');
-        g.addColorStop(0.5, 'rgba(255,255,255,.95)');
-        g.addColorStop(1, 'rgba(127,246,255,0)');
-        c.fillStyle = g;
-        c.fillRect(-220, 438, 440, 10);
-      }
-      c.font = 'bold 66px "Segoe UI", sans-serif';
-      c.fillStyle = abs === v.dealer ? '#ff8a8a' : '#d8f4ff';
-      c.fillText(WIND_KANJI[p.wind], -150, 330);
-      c.fillStyle = turn ? '#fff27a' : '#fff';
-      c.fillText(String(p.score), 40, 330);
-      c.font = '500 40px "Segoe UI", sans-serif';
-      c.fillStyle = '#d8f4ff';
-      c.fillText(`${p.name}${p.bot ? ' 🤖' : ''}${p.online ? '' : ' (off)'}`, 0, 395);
-      c.restore();
-    });
-  }
 
   // ------------------------------------------------------------ callouts
   const anchors = [0, 1, 2, 3].map((r) => new THREE.Vector3(0, 2.2, fz(76)).applyQuaternion(qSeat[r]));
@@ -896,27 +857,24 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   // ------------------------------------------------------------ hand intro
   // At the start of every hand the server pauses the clocks (view.intro) and
   // the table plays: 1) shuffle face down, 2) build the walls a little outward
-  // and push them into place, 3) throw the dice, 4) deal in blocks of four
+  // and push them into place, 3) throw the dice into the middle and then
+  // set them together at the dealer's right, 4) deal in blocks of four
   // (4-4-4 then 1, plus the dealer's draw) and flip the dora indicator. It
   // uses its own temporary tiles that end exactly where the normal view puts
   // them, so the hand-over is seamless. Tiles never pass through each other:
   // the shuffle is a small collision simulation (shuffle.js), and every move
   // over other tiles lifts first, travels high enough to clear them and only
   // then comes down.
-  const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.5], push: [0.5, 0.57], dice: [0.57, 0.72], deal: [0.72, 0.97], flip: [0.95, 1] };
+  const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.48], push: [0.48, 0.55], dice: [0.55, 0.77], deal: [0.77, 0.97], flip: [0.95, 1] };
+  // within the dice phase: the throw, a moment lying where they fell, then
+  // they are picked up and set together at the dealer's right
+  const DICE = { landed: 0.6, pickUp: 0.7 };
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  // The tiles spin in a disc over the whole middle of the table first (the
-  // Frutiger Aero centre panel sinks into the table meanwhile and comes back
-  // up with the walls), then the pile is pushed together (and squared up)
-  // inside the line where the walls get built.
+  // The tiles spin in a disc over the whole middle of the table first, then
+  // the pile is pushed together (and squared up) inside the line where the
+  // walls get built.
   const PILE = { radius: 10.8, open: 13, closed: 10.2, squeeze: [0.2, 0.3] };
-  const PANEL_DROP = 0.32;
-  function sinkPanel(p) {
-    const down = Math.min(clamp01(p / 0.03), 1 - clamp01(span(p, PHASES.push)));
-    panel.position.y = 0.15 - down * PANEL_DROP;
-    label.position.y = 0.31 - down * (PANEL_DROP + 0.06);
-  }
   const PRE_OUT = 2.6; // walls are built this far outside their final place
   const buildStart = (t) => PHASES.build[0] + t.order * 0.15;
   let intro = null;
@@ -947,17 +905,16 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   const DIE = 0.45;
   const dieGeo = new RoundedBoxGeometry(DIE, DIE, DIE, 3, 0.07);
 
-  // Where the dice come to rest, in the dealer's frame: on the centre panel
-  // (Frutiger Aero), or on the felt at the dealer's right, clear of every
-  // pond (Tetsuya), where they stay for the whole hand to show who deals.
-  // The turn is fixed per hand so the thrown dice and the resting ones match.
+  // Where the dice come to rest, in the dealer's frame: together on the felt
+  // at the dealer's right, clear of every pond, where they stay for the whole
+  // hand to show who deals. The turn is fixed per hand so the thrown dice and the
+  // resting ones match.
   function diceRest(v, i) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
-    const local = hasPanel()
-      ? new THREE.Vector3(i ? 0.7 : -0.6, 0.3 + DIE / 2, i ? -0.3 : 0.5)
-      : new THREE.Vector3(i ? 5.5 : 4.6, DIE / 2, i ? 5.1 : 4.3);
+    // side by side and squared with each other (a quarter turn keeps them so)
+    const local = new THREE.Vector3(5 + (i ? 1 : -1) * (DIE / 2 + 0.02), DIE / 2, 4.6);
     const up = DIE_NORMALS[DIE_FACES.indexOf(v.wall.dice[i])];
-    const yaw = ((v.round * 7 + v.kyokuNum * 13 + v.honba * 5 + i * 3) % 10) * 0.63;
+    const yaw = (((v.round * 7 + v.kyokuNum * 13 + v.honba * 5 + i * 3) % 4) * Math.PI) / 2;
     const q = qSeat[dealerRel].clone()
       .multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, yaw))
       .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));
@@ -966,7 +923,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   let restDice = { key: '', meshes: [] };
   let introFlipped = null; // dora indicator the intro turned face up
   function syncRestDice(v) {
-    const key = v.wall && !hasPanel() && v.phase !== 'end' ? `${resultKey(v)}:${v.wall.dice.join('')}:${v.seat}` : '';
+    const key = v.wall && v.phase !== 'end' ? `${resultKey(v)}:${v.wall.dice.join('')}:${v.seat}` : '';
     if (key === restDice.key) return;
     for (const m of restDice.meshes) scene.remove(m);
     restDice = { key, meshes: [] };
@@ -1052,17 +1009,35 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         t.deal = { t0: d.t0, dur: 0.06, lift: 2.2 + (n % 3) * 0.7, to: handTarget(d.abs, d.first + k), mine: rel(d.abs) === 0 };
       });
     });
-    // dice: thrown from the dealer's side, they land showing the real roll
+    // dice: the dealer throws them into the middle of the table, a
+    // different way every hand, and they land showing the real roll at any
+    // angle; then they are lifted and set side by side at the dealer's right
     const dealerRel = rel(v.dealer);
+    const toWorld = (vec) => vec.applyQuaternion(qSeat[dealerRel]);
+    const from0 = new THREE.Vector3(rnd(-1.5, 3.5), 3.2, 8.4); // over the dealer's wall
+    const aim = new THREE.Vector3(rnd(-2.2, 2.2), 0, rnd(-2, 1.5));
+    const dir = aim.clone().sub(from0).setY(0).normalize();
+    const side = new THREE.Vector3(-dir.z, 0, dir.x);
     const dice = v.wall.dice.map((value, i) => {
       const m = new THREE.Mesh(dieGeo, dieMats);
       m.castShadow = true;
       scene.add(m);
       const rest = diceRest(v, i);
-      const from = (hasPanel() ? new THREE.Vector3(i ? 0.8 : -0.8, 3.2, 6.5) : new THREE.Vector3(i ? 3.6 : 2.9, 3.2, 7)).applyQuaternion(qSeat[dealerRel]);
-      return { m, from, to: rest.p, q: rest.q, axis: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(), turns: rnd(5, 8) };
+      const from = toWorld(from0.clone().addScaledVector(side, i ? 0.3 : -0.3));
+      const land = toWorld(aim.clone()
+        .addScaledVector(side, (i ? 0.55 : -0.55) + rnd(-0.2, 0.2))
+        .addScaledVector(dir, rnd(-0.7, 0.7))
+        .setY(DIE / 2));
+      const up = DIE_NORMALS[DIE_FACES.indexOf(value)];
+      const landQ = new THREE.Quaternion().setFromAxisAngle(Y_AXIS, rnd(0, Math.PI * 2))
+        .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));
+      return {
+        m, from, land, landQ,
+        gather: makePath({ p: land, q: landQ }, rest, { hy: DIE / 2 + 1.4, turnAll: true }),
+        axis: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(),
+        turns: rnd(4, 7),
+      };
     });
-    drawCenter(v, rel);
     world.forceView('overview');
     intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, pile, myDealt: -1, v, ui };
     hand.layout(v, ui, 0);
@@ -1074,7 +1049,6 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
     const p = Math.min(1, (performance.now() - intro.t0) / intro.total);
     const tmpQ = new THREE.Quaternion();
     let myTiles = 0;
-    sinkPanel(p);
     if (p < PHASES.push[0]) {
       const q = clamp01(span(p, PILE.squeeze));
       intro.pile.setArea({ ring: [0, PILE.radius + q * 5], square: PILE.open - q * (PILE.open - PILE.closed) });
@@ -1114,13 +1088,22 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
         poseAt(t.flip, clamp01(span(p, PHASES.flip)) * t.flip.total, o);
       }
     }
+    const diceU = clamp01(span(p, PHASES.dice));
     for (const d of intro.dice) {
-      const u = Math.max(0, Math.min(1, span(p, PHASES.dice)));
       d.m.visible = p >= PHASES.dice[0];
-      d.m.position.lerpVectors(d.from, d.to, 1 - (1 - u) ** 2);
-      // three bounces, each lower
-      d.m.position.y = d.to.y + Math.abs(Math.sin(u * Math.PI * 3)) * (1 - u) ** 1.5 * 1.6 + (1 - u) * (d.from.y - d.to.y) * 0.35;
-      d.m.quaternion.copy(d.q).multiply(tmpQ.setFromAxisAngle(d.axis, (1 - u) ** 2 * d.turns * Math.PI * 2));
+      if (diceU < DICE.landed) {
+        // the throw: sliding to a stop with three bounces, each lower, and
+        // a roll that dies out on the real face
+        const u = diceU / DICE.landed;
+        d.m.position.lerpVectors(d.from, d.land, 1 - (1 - u) ** 2);
+        d.m.position.y = d.land.y + Math.abs(Math.sin(u * Math.PI * 3)) * (1 - u) ** 1.5 * 1.6 + (1 - u) * (d.from.y - d.land.y) * 0.35;
+        d.m.quaternion.copy(d.landQ).multiply(tmpQ.setFromAxisAngle(d.axis, (1 - u) ** 2 * d.turns * Math.PI * 2));
+      } else {
+        // picked up and set in place at the usual steady speed
+        const at = PHASES.dice[0] + DICE.pickUp * (PHASES.dice[1] - PHASES.dice[0]);
+        const secs = Math.max(0, p - at) * intro.total / 1000;
+        poseAt(d.gather, secs * SPEED, d.m);
+      }
     }
     if (myTiles !== intro.myDealt) {
       intro.myDealt = myTiles;
@@ -1136,7 +1119,6 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       kit.dispose(t.obj);
     }
     for (const d of intro.dice) scene.remove(d.m);
-    sinkPanel(1);
     const pending = intro.pending;
     intro = null;
     world.forceView(null);
@@ -1151,25 +1133,7 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
   window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
   window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
 
-  // Per-setting look of tile backs and the centre panel.
-  const LOOKS = {
-    aero: { panel: 0x0a4a58 },
-    tetsuya: { panel: 0x1a1a1a },
-  };
-  world.onTheme((name) => {
-    const l = LOOKS[name] || LOOKS.aero;
-    kit.setLook(name);
-    hand.setTheme(name);
-    panelMat.color.setHex(l.panel);
-    drawerMat.color.setHex(name === 'tetsuya' ? 0x4a3420 : 0xeef8ff);
-    drawerMat.roughness = name === 'tetsuya' ? 0.7 : 0.25;
-    themeName = name;
-    panel.visible = label.visible = hasPanel();
-    if (lastView) update(...lastView);
-  });
-
   return {
-    setTheme: world.setTheme,
     update(v, ui) {
       relOf = (abs) => (abs - v.seat + 4) % 4;
       const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
@@ -1198,6 +1162,10 @@ export function createTable3D(container, theme = 'aero', { onPick } = {}) {
       pointsListener = cb;
     },
     pointsOpen: () => drawerState.open,
+    // discard with a single click (default: click to pick up, click again)
+    setOneClick: hand.setOneClick,
+    // the camera view in use: 'player', 'overview', 'drawer' or 'free'
+    onView: world.onView,
     setCallouts(els) {
       calloutEls = els;
     },

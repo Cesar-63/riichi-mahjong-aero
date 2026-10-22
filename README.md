@@ -1,7 +1,8 @@
-# Riichi Mahjong Aero
+# Riichi Mahjong
 
 Riichi mahjong para 4 jugadores en el navegador, con reglas tipo **partida
-ranked de Tenhou**. Las reglas, la pared y el reparto de puntos los maneja el
+ranked de Tenhou**, jugado en 3D en un salón de mahjong clásico al estilo de
+los juegos *Tetsuya*. Las reglas, la pared y el reparto de puntos los maneja el
 servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 - Sin build ni dependencias: HTML, CSS y JS (módulos ES) servidos estáticos.
@@ -26,25 +27,30 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Cómo se juega
 
-1. En el menú principal elige el **modo de juego**, escribe un nombre y un
-   código de sala (por defecto `publica`) y pulsa **Entrar a la sala**. Cada
-   sala queda con el modo de quien la abrió; para entrar hay que elegir ese
-   mismo modo.
+1. En el menú principal (**Elige cómo jugar**) elige el modo, escribe tu
+   nombre y un código de sala (por defecto `publica`) y pulsa **Entrar a la
+   sala**. Cada sala queda con el modo de quien la abrió; para entrar hay que
+   elegir ese mismo modo.
    - **Clásico** (ranked individual, el modo original): la partida empieza
      sola al llegar a 4 jugadores, con asientos al azar.
    - **Por equipos** (2 contra 2): en la sala de espera (máximo 4) eliges
-     **Equipo Norte** o **Equipo Sur** (2 por equipo), marcas **Estoy listo**
-     (cambiar de equipo lo quita) y el **host** (el primero que entró; si se
-     va, el siguiente) pulsa **Comenzar partida** cuando hay 2 + 2 y los 4
-     están listos. Los compañeros se sientan uno al lado del otro (se sortea
-     qué equipo empieza en 東 y el orden dentro de cada equipo). Ver
+     **Norte** o **Sur** (2 por equipo), marcas **Estoy listo** (cambiar de
+     equipo lo quita) y el **anfitrión** (el primero que entró; si se va, el
+     siguiente) pulsa **Comenzar** cuando hay 2 + 2 y los 4 están listos. Los
+     compañeros se sientan uno al lado del otro (se sortea qué equipo empieza
+     de Este y el orden dentro de cada equipo). Ver
      [Juego por equipos](#juego-por-equipos).
-2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
+   - **Práctica**: contra bots, sin código de sala; con **Con Bot 1 de
+     compañero** se juega por equipos. Ver [Práctica](#práctica-contra-bots).
+2. Para descartar, un clic levanta la ficha y otro clic sobre ella la
+   descarta (un clic en otra ficha levanta esa; fuera de la mano, la baja).
+   En el menú, **Descartar con un solo clic** descarta al primer clic. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
-3. **☰ Menú** (esquina superior izquierda, siempre visible):
+3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
    - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
      ofreciendo.
-   - **Reglas** y **Pantalla completa**.
+   - **Descartar con un solo clic** (queda guardado en el navegador).
+   - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
@@ -52,61 +58,81 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 4. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
-## Mesa 2.5D y muro
+## Muro y robos
 
-- Las fichas son imágenes planas del mismo tamaño en toda la mesa (proyección
-  oblicua, sin perspectiva, como Tenhou). El volumen sale de dibujar el canto
-  de cada ficha (cuerpo marfil + capa del reverso) siempre hacia abajo en
-  pantalla; cada asiento rotado compensa la dirección con variables CSS
-  (`--tx`, `--ty`).
 - El muro son 4 lados de 17 pilas de 2 fichas en molinete. Al empezar cada
-  mano se tiran dos dados (se ven en el centro): la suma elige el muro
-  (contando al oya como 1, en sentido antihorario) y cuántas pilas contar
-  desde su extremo derecho para el corte. Desde el corte se roba en sentido
-  horario; las 7 pilas al otro lado son el muro muerto (algo más apagado), con
-  el indicador de dora boca arriba en la tercera pila y las fichas de rinshan
-  en la pila junto al corte.
-- Cada robo anima una ficha desde su hueco del muro (o del muro muerto, tras
-  un kan) hasta la mano de quien roba.
-- Cada descarte vuela boca arriba desde la mano hasta la pila de descartes:
-  desde la posición de la ficha robada si es **tsumogiri**, o desde dentro de
-  la mano si es **tedashi**. En la pila, los descartes tsumogiri se ven más
-  oscuros.
+  mano se tiran dos dados: la suma elige el muro (contando al oya como 1, en
+  sentido antihorario) y cuántas pilas contar desde su extremo derecho para
+  el corte. Desde el corte se roba en sentido horario; las 7 pilas al otro
+  lado son el muro muerto, con el indicador de dora boca arriba en la tercera
+  pila y las fichas de rinshan en la pila junto al corte.
 - El servidor solo envía qué huecos están vacíos y de dónde salió el último
   robo, nunca qué ficha hay en cada posición.
 
-## Ambientaciones
+## Ambientación: salón Tetsuya
 
-Se elige en el menú principal (**Ambientación**) o en **☰ Menú** durante la
-partida, y se recuerda en el navegador. Cambia la interfaz 2D y la escena 3D al
-instante, sin recargar.
+Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa de madera (con
+vetas y el marco cortado en diagonal en las esquinas, como un marco de
+cuadro) y tapete verde bajo una lámpara cálida, con sillas en penumbra, y
+fichas de reverso amarillo. La mesa no tiene placa central: los dados quedan
+toda la mano sobre el tapete a la derecha del oya (quien los tiene de su lado
+reparte).
 
-- **Frutiger Aero** (por defecto): cielo, burbujas, vidrio aguamarina y
-  botones brillantes tipo Aqua.
-- **Salón Tetsuya**: inspirada en los juegos de *Tetsuya*. Habitación oscura,
-  mesa de madera (con vetas y el marco cortado en diagonal en las esquinas,
-  como un marco de cuadro) y tapete verde bajo una lámpara cálida y sillas en
-  penumbra (3D); fichas de reverso amarillo, menús en cajas azul marino con
-  brillo azul, retratos de los rivales en marcos dorados, la mano propia sobre
-  una franja oscura con resplandor azul y avisos de llamada en letra blanca
-  con contorno negro. En 3D la mesa no tiene placa central: los dados quedan
-  toda la mano sobre el tapete a la derecha del oya (quien los tiene de su
-  lado reparte), y la ronda, los honba, los depósitos, las fichas que quedan
-  y tus puntos se ven en un recuadro arriba a la izquierda.
+La interfaz se diseñó en Claude Design y se pasó al juego con estos
+materiales:
+
+- **Papel** viejo para botones, la ficha de la ronda, el menú, las reglas y la
+  hoja final; el botón principal de cada caja lleva un borde rojo, como un
+  sello.
+- **Tablillas de madera** con nombre, viento y puntos de cada jugador.
+- **Cajas azul marino** (estilo menú de PS2) en el lobby y la sala de espera.
+- Letras: **Kaushan Script** (títulos y botones) y **Caveat Brush** (hojas y
+  tablillas) con trazo de pincel; los avisos grandes (¡Pon!, ¡Ron!, Mangan…)
+  en **Shippori Mincho B1** gruesa con un halo de luz detrás, no un contorno;
+  el resto en **Zen Kaku Gothic New**. Todas de Google Fonts.
+- Todo el texto está en español; el japonés va solo de acento, chico y al
+  lado (ポン bajo "Pon", 満貫 detrás de "Mangan").
+
+Pantallas:
+
+- **Lobby** (pared verde oliva): título "Salón Mahjong", la caja **Elige cómo
+  jugar** con los tres modos, tu nombre y la sala, y la hoja **Reglas de la
+  casa** pegada a la pared. **Reglas del salón** abre las reglas completas.
+- **Sala de espera**: la mesa dibujada desde arriba con los cuatro asientos
+  (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
+  izquierda) y la caja para elegir equipo, marcar listo y comenzar.
+- **En partida**: una franja oscura arriba con un marco por rival (izquierda =
+  kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
+  tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
+  no hay retratos: cada marco muestra una silueta. Con la cámara en la mesa
+  entera (cursor en la mitad superior) la franja se pliega hacia arriba y
+  quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
+  ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
+  puntos. Estos dos no se mueven cuando la franja se pliega, así el menú
+  no se escapa al ir a hacerle clic. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
+  botones de llamada (Ron y Tsumo con un sello 和).
+- **Resultado de la mano**: una hoja oscura cubre la parte de arriba con la
+  ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
+  sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
+  三倍満, Yakuman 役満) cruzado por un trazo de luz, y los yaku escritos a
+  mano. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada y la
+  fila de dora y ura dora. Al pie, una tablilla por jugador con su puntaje y
+  lo que ganó o perdió, y **Aceptar**. Los empates usan la misma hoja
+  ("Empate" y quién quedó en tenpai), con la mesa entera de fondo.
+- **Fin de la partida**: la hoja de papel **Resultados** con puesto, puntos y
+  resultado (y la suma de cada equipo), un sello rojo "Gana" y **Volver al
+  lobby**.
+
+La ambientación Frutiger Aero y la vista 2.5D se quitaron; siguen en el
+historial del repositorio (último commit con ambas: `b9c1116`).
 
 ## Vista 3D
 
 Hecha con [three.js](https://threejs.org) (0.170, MIT, incluido en
-`public/vendor/three/`, sin build). Es la vista por defecto; la vista 2.5D
-clásica se elige en el menú principal (**Vista**) o en **☰ Menú → Vista**
-durante la partida, o abriendo la página con `?3d=0` (`?3d=1` fuerza la 3D).
-La elección se recuerda en el navegador. three.js solo se descarga cuando se
-usa.
+`public/vendor/three/`, sin build). three.js se descarga al empezar la
+primera partida.
 
 - Pantalla completa en cualquier proporción (16:9, ultrawide, móvil vertical).
-- Escenario Frutiger Aero en 3D: la mesa de vidrio aguamarina flota en un
-  cielo luminoso sobre un mar de nubes, con islas de pasto flotantes y
-  burbujas de jabón iridiscentes; los reflejos salen del propio cielo.
 - **Fichas estilo PS2**: cada ficha es una sola caja casi recta (sin piezas
   redondeadas separadas, así no hay escalón entre el frente y el reverso). El
   canto usa colores por vértice (marfil hacia la cara y una franja del color
@@ -147,7 +173,7 @@ usa.
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
-- **Cajón de puntos**: el botón **点棒 Puntos** (siempre a la izquierda, justo
+- **Cajón de puntos**: el botón **Puntos** (siempre a la izquierda, justo
   encima de tu mano, como los botones de llamada a la derecha) hace que la
   cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
@@ -156,46 +182,41 @@ usa.
   blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
   un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
   chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
-  uno negro grande hacia cada extremo. Encima del cajón aparece tu puntaje y alrededor el de los
-  demás en su posición (izquierda = kamicha, arriba = toimen, derecha =
-  shimocha), con la diferencia con el tuyo. Un toque lo cierra.
-- **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
-  derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
-  modo por equipos; el que tiene el turno brilla.
-- Botones, menú, resultados y el panel del compañero son los mismos del 2D,
-  encima del canvas.
+  uno negro grande hacia cada extremo. Encima del cajón aparece tu tablilla
+  con tu puntaje y alrededor las de los demás en su posición (izquierda =
+  kamicha, arriba = toimen, derecha = shimocha), con la diferencia con el
+  tuyo. Un toque lo cierra.
+- Botones, menú, resultados y el panel del compañero son HTML encima del
+  canvas.
 
 ### Animaciones de riichi y de victoria (3D)
 
-- **Riichi**: aviso grande "リーチ"; la ficha sale de la mano, se acuesta de
+- **Riichi**: aviso grande "¡Riichi!" (リーチ debajo); la ficha sale de la mano, se acuesta de
   lado mientras sube y cae así en los descartes. Si nadie hace ron sobre ella
   (el servidor recién entonces marca el riichi), un palito de 1000 puntos en
-  3D entra girando y se acomoda frente al jugador (en la placa central, o en
-  el tapete en el salón Tetsuya).
-- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador se tumban
+  3D entra girando y se acomoda en el tapete frente al jugador.
+- **Victoria**: aviso grande "¡Tsumo!"/"¡Ron!"; las fichas del ganador se tumban
   boca arriba una por una, girando sobre su canto a ritmo parejo (la ganadora,
   separada y brillando), y la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
-  una fila con cartel **ドラ**: los indicadores de dora vuelan desde el muro
-  muerto hasta ella; con riichi sigue el cartel **裏ドラ** y los ura dora salen
+  una fila con cartel **Dora**: los indicadores de dora vuelan desde el muro
+  muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
-  rosado: ura dora) y un cartel cuenta dora, ura y aka. Después se abre la
-  pantalla de resultado. En 2D el resultado se abre tras un momento, para que
-  se vea el aviso.
-- **Empate por agotamiento** (3D): todas las manos se tumban a la vez, ficha
-  por ficha: las que están en tenpai boca arriba con el cartel **テンパイ**, y
-  las noten boca abajo con **ノーテン**. Después se abre la pantalla de
+  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
+  baja detrás del ganador a su mano y se abre la hoja de resultado.
+- **Empate por agotamiento**: todas las manos se tumban a la vez, ficha
+  por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
+  las noten boca abajo con **Noten**. Después se abre la pantalla de
   resultado. Los empates abortivos van directo al resultado.
 
 ### Animación de inicio de cada mano
 
 Al empezar cada mano el servidor pausa los relojes y los bots durante
-`INTRO_SECONDS` (6 s por defecto; 0 la desactiva) y la vista 3D reproduce, con
+`INTRO_SECONDS` (7 s por defecto; 0 la desactiva) y la mesa reproduce, con
 las 136 fichas y la mesa vista entera:
 
 1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
-   el centro de la mesa (en Frutiger Aero la placa central se hunde en la
-   mesa mientras tanto y vuelve a subir con los muros), cada una a su ritmo,
+   el centro de la mesa, cada una a su ritmo,
    acercándose y alejándose y dándose vuelta, mientras dos "manos" las
    arremolinan. Es una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
    fichas se empujan y se deslizan unas contra otras (una esquina puede
@@ -206,30 +227,29 @@ las 136 fichas y la mesa vista entera:
    demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
    primero la de abajo y encima la de arriba, y las filas se empujan a su
    lugar.
-3. **Tirar los dados**: dos dados pequeños rebotan desde el lado del oya y caen
-   mostrando la tirada real, que decide el corte del muro: en la placa
-   central (Frutiger Aero) o a la derecha del oya, donde se quedan toda la
-   mano (Tetsuya).
+3. **Tirar los dados**: el oya lanza los dos dados desde su lado hacia el
+   centro de la mesa, cada mano en otra dirección; ruedan, rebotan y se
+   detienen donde caen, en cualquier ángulo, mostrando la tirada real, que
+   decide el corte del muro. Luego se levantan y se acomodan a la derecha del
+   oya, juntos y alineados, donde se quedan toda la mano.
 4. **Repartir**: desde el corte, en bloques de 4 (tres vueltas), luego 1 cada
    uno y el primer robo del oya; cada bloque se levanta por encima de los
    muros (los que vuelan a la vez, a distinta altura) antes de ir a la mano, y
    tu mano se llena a medida que llegan tus fichas. Al final se voltea el
    indicador de dora.
 
-En 2D se muestra un aviso con la fase y los dados rodando. Quien se conecta a
-mitad de la pausa ve la animación acortada.
+Quien se conecta a mitad de la pausa ve la animación acortada.
 
-El motor de reglas y el servidor son los mismos: la vista 3D dibuja la misma
-"vista" que envía el servidor (`public/js/three3d/`).
+La mesa 3D dibuja la "vista" que envía el servidor (`public/js/three3d/`).
 
 ## Juego por equipos
 
 Solo en el modo **Por equipos**:
 
 
-- Cada jugador ve la **mano de su compañero** en un panel fuera del tablero:
-  acoplado al margen del lado donde se sienta el compañero si la pantalla
-  tiene espacio, o como franja desplegable arriba en pantallas angostas. Se
+- Cada jugador ve la **mano de su compañero** en un panel: acoplado al lado
+  de la pantalla donde se sienta el compañero si hay espacio, o como franja
+  desplegable arriba en pantallas angostas. Se
   puede plegar con su botón.
 - **Pedir descarte**: clic en una ficha del compañero. A él se le resalta en
   naranja en su mano con el aviso "X te pide ▢". Es una sugerencia, no
@@ -240,12 +260,12 @@ Solo en el modo **Por equipos**:
 - Los puntos y el uma siguen siendo individuales; al final se suma el
   resultado de cada equipo y gana el que tenga más.
 
-## Modo test (contra bots)
+## Práctica (contra bots)
 
-En el menú principal, **Modo test: jugar contra bots** crea una sala privada
-(`bots-…`) con el modo elegido y empieza al instante: en **Clásico**, tú contra
-3 bots; en **Por equipos**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y
-Bot 3. Los bots:
+En el menú principal, el modo **Práctica** con **Empezar práctica** crea una
+sala privada (`bots-…`) y empieza al instante: tú contra 3 bots o, con **Con
+Bot 1 de compañero**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y Bot 3 por
+equipos. Los bots:
 
 - descartan siempre la ficha que acaban de robar (tras una llamada, la última
   ficha legal de la mano);
@@ -342,4 +362,4 @@ las manos ajenas ni la pared).
 - En doble ron, cada ganador cobra los honba y los depósitos de riichi van al
   primero en orden de turno desde quien descartó.
 - En pao se aplica la responsabilidad a todo el valor de la mano.
-- En móvil vertical el tablero es pequeño (se ajusta al ancho de la pantalla).
+- En móvil vertical se ve siempre la mesa entera desde arriba.
