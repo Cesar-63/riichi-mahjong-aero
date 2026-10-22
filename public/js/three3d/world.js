@@ -39,10 +39,21 @@ export function createWorld(container) {
   // 'overview' (the whole table) and 'drawer' (looking down at the point
   // stick drawer at the player's edge). Portrait screens use the overview
   // instead of the player view, since the low view would cut the table's
-  // width.
+  // width. A forced view can also be a free { pos, target } (the result
+  // screen framing a winning hand).
   const views = { player: null, overview: null, drawer: null };
   let mode = 'player';
   let forced = null;
+  const current = () => (forced && typeof forced === 'object' ? forced : views[forced || mode]);
+  // listeners hear the name of the view in use ('free' for a { pos, target })
+  const viewListeners = [];
+  let announced = null;
+  const announce = () => {
+    const name = forced ? (typeof forced === 'object' ? 'free' : forced) : mode;
+    if (name === announced) return;
+    announced = name;
+    for (const f of viewListeners) f(name);
+  };
   const look = new THREE.Vector3();
   let snapped = false;
   const fit = () => {
@@ -69,14 +80,14 @@ export function createWorld(container) {
     camera.updateProjectionMatrix();
     if (!snapped) {
       snapped = true;
-      const v = views[forced || mode];
+      const v = current();
       camera.position.copy(v.pos);
       look.copy(v.target);
       camera.lookAt(look);
     }
   };
   tickersEarly.push((dt) => {
-    const v = views[forced || mode];
+    const v = current();
     const k = 1 - Math.exp(-dt * 4.5);
     camera.position.lerp(v.pos, k);
     look.lerp(v.target, k);
@@ -101,8 +112,9 @@ export function createWorld(container) {
 
   return {
     THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry,
-    setView: (m) => { mode = m; },
-    forceView: (m) => { forced = m; },
+    setView: (m) => { mode = m; announce(); },
+    forceView: (m) => { forced = m; announce(); },
+    onView: (f) => { viewListeners.push(f); f(announced || mode); },
     addOverlay: (s2, c2) => overlays.push([s2, c2]),
   };
 }

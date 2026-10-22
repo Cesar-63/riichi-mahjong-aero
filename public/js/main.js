@@ -1,7 +1,7 @@
 import {
   renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
-import { WIND_KANJI, sortTiles } from './shared/tiles.js';
+import { sortTiles } from './shared/tiles.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -24,7 +24,9 @@ store.set('mj.token', token);
 
 const state = {
   room: store.get('mj.room') || 'publica',
-  mode: store.get('mj.mode') === 'teams' ? 'teams' : 'classic',
+  // lobby choice: 'classic', 'teams' or 'practice' (against bots)
+  mode: ['teams', 'practice'].includes(store.get('mj.mode')) ? store.get('mj.mode') : 'classic',
+  practiceMate: store.get('mj.practiceMate') === '1',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -98,14 +100,18 @@ function showLobby(data) {
   hideModal();
   const q = $('#queue');
   const inRoom = !!data.inQueue;
+  $('#lobby').classList.toggle('waiting', inRoom);
   $('#entry').classList.toggle('hidden', inRoom);
   $('#waiting').classList.toggle('hidden', !inRoom);
+  $('#queue-hint').classList.add('hidden');
   if (data.spectator) {
-    q.innerHTML = `Hay una partida en curso en la sala <b>${escapeHTML(data.room)}</b> (${data.names.map(escapeHTML).join(', ')}). Prueba otro código de sala.`;
+    q.innerHTML = `Hay una partida en curso en la sala «${escapeHTML(data.room)}» (${data.names.map(escapeHTML).join(', ')}). Prueba otro nombre de sala.`;
     return;
   }
   if (!inRoom) {
-    q.textContent = data.queue && data.queue.length ? `${data.queue.length}/4 en la sala "${data.room}"` : '';
+    const n = data.queue ? data.queue.length : 0;
+    q.textContent = n ? `${n}/4 en la sala «${data.room}»` : '';
+    $('#queue-hint').classList.toggle('hidden', !n);
     return;
   }
   q.textContent = '';
@@ -113,20 +119,46 @@ function showLobby(data) {
   const me = players.find((p) => p.you);
   const teams = data.mode === 'teams';
   $('#w-room').textContent = data.room;
-  $('#w-mode').textContent = teams ? '· Por equipos' : '· Clásico';
+  $('#waiting .w-mode').textContent = teams ? 'Por equipos' : 'Clásico';
+  $('#waiting .w-jp').textContent = teams ? '団体戦' : '個人戦';
+  $('#w-title').textContent = teams ? 'Elige tu equipo' : 'En la sala';
+  $('#w-title-jp').textContent = teams ? '組分け' : '待合室';
+  $('#w-felt-note').textContent = teams ? 'Los compañeros se sientan uno al lado del otro' : 'Los asientos se sortean al empezar';
   $('#waiting .teams').classList.toggle('hidden', !teams);
   $('#ready').classList.toggle('hidden', !teams);
+  // seats around the drawing of the table: Norte at the bottom and right,
+  // Sur at the top and left (teammates sit side by side)
+  const seats = [...document.querySelectorAll('#waiting .w-seat')];
+  const plate = (p, team) => {
+    if (!p) return `<span class="free">Asiento libre${team ? ` · ${TEAM_NAME[team]}` : ''}</span>`;
+    const status = teams ? (p.ready ? '<i class="ok">listo</i>' : '<i>esperando</i>') : '';
+    return `<span class="who">${team ? `<b>${TEAM_NAME[team]}</b>` : ''}<span>${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}</span></span>${status}`;
+  };
+  if (teams) {
+    const n = players.filter((p) => p.team === 'N');
+    const so = players.filter((p) => p.team === 'S');
+    [[n[0], 'N'], [n[1], 'N'], [so[0], 'S'], [so[1], 'S']].forEach(([p, t], i) => {
+      seats[i].className = `w-seat ${p ? `t${t}` : 'empty'}`;
+      setIfChanged(seats[i], plate(p, t));
+    });
+  } else {
+    seats.forEach((el, i) => {
+      const p = players[i];
+      el.className = `w-seat${p ? '' : ' empty'}`;
+      setIfChanged(el, plate(p));
+    });
+  }
   if (!teams) {
     $('#start').classList.add('hidden');
     $('#unassigned').innerHTML = `En la sala (${players.length}/4): ${players.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}`;
-    $('#w-hint').textContent = 'La partida empieza sola al llegar a 4 jugadores; los asientos se sortean.';
+    $('#w-hint').textContent = 'La partida empieza sola al llegar el cuarto jugador; los asientos se sortean.';
     return;
   }
-  const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' (tú)' : ''}${p.host ? ' <span class="badge">host</span>' : ''}<span class="tick">${p.ready ? '✔ listo' : '…'}</span></li>`;
+  const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}${p.host ? ' <span class="badge">anfitrión</span>' : ''}</li>`;
   for (const team of ['N', 'S']) {
     const box = document.querySelector(`.team[data-team="${team}"]`);
     const members = players.filter((p) => p.team === team);
-    box.querySelector('ul').innerHTML = members.map(row).join('') + '<li class="empty">libre</li>'.repeat(2 - members.length);
+    box.querySelector('ul').innerHTML = members.map(row).join('') + '<li class="empty">— libre —</li>'.repeat(2 - members.length);
     const btn = box.querySelector('button');
     btn.classList.toggle('hidden', me.team === team || members.length >= 2);
     box.classList.toggle('mine', me.team === team);
@@ -142,8 +174,8 @@ function showLobby(data) {
   let hint;
   if (!me.team) hint = 'Elige un equipo.';
   else if (players.length < 4) hint = `Esperando jugadores (${players.length}/4).`;
-  else if (!all) hint = 'Esperando a que los 4 estén listos en 2 equipos.';
-  else hint = me.host ? '¡Todo listo! Pulsa Comenzar partida.' : 'Esperando a que el host comience la partida.';
+  else if (!all) hint = 'Esperando a que los cuatro estén listos, dos por equipo.';
+  else hint = me.host ? '¡Todo listo! Pulsa Comenzar.' : 'Cuando los cuatro estén listos, el anfitrión empieza la partida.';
   $('#w-hint').textContent = hint;
 }
 
@@ -187,8 +219,8 @@ function showGame(v) {
   }
   const holdModal = winKey && ui.winDone !== winKey;
   if (holdModal) hideModal();
-  else if (v.phase === 'result' && v.result) showModal(resultHTML(v));
-  else if (v.phase === 'end' && v.final) showModal(finalHTML(v));
+  else if (v.phase === 'result' && v.result) showModal(resultHTML(v), 'result');
+  else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room), 'final');
   else hideModal();
 
   if (v.options && v.options.kind === 'response' && ui.noCalls && !v.options.ron) send({ type: 'pass' });
@@ -208,6 +240,10 @@ function ensure3d() {
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      // the top band folds away while the camera shows the whole table
+      t.onView((name) => {
+        $('#game').classList.toggle('v-overview', name === 'overview' || name === 'free');
+      });
       t.onPoints(({ open }) => {
         if (open) return;
         $('#scores3d').classList.add('hidden');
@@ -236,9 +272,9 @@ function showDoraBanner(result) {
   const w = result.wins[0];
   const han = (k) => (w.yaku.find(([y]) => y === k) || [k, 0])[1];
   const group = (label, ids, n) => `<div class="dgroup"><span class="dl">${label}</span>${ids.map((id) => tile(id)).join('')}<b>${n}</b></div>`;
-  let html = group('ドラ Dora', result.dora, han('dora'));
-  if (w.ura && w.ura.length) html += group('裏ドラ Ura', w.ura, han('ura'));
-  if (han('aka')) html += `<div class="dgroup"><span class="dl">赤ドラ Aka</span><b>${han('aka')}</b></div>`;
+  let html = group('Dora <i class="jp">ドラ</i>', result.dora, han('dora'));
+  if (w.ura && w.ura.length) html += group('Ura <i class="jp">裏ドラ</i>', w.ura, han('ura'));
+  if (han('aka')) html += `<div class="dgroup"><span class="dl">Rojas <i class="jp">赤ドラ</i></span><b>${han('aka')}</b></div>`;
   const el = $('#dora3d');
   el.innerHTML = html;
   el.classList.remove('hidden');
@@ -250,38 +286,39 @@ function hideDoraBanner() {
   $('#dora3d').classList.add('hidden');
 }
 
-// Tetsuya-style portraits of the three opponents along the top of the 3D view:
-// left = kamicha, centre = toimen, right = shimocha.
-const AVATAR = [['#ffb199', '#ff5e7e'], ['#8fe3ff', '#2a8fe6'], ['#b9f58a', '#2fae2c'], ['#ffe08a', '#f08a12']];
+// The three opponents along the top band: a framed portrait (it hides the
+// chair) over a wooden plaque with wind, name, tags and score; left =
+// kamicha, centre = toimen, right = shimocha. No portrait art yet: a
+// silhouette on the player's own colour.
+const WIND_ES = ['Este', 'Sur', 'Oeste', 'Norte'];
+const BACKDROP = [['#7d7842', '#5f5b31'], ['#8a7a52', '#64583a'], ['#6f7a5a', '#4f573e'], ['#7a5a52', '#57403a']];
+const SILHOUETTE = '<svg viewBox="0 0 200 140" aria-hidden="true"><ellipse cx="100" cy="52" rx="30" ry="36"/><path d="M14 140 C 22 96, 60 84, 100 84 C 140 84, 178 96, 186 140 Z"/></svg>';
 function portraitsHTML(v) {
   return [3, 2, 1].map((r) => {
     const abs = (v.seat + r) % 4;
     const p = v.players[abs];
-    const [a, b] = AVATAR[abs];
+    const [a, b] = BACKDROP[abs];
     const turn = v.turn === abs && v.phase === 'turn';
     const tags = [
-      p.riichi ? '<i class="tag riichi">リーチ</i>' : '',
+      p.riichi ? '<i class="tag riichi">Riichi</i>' : '',
       v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
-      p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">desconectado</i>' : '',
+      p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">sin conexión</i>' : '',
+      turn ? '<i class="tag turn">su turno</i>' : '',
     ].join('');
-    return `<div class="pcard${turn ? ' turn' : ''}">
-      <div class="avatar" style="--a:${a};--b:${b}">${escapeHTML((p.name || '?').trim().charAt(0).toUpperCase())}${p.bot ? '<span>🤖</span>' : ''}</div>
-      <div class="pinfo">
-        <b>${escapeHTML(p.name)}</b>
-        <span><em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em> ${p.score}</span>
-        <span class="tags">${tags}</span>
-      </div>
+    const pos = ['', 'right', 'top', 'left'][r];
+    return `<div class="seatcard ${pos}${turn ? ' turn' : ''}">
+      <div class="frame" style="--a:${a};--b:${b}">${SILHOUETTE}${p.bot ? '<span class="bot">bot</span>' : ''}</div>
+      <div class="plaque"><span class="wind${abs === v.dealer ? ' oya' : ''}">${WIND_ES[p.wind]}</span><b>${escapeHTML(p.name)}</b>${tags}<span class="score">${p.score}</span></div>
     </div>`;
   }).join('');
 }
 
-// Round, sticks, wall and my own score (shown in the Tetsuya setting, whose
-// table has no centre panel).
+// Paper chit with the round, sticks on the table, wall and my own score.
 function roundInfoHTML(v) {
   const me = v.players[v.seat];
-  return `<b>${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局</b>
-    <span>${v.honba}本場</span><span>供託 ${v.kyoutaku}</span><span>残り ${v.wallLeft}</span>
-    <span class="mine"><em class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_KANJI[me.wind]}</em> ${me.score}</span>`;
+  return `<span class="round">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}${v.honba ? ` <small>· Honba ${v.honba}</small>` : ''}</span>
+    <span>Depósitos ${v.kyoutaku} · Quedan ${v.wallLeft}</span>
+    <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}</span>`;
 }
 
 // The table's scores as seen from my seat: me at the bottom, the others in
@@ -296,10 +333,10 @@ function scoresHTML(v) {
     const diff = p.score - me.score;
     const gap = r === 0 ? '' : `<small class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}</small>`;
     return `<div class="sc ${POS[r]}${r === 0 ? ' me' : ''}">
-      <em class="${abs === v.dealer ? 'oya' : ''}">${WIND_KANJI[p.wind]}</em>
+      <em class="${abs === v.dealer ? 'oya' : ''}">${WIND_ES[p.wind]}</em>
       <b>${escapeHTML(p.name)}</b><span>${p.score}</span>${gap}</div>`;
   }).join('');
-  return `${cards}<div class="sc mid">${WIND_KANJI[v.round] || '?'}${v.kyokuNum + 1}局<small>本 ${v.honba} · 供 ${v.kyoutaku} · toca para cerrar</small></div>`;
+  return `${cards}<div class="sc mid">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}<small>Honba ${v.honba} · Depósitos ${v.kyoutaku} · toca para cerrar</small></div>`;
 }
 
 function togglePoints() {
@@ -327,19 +364,20 @@ function renderHud(v, ui) {
   setIfChanged(hud.querySelector('.portraits'), portraitsHTML(v));
   setIfChanged(hud.querySelector('.roundinfo'), roundInfoHTML(v));
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
-  setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">振聴 Furiten</span>' : '');
+  setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">Furiten <i class="jp">振聴</i></span>' : '');
   const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
   setIfChanged(hud.querySelector('.ask'), askedBy ? `<span>${escapeHTML(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
 }
 
-function showModal(html) {
+// kind: 'result' (sheet over the 3D table) or 'final' (the score sheet)
+function showModal(html, kind) {
   const m = $('#modal');
-  m.innerHTML = `<div class="modal-box">${html}</div>`;
-  m.classList.remove('hidden');
+  m.className = kind;
+  setIfChanged(m, html);
 }
 
 function hideModal() {
-  $('#modal').classList.add('hidden');
+  $('#modal').className = 'hidden';
 }
 
 // A discard shows at once: the predicted table (the tile out of the hand and
@@ -459,19 +497,26 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Joining a room, or a practice room of my own against the bots.
 $('#join').addEventListener('click', async () => {
   const name = $('#name').value.trim();
-  const room = $('#room').value.trim().toLowerCase() || 'publica';
   if (!name) {
-    toast('Escribe un nombre');
+    toast('Escribe tu nombre');
+    $('#name').focus();
     return;
   }
+  const practice = state.mode === 'practice';
+  const mode = practice ? (state.practiceMate ? 'teams' : 'classic') : state.mode;
+  const room = practice
+    ? `bots-${mode === 'teams' ? 't' : 'c'}-${token.slice(0, 10)}`
+    : $('#room').value.trim().toLowerCase() || 'publica';
   state.name = name;
   state.room = room;
   store.set('mj.name', name);
   store.set('mj.room', room);
+  if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode: state.mode });
+  await api('join', { name, mode });
   pollLoop();
 });
 
@@ -495,22 +540,6 @@ $('#partner-toggle').addEventListener('click', () => {
   if (state.view) renderPartner(state.view, state.ui);
 });
 
-$('#bots').addEventListener('click', async () => {
-  const name = $('#name').value.trim();
-  if (!name) {
-    toast('Escribe un nombre');
-    return;
-  }
-  state.name = name;
-  state.room = `bots-${state.mode === 'teams' ? 't' : 'c'}-${token.slice(0, 10)}`;
-  store.set('mj.name', name);
-  store.set('mj.room', state.room);
-  $('#room').value = state.room;
-  state.lastHb = 0;
-  await api('join', { name, mode: state.mode });
-  pollLoop();
-});
-
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
 });
@@ -526,7 +555,10 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#menu')) setMenu(false);
 });
 
-$('#rules-dialog ul').innerHTML = $('#lobby details ul').innerHTML;
+$('#rules-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  $('#rules-dialog').showModal();
+});
 $('#m-rules').addEventListener('click', () => {
   setMenu(false);
   $('#rules-dialog').showModal();
@@ -561,23 +593,36 @@ $('#m-abandon').addEventListener('click', async () => {
   if (botRoom) {
     state.room = 'publica';
     store.set('mj.room', state.room);
-    $('#room').value = state.room;
   }
   if (!$('#lobby').classList.contains('hidden')) return;
   showLobby({ queue: [], inQueue: false, room: state.room });
   pollLoop();
 });
 
+// Practice needs no room name; it can be played as a team with Bot 1.
+function showMode() {
+  const practice = state.mode === 'practice';
+  $('#entry').classList.toggle('practice', practice);
+  $('#join .es').textContent = practice ? 'Empezar práctica' : 'Entrar a la sala';
+  $('#join .jp').textContent = practice ? '稽古' : '入場';
+}
 document.querySelectorAll('input[name="mode"]').forEach((r) => {
   r.checked = r.value === state.mode;
   r.addEventListener('change', () => {
     state.mode = r.value;
     store.set('mj.mode', state.mode);
+    showMode();
   });
 });
+$('#practice-mate').checked = state.practiceMate;
+$('#practice-mate').addEventListener('change', (e) => {
+  state.practiceMate = e.target.checked;
+  store.set('mj.practiceMate', state.practiceMate ? '1' : '0');
+});
+showMode();
 
 $('#name').value = state.name;
-$('#room').value = state.room;
+$('#room').value = state.room.startsWith('bots-') ? 'publica' : state.room;
 
 detectTileset().finally(() => {
   // Resume a game in progress for this browser, if any.

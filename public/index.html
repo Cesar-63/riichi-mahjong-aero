@@ -1,80 +1,119 @@
 <!doctype html>
-<html lang="es" data-theme="tetsuya">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Riichi Mahjong</title>
+  <title>Salón Mahjong</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%80%84%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Kaushan+Script&family=Shippori+Mincho+B1:wght@500;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main id="lobby" class="screen">
-    <div class="card">
-      <h1>麻雀 <span>Riichi Mahjong</span></h1>
-      <p class="sub">Estilo Tenhou · Tonpuusen (東風戦)</p>
-      <div id="entry">
-        <div class="modes" role="radiogroup" aria-label="Modo de juego">
-          <label><input type="radio" name="mode" value="classic" checked>
-            <span><b>Clásico</b><small>Ranked · 4 jugadores, cada uno por su cuenta</small></span></label>
-          <label><input type="radio" name="mode" value="teams">
-            <span><b>Por equipos</b><small>2 contra 2 · ves la mano de tu compañero</small></span></label>
-        </div>
-        <label>Nombre <input id="name" maxlength="16" autocomplete="nickname"></label>
-        <label>Sala <input id="room" maxlength="24" placeholder="publica"></label>
-        <div class="row">
-          <button id="join" class="primary">Entrar a la sala</button>
-        </div>
-        <button id="bots" class="link">Modo test: jugar contra bots</button>
+    <header class="brand">
+      <span class="jp">麻雀荘</span>
+      <h1>Salón Mahjong</h1>
+      <p>Riichi japonés · reglas Tenhou · partidas al Este</p>
+    </header>
+
+    <section id="entry" class="navy">
+      <div class="navy-head"><span>Elige cómo jugar</span><span class="jp">モード選択</span></div>
+      <div class="modes" role="radiogroup" aria-label="Modo de juego">
+        <label><input type="radio" name="mode" value="classic" checked>
+          <span class="mark" aria-hidden="true"></span>
+          <span class="txt"><b>Clásico</b><small>Ranked · 4 jugadores, cada uno por su cuenta</small></span>
+          <span class="jp">個人戦</span></label>
+        <label><input type="radio" name="mode" value="teams">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="txt"><b>Por equipos</b><small>2 contra 2 · ves la mano de tu compañero</small></span>
+          <span class="jp">団体戦</span></label>
+        <label><input type="radio" name="mode" value="practice">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="txt"><b>Práctica</b><small>Contra bots que descartan lo que roban</small></span>
+          <span class="jp">稽古</span></label>
       </div>
-      <div id="waiting" class="hidden">
-        <h2>Sala <span id="w-room"></span> <small id="w-mode"></small></h2>
+      <div class="fields">
+        <label>Tu nombre <input id="name" maxlength="16" autocomplete="nickname"></label>
+        <label class="room-field">Sala <input id="room" maxlength="24" placeholder="publica"></label>
+        <label class="mate-field check"><input type="checkbox" id="practice-mate"> Con Bot 1 de compañero (por equipos)</label>
+      </div>
+      <div class="navy-foot">
+        <a href="#reglas" id="rules-link">Reglas del salón</a>
+        <button id="join" class="paper seal" type="button"><span class="es">Entrar a la sala</span><span class="jp">入場</span></button>
+      </div>
+    </section>
+
+    <aside class="house-rules" aria-label="Reglas de la casa">
+      <div class="lines">
+        <h2>Reglas de la casa</h2>
+        <ul>
+          <li>Partida al Este (tonpuusen)</li>
+          <li>Tanyao abierto permitido</li>
+          <li>Tres cincos rojos (akadora)</li>
+          <li>25.000 puntos al empezar</li>
+          <li>Retorno 30.000 · uma 10/20</li>
+          <li>5 s por jugada + 10 s de reserva</li>
+        </ul>
+        <span class="sign">— La casa</span>
+      </div>
+      <span class="jp" aria-hidden="true">当店規定</span>
+    </aside>
+
+    <section id="waiting" class="hidden">
+      <header class="w-head">
+        <span class="w-mode"></span>
+        <span class="w-room">Sala «<span id="w-room"></span>»</span>
+        <span class="jp w-jp"></span>
+      </header>
+      <div class="w-table" aria-hidden="true">
+        <div class="w-felt"><span class="es">Mesa</span><small id="w-felt-note"></small></div>
+        <div class="w-seat" data-pos="bottom"></div>
+        <div class="w-seat" data-pos="right"></div>
+        <div class="w-seat" data-pos="top"></div>
+        <div class="w-seat" data-pos="left"></div>
+      </div>
+      <div class="navy w-box">
+        <div class="navy-head"><span id="w-title">Elige tu equipo</span><span class="jp" id="w-title-jp">組分け</span></div>
         <div class="teams">
           <section class="team" data-team="N">
-            <h3>Equipo Norte</h3>
+            <h3>Norte <span class="jp">北</span></h3>
             <ul></ul>
-            <button data-join-team="N">Unirse a Norte</button>
+            <button class="paper" type="button" data-join-team="N">Unirse a Norte</button>
+            <span class="here">Estás aquí</span>
           </section>
           <section class="team" data-team="S">
-            <h3>Equipo Sur</h3>
+            <h3>Sur <span class="jp">南</span></h3>
             <ul></ul>
-            <button data-join-team="S">Unirse a Sur</button>
+            <button class="paper" type="button" data-join-team="S">Unirse a Sur</button>
+            <span class="here">Estás aquí</span>
           </section>
         </div>
         <p id="unassigned"></p>
-        <div class="row">
-          <button id="ready">Estoy listo</button>
-          <button id="start" class="primary hidden">Comenzar partida</button>
-          <button id="leave" class="pass">Salir</button>
+        <div class="w-actions">
+          <button id="ready" class="paper" type="button">Estoy listo</button>
+          <button id="start" class="paper seal hidden" type="button"><span class="es">Comenzar</span><span class="jp">開始</span></button>
+          <button id="leave" class="paper plain" type="button">Salir</button>
         </div>
         <p class="hint" id="w-hint"></p>
       </div>
-      <p id="queue"></p>
-      <details>
-        <summary>Reglas</summary>
-        <ul>
-          <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>
-          <li><b>Por equipos:</b> Norte contra Sur, 2 y 2. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero). Al final se suman los resultados de cada equipo.</li>
-          <li>25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (oka +20 al 1º).</li>
-          <li>Kuitan (tanyao abierto) permitido. 3 akadora (un 5 rojo por palo).</li>
-          <li>Sin kiriage mangan. Doble ron permitido; triple ron es empate abortivo.</li>
-          <li>Empates abortivos: kyuushu kyuuhai, suufon renda, suucha riichi, suukaikan.</li>
-          <li>Nagashi mangan, pao en daisangen/daisuushii, sin doble yakuman.</li>
-          <li>Si nadie llega a 30.000 al final de 東4, se juega 南 a muerte súbita.</li>
-          <li>Tiempo: 5 s por acción + 10 s de reserva por mano.</li>
-          <li>Modo test: los bots solo descartan lo que roban y hacen pon/chi siempre que pueden (nunca ganan). En el modo por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
-        </ul>
-      </details>
-    </div>
+    </section>
+
+    <footer class="lobby-foot"><span id="queue"></span><span id="queue-hint">La partida empieza al llegar el cuarto jugador</span></footer>
   </main>
 
   <div id="game" class="screen hidden">
     <div id="stage3d"></div>
     <div id="hud3d">
+      <div class="band" aria-hidden="true"></div>
       <div class="portraits"></div>
-      <div class="roundinfo"></div>
-      <button class="act points-btn" type="button" title="Mirar tu cajón de puntos">点棒 Puntos</button>
+      <div class="roundinfo paper-chit"></div>
+      <div class="bottom-left">
+        <button class="paper points-btn" type="button" title="Mirar tu cajón de puntos"><span class="es">Puntos</span><span class="jp">点棒</span></button>
+        <div class="status3d"><span class="furiten-slot"></span><span class="timer"></span></div>
+      </div>
       <div id="scores3d" class="hidden" role="dialog" aria-label="Puntos de la mesa"></div>
-      <div class="status3d"><span class="furiten-slot"></span><span class="timer"></span></div>
       <div class="ask"></div>
       <div class="actions"></div>
       <div id="dora3d" class="hidden" aria-live="polite"></div>
@@ -84,30 +123,44 @@
       </div>
     </div>
     <aside id="partner" class="hidden" aria-label="Mano del compañero">
-      <button id="partner-toggle" aria-expanded="true"></button>
+      <button id="partner-toggle" type="button" aria-expanded="true"></button>
       <div id="partner-body">
         <div id="partner-hand"></div>
         <p class="hint">Clic en una ficha para pedir que la descarte.</p>
       </div>
     </aside>
     <div id="menu">
-      <button id="menu-btn" aria-expanded="false" aria-controls="menu-panel">☰ Menú</button>
-      <div id="menu-panel" class="hidden">
-        <label><input type="checkbox" id="nocalls"> No llamar (pasar chi/pon/kan)</label>
-        <button id="m-rules">Reglas</button>
-        <button id="m-full">Pantalla completa</button>
-        <button id="m-abandon" class="danger">Abandonar partida</button>
+      <button id="menu-btn" class="paper" type="button" aria-label="Menú" aria-expanded="false" aria-controls="menu-panel">
+        <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true"><path d="M1 2 H19 M1 8 H19 M1 14 H19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+      <div id="menu-panel" class="hidden sheet">
+        <h2>Menú <span class="jp">品書き</span></h2>
+        <label class="check"><input type="checkbox" id="nocalls"> No llamar (pasar chi, pon y kan)</label>
+        <button id="m-rules" class="paper" type="button">Reglas del salón</button>
+        <button id="m-full" class="paper" type="button">Pantalla completa</button>
+        <button id="m-abandon" class="paper danger" type="button">Abandonar partida</button>
       </div>
     </div>
   </div>
 
   <div id="modal" class="hidden"></div>
-  <dialog id="rules-dialog">
-    <h2>Reglas</h2>
-    <ul></ul>
-    <form method="dialog"><button>Cerrar</button></form>
+  <dialog id="rules-dialog" class="sheet">
+    <h2>Reglas del salón <span class="jp">当店規定</span></h2>
+    <ul>
+      <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>
+      <li><b>Por equipos:</b> Norte contra Sur, 2 y 2. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero). Al final se suman los resultados de cada equipo.</li>
+      <li><b>Práctica:</b> los bots solo descartan lo que roban y hacen pon y chi siempre que pueden (nunca ganan). Por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
+      <li>25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (oka +20 al primero).</li>
+      <li>Kuitan (tanyao abierto) permitido. Tres akadora (un 5 rojo por palo).</li>
+      <li>Sin kiriage mangan. Doble ron permitido; triple ron es empate abortivo.</li>
+      <li>Empates abortivos: kyuushu kyuuhai, suufon renda, suucha riichi, suukaikan.</li>
+      <li>Nagashi mangan, pao en daisangen y daisuushii, sin doble yakuman.</li>
+      <li>Si nadie llega a 30.000 al final de Este 4, se juega el Sur a muerte súbita.</li>
+      <li>Tiempo: 5 s por jugada + 10 s de reserva por mano.</li>
+    </ul>
+    <form method="dialog"><button class="paper" type="submit">Cerrar</button></form>
   </dialog>
-  <div id="toast"></div>
+  <div id="toast" role="status"></div>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

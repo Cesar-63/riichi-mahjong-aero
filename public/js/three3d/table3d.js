@@ -249,7 +249,7 @@ export function createTable3D(container, { onPick } = {}) {
       g.lineWidth = 5;
       g.stroke();
       g.fillStyle = color;
-      g.font = 'bold 50px "Segoe UI", "Hiragino Sans", sans-serif';
+      g.font = '46px "Kaushan Script", "Zen Kaku Gothic New", sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       g.fillText(text, 128, 50);
@@ -275,6 +275,7 @@ export function createTable3D(container, { onPick } = {}) {
     }
     for (const o of objects.values()) o.obj.visible = true;
     win = null;
+    if (!intro) world.forceView(null);
   }
 
   // A hand tipping over in place: the standing tile turns about its bottom
@@ -305,6 +306,19 @@ export function createTable3D(container, { onPick } = {}) {
     mesh.visible = false;
     scene.add(mesh);
     labels.push({ mesh, at });
+  }
+
+  // Camera behind seat r looking down at its revealed hand (centred on the
+  // seat-local x cx), placed so the hand and its dora row sit in the lower
+  // part of the screen. Narrow screens step back until the hand fits.
+  function handFrame(r, cx) {
+    const z = revealZ(true);
+    const fit = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    const k = Math.max(1, 0.66 / fit) * 1.12;
+    return {
+      pos: new THREE.Vector3(cx, 11 * k, z + 10 * k).applyQuaternion(qSeat[r]),
+      target: new THREE.Vector3(cx, 0, z - 4 * k).applyQuaternion(qSeat[r]),
+    };
   }
 
   // seats whose concealed hand is laid down on the table right now
@@ -346,6 +360,8 @@ export function createTable3D(container, { onPick } = {}) {
       t += ids.length * WIN.tileMs + 450;
       return { w, r, x0, hand };
     });
+    // the score screen then frames the first winner's hand and dora row
+    const frame = handFrame(rows[0].r, fx(rows[0].x0) + (rows[0].hand.length * PITCH) / 2);
     const doraAt = t;
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand (towards its owner)
@@ -365,7 +381,7 @@ export function createTable3D(container, { onPick } = {}) {
         flyers.push({ mesh, path: makePath(from, target), at: at + n * WIN.flyGap, kind });
         x += PITCH;
       };
-      lbl('ドラ', '#ffd75a', t);
+      lbl('Dora', '#ffd75a', t);
       res.dora.forEach((id, i) => {
         const o = objects.get(`t${id}`);
         const from = o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : slotPose(v, deadSlot(4 + i), rel);
@@ -378,7 +394,7 @@ export function createTable3D(container, { onPick } = {}) {
       const doraLit = t;
       if (ura.length) {
         x += 0.4;
-        lbl('裏ドラ', '#ff8ad8', t);
+        lbl('Ura', '#ff8ad8', t);
         ura.forEach((id, i) => {
           const slot = deadSlot(9 + i);
           flyer(id, slotPose(v, slot, rel), i, t, 'ura');
@@ -394,7 +410,7 @@ export function createTable3D(container, { onPick } = {}) {
       }
       t += 350;
     }
-    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles' };
+    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame };
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
     world.forceView('overview');
@@ -419,7 +435,7 @@ export function createTable3D(container, { onPick } = {}) {
         items.push({ mesh, id, at: DRAW.startMs + i * DRAW.tileMs, tip: tipOver(r, rowX(x0, i), up) });
       });
       const z = up ? revealZ(true) + H / 2 + 0.6 : revealZ(false) - H / 2 - 0.55;
-      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'テンパイ' : 'ノーテン', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs);
+      addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs);
     });
     const last = Math.max(0, ...items.map((it) => it.at));
     win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
@@ -464,7 +480,11 @@ export function createTable3D(container, { onPick } = {}) {
     }
     if (e >= win.doneAt && win.phase === 'dora') {
       win.phase = 'done';
-      world.forceView(null);
+      // a win: close on the hand, from behind its owner (the score sheet
+      // covers the top of the screen); a draw keeps the whole table
+      world.forceView(win.frame || 'overview');
+      // my own standing hand leaves the screen to the score sheet
+      if (lastView) hand.layout(lastView[0], {}, 0);
       winListener({ phase: 'done' });
     }
   }
@@ -799,7 +819,8 @@ export function createTable3D(container, { onPick } = {}) {
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
       laneEnd = performance.now() + spawn.wait + 90; // its flight to the hand
     }
-    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, drawerState.open ? 0 : Infinity, spawn);
+    const away = drawerState.open || (win && win.phase === 'done');
+    if (!laidDown(v).has(v.seat)) hand.layout(v, ui, away ? 0 : Infinity, spawn);
   }
 
   let lastView = null;
@@ -1095,6 +1116,8 @@ export function createTable3D(container, { onPick } = {}) {
       pointsListener = cb;
     },
     pointsOpen: () => drawerState.open,
+    // the camera view in use: 'player', 'overview', 'drawer' or 'free'
+    onView: world.onView,
     setCallouts(els) {
       calloutEls = els;
     },
