@@ -17,7 +17,9 @@ export function createHand3D({ world, kit, onPick }) {
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 
-  // dark band behind the hand
+  // dark band behind the hand, standing on the bottom edge of the screen
+  // (the texture's rim and glow go round the top and the sides only)
+  const BAND_TOP = 26 / 128; // part of the texture above the band itself
   const bandCanvas = document.createElement('canvas');
   bandCanvas.width = 512;
   bandCanvas.height = 128;
@@ -31,11 +33,16 @@ export function createHand3D({ world, kit, onPick }) {
     g.shadowColor = 'rgba(50,110,255,.9)';
     g.shadowBlur = 26;
     g.fillStyle = '#0a0f22';
-    g.fillRect(28, 26, 456, 76);
+    g.fillRect(28, 26, 456, 128);
     g.shadowBlur = 0;
     g.strokeStyle = '#3a4a7a';
     g.lineWidth = 2;
-    g.strokeRect(28, 26, 456, 76);
+    g.beginPath();
+    g.moveTo(28, 128);
+    g.lineTo(28, 26);
+    g.lineTo(484, 26);
+    g.lineTo(484, 128);
+    g.stroke();
     bandTex.needsUpdate = true;
   })();
 
@@ -152,10 +159,12 @@ export function createHand3D({ world, kit, onPick }) {
         tiles.delete(id);
       }
     }
-    band.scale.set(total + size * 1.6, size * H + size * 0.9, 1);
+    // its top edge stays where it was, level with the tops of the tiles
+    const bandH = (y + (size * H + size * 0.9) * (0.5 - BAND_TOP)) / (1 - BAND_TOP);
+    band.scale.set(total + size * 1.6, bandH, 1);
     // no band while the hand is put away (intro, reveals)
     band.visible = visible > 0;
-    band.position.set(camera.right / 2, y, -400);
+    band.position.set(camera.right / 2, bandH / 2, -400);
   }
 
   // tiles move at a steady speed (no easing), growing to full size as they arrive
