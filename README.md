@@ -27,25 +27,27 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Cómo se juega
 
-1. En el menú principal elige el **modo de juego**, escribe un nombre y un
-   código de sala (por defecto `publica`) y pulsa **Entrar a la sala**. Cada
-   sala queda con el modo de quien la abrió; para entrar hay que elegir ese
-   mismo modo.
+1. En el menú principal (**Elige cómo jugar**) elige el modo, escribe tu
+   nombre y un código de sala (por defecto `publica`) y pulsa **Entrar a la
+   sala**. Cada sala queda con el modo de quien la abrió; para entrar hay que
+   elegir ese mismo modo.
    - **Clásico** (ranked individual, el modo original): la partida empieza
      sola al llegar a 4 jugadores, con asientos al azar.
    - **Por equipos** (2 contra 2): en la sala de espera (máximo 4) eliges
-     **Equipo Norte** o **Equipo Sur** (2 por equipo), marcas **Estoy listo**
-     (cambiar de equipo lo quita) y el **host** (el primero que entró; si se
-     va, el siguiente) pulsa **Comenzar partida** cuando hay 2 + 2 y los 4
-     están listos. Los compañeros se sientan uno al lado del otro (se sortea
-     qué equipo empieza en 東 y el orden dentro de cada equipo). Ver
+     **Norte** o **Sur** (2 por equipo), marcas **Estoy listo** (cambiar de
+     equipo lo quita) y el **anfitrión** (el primero que entró; si se va, el
+     siguiente) pulsa **Comenzar** cuando hay 2 + 2 y los 4 están listos. Los
+     compañeros se sientan uno al lado del otro (se sortea qué equipo empieza
+     de Este y el orden dentro de cada equipo). Ver
      [Juego por equipos](#juego-por-equipos).
+   - **Práctica**: contra bots, sin código de sala; con **Con Bot 1 de
+     compañero** se juega por equipos. Ver [Práctica](#práctica-contra-bots).
 2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
-3. **☰ Menú** (esquina superior izquierda, siempre visible):
+3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
    - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
      ofreciendo.
-   - **Reglas** y **Pantalla completa**.
+   - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
@@ -68,18 +70,57 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa de madera (con
 vetas y el marco cortado en diagonal en las esquinas, como un marco de
-cuadro) y tapete verde bajo una lámpara cálida, con sillas en penumbra;
-fichas de reverso amarillo, menús en cajas azul marino, retratos de los
-rivales en marcos dorados, la mano propia sobre una franja oscura y avisos de
-llamada en letra blanca con contorno negro. La mesa no tiene placa central:
-los dados quedan toda la mano sobre el tapete a la derecha del oya (quien los
-tiene de su lado reparte), y la ronda, los honba, los depósitos, las fichas
-que quedan y tus puntos se ven en un recuadro arriba a la izquierda.
+cuadro) y tapete verde bajo una lámpara cálida, con sillas en penumbra, y
+fichas de reverso amarillo. La mesa no tiene placa central: los dados quedan
+toda la mano sobre el tapete a la derecha del oya (quien los tiene de su lado
+reparte).
 
-La interfaz (menús, lobby, pantallas de resultado) está por rediseñarse
-entera en este estilo. La ambientación Frutiger Aero y la vista 2.5D se
-quitaron; siguen en el historial del repositorio (último commit con ambas:
-`b9c1116`).
+La interfaz se diseñó en Claude Design y se pasó al juego con estos
+materiales:
+
+- **Papel** viejo para botones, la ficha de la ronda, el menú, las reglas y la
+  hoja final; el botón principal de cada caja lleva un borde rojo, como un
+  sello.
+- **Tablillas de madera** con nombre, viento y puntos de cada jugador.
+- **Cajas azul marino** (estilo menú de PS2) en el lobby y la sala de espera.
+- Letras: **Kaushan Script** (títulos y botones) y **Caveat Brush** (hojas y
+  tablillas) con trazo de pincel; los avisos grandes (¡Pon!, ¡Ron!, Mangan…)
+  en **Shippori Mincho B1** gruesa con un halo de luz detrás, no un contorno;
+  el resto en **Zen Kaku Gothic New**. Todas de Google Fonts.
+- Todo el texto está en español; el japonés va solo de acento, chico y al
+  lado (ポン bajo "Pon", 満貫 detrás de "Mangan").
+
+Pantallas:
+
+- **Lobby** (pared verde oliva): título "Salón Mahjong", la caja **Elige cómo
+  jugar** con los tres modos, tu nombre y la sala, y la hoja **Reglas de la
+  casa** pegada a la pared. **Reglas del salón** abre las reglas completas.
+- **Sala de espera**: la mesa dibujada desde arriba con los cuatro asientos
+  (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
+  izquierda) y la caja para elegir equipo, marcar listo y comenzar.
+- **En partida**: una franja oscura arriba con un marco por rival (izquierda =
+  kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
+  tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
+  no hay retratos: cada marco muestra una silueta. Con la cámara en la mesa
+  entera (cursor en la mitad superior) la franja se pliega hacia arriba y
+  quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
+  ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
+  puntos. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
+  botones de llamada (Ron y Tsumo con un sello 和).
+- **Resultado de la mano**: una hoja oscura cubre la parte de arriba con la
+  ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
+  sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
+  三倍満, Yakuman 役満) cruzado por un trazo de luz, y los yaku escritos a
+  mano. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada y la
+  fila de dora y ura dora. Al pie, una tablilla por jugador con su puntaje y
+  lo que ganó o perdió, y **Aceptar**. Los empates usan la misma hoja
+  ("Empate" y quién quedó en tenpai), con la mesa entera de fondo.
+- **Fin de la partida**: la hoja de papel **Resultados** con puesto, puntos y
+  resultado (y la suma de cada equipo), un sello rojo "Gana" y **Volver al
+  lobby**.
+
+La ambientación Frutiger Aero y la vista 2.5D se quitaron; siguen en el
+historial del repositorio (último commit con ambas: `b9c1116`).
 
 ## Vista 3D
 
@@ -128,7 +169,7 @@ primera partida.
   cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
-- **Cajón de puntos**: el botón **点棒 Puntos** (siempre a la izquierda, justo
+- **Cajón de puntos**: el botón **Puntos** (siempre a la izquierda, justo
   encima de tu mano, como los botones de llamada a la derecha) hace que la
   cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
@@ -137,33 +178,31 @@ primera partida.
   blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
   un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
   chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
-  uno negro grande hacia cada extremo. Encima del cajón aparece tu puntaje y alrededor el de los
-  demás en su posición (izquierda = kamicha, arriba = toimen, derecha =
-  shimocha), con la diferencia con el tuyo. Un toque lo cierra.
-- **Retratos de los rivales** arriba (izquierda = kamicha, centro = toimen,
-  derecha = shimocha) con nombre, viento, puntos, riichi y el compañero en el
-  modo por equipos; el que tiene el turno brilla.
+  uno negro grande hacia cada extremo. Encima del cajón aparece tu tablilla
+  con tu puntaje y alrededor las de los demás en su posición (izquierda =
+  kamicha, arriba = toimen, derecha = shimocha), con la diferencia con el
+  tuyo. Un toque lo cierra.
 - Botones, menú, resultados y el panel del compañero son HTML encima del
   canvas.
 
 ### Animaciones de riichi y de victoria (3D)
 
-- **Riichi**: aviso grande "リーチ"; la ficha sale de la mano, se acuesta de
+- **Riichi**: aviso grande "¡Riichi!" (リーチ debajo); la ficha sale de la mano, se acuesta de
   lado mientras sube y cae así en los descartes. Si nadie hace ron sobre ella
   (el servidor recién entonces marca el riichi), un palito de 1000 puntos en
   3D entra girando y se acomoda en el tapete frente al jugador.
-- **Victoria**: aviso grande "ツモ"/"ロン"; las fichas del ganador se tumban
+- **Victoria**: aviso grande "¡Tsumo!"/"¡Ron!"; las fichas del ganador se tumban
   boca arriba una por una, girando sobre su canto a ritmo parejo (la ganadora,
   separada y brillando), y la cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
-  una fila con cartel **ドラ**: los indicadores de dora vuelan desde el muro
-  muerto hasta ella; con riichi sigue el cartel **裏ドラ** y los ura dora salen
+  una fila con cartel **Dora**: los indicadores de dora vuelan desde el muro
+  muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
-  rosado: ura dora) y un cartel cuenta dora, ura y aka. Después se abre la
-  pantalla de resultado.
+  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
+  baja detrás del ganador a su mano y se abre la hoja de resultado.
 - **Empate por agotamiento**: todas las manos se tumban a la vez, ficha
-  por ficha: las que están en tenpai boca arriba con el cartel **テンパイ**, y
-  las noten boca abajo con **ノーテン**. Después se abre la pantalla de
+  por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
+  las noten boca abajo con **Noten**. Después se abre la pantalla de
   resultado. Los empates abortivos van directo al resultado.
 
 ### Animación de inicio de cada mano
@@ -215,12 +254,12 @@ Solo en el modo **Por equipos**:
 - Los puntos y el uma siguen siendo individuales; al final se suma el
   resultado de cada equipo y gana el que tenga más.
 
-## Modo test (contra bots)
+## Práctica (contra bots)
 
-En el menú principal, **Modo test: jugar contra bots** crea una sala privada
-(`bots-…`) con el modo elegido y empieza al instante: en **Clásico**, tú contra
-3 bots; en **Por equipos**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y
-Bot 3. Los bots:
+En el menú principal, el modo **Práctica** con **Empezar práctica** crea una
+sala privada (`bots-…`) y empieza al instante: tú contra 3 bots o, con **Con
+Bot 1 de compañero**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y Bot 3 por
+equipos. Los bots:
 
 - descartan siempre la ficha que acaban de robar (tras una llamada, la última
   ficha legal de la mano);

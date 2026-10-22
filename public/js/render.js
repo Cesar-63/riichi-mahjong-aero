@@ -1,7 +1,7 @@
 // DOM pieces around the 3D table: tile images, call buttons, callouts,
 // the result and final screens and the teammate's hand.
 import {
-  tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI, WIND_KANJI,
+  tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI,
   YAKU_NAMES, DRAW_NAMES,
 } from './shared/tiles.js';
 
@@ -64,29 +64,12 @@ function face(id) {
   return `<span class="tf txt s${suitOf(t)}${aka}"><b>${numOf(t)}</b><i>${SUIT_KANJI[suitOf(t)]}</i></span>`;
 }
 
-export function tile(id, { side = false, cls = '', attrs = '' } = {}) {
-  if (side) return `<span class="tile side ${cls}" ${attrs}><span class="rot">${face(id)}</span></span>`;
+export function tile(id, { cls = '', attrs = '' } = {}) {
   return `<span class="tile ${cls}" ${attrs}>${face(id)}</span>`;
 }
 
 export function tileOfType(t) {
   return tile(t * 4 + 1);
-}
-
-function meldHTML(m, owner) {
-  if (m.type === 'ankan') {
-    return `<span class="meld">${tile(-1)}${tile(m.tiles[1])}${tile(m.tiles[2])}${tile(-1)}</span>`;
-  }
-  const rel = (m.from - owner + 4) % 4; // 1 right, 2 across, 3 left
-  const others = m.tiles.filter((x) => x !== m.called && x !== m.added);
-  let sideHTML = tile(m.called, { side: true });
-  if (m.type === 'kakan') {
-    sideHTML = `<span class="kakan">${tile(m.added, { side: true })}${tile(m.called, { side: true })}</span>`;
-  }
-  const parts = others.map((x) => tile(x));
-  const pos = rel === 3 ? 0 : rel === 2 ? 1 : parts.length;
-  parts.splice(pos, 0, sideHTML);
-  return `<span class="meld">${parts.join('')}</span>`;
 }
 
 // Keyed update of a container's children: nodes whose key and markup are
@@ -120,43 +103,51 @@ function setHTML(el, html) {
   }
 }
 
-const CALL_TEXT = { chi: 'チー', pon: 'ポン', kan: 'カン', riichi: 'リーチ', ron: 'ロン', tsumo: 'ツモ' };
+// Calls as they are shouted across the table: Spanish first, the Japanese
+// call under it.
+const CALL_TEXT = {
+  chi: ['¡Chi!', 'チー'], pon: ['¡Pon!', 'ポン'], kan: ['¡Kan!', 'カン'],
+  riichi: ['¡Riichi!', 'リーチ'], ron: ['¡Ron!', 'ロン'], tsumo: ['¡Tsumo!', 'ツモ'],
+};
 
-function btn(label, action, cls = '') {
-  return `<button class="act ${cls}" data-action='${esc(JSON.stringify(action))}'>${label}</button>`;
+// Paper button: the label, with the Japanese term small underneath.
+function btn(label, jp, action, cls = '') {
+  const seal = cls.includes('win') ? '<span class="stamp" aria-hidden="true">和</span>' : '';
+  return `<button class="paper act ${cls}" type="button" data-action='${esc(JSON.stringify(action))}'><span class="es">${label}</span><span class="jp">${jp}</span>${seal}</button>`;
 }
+const choice = (action, tiles) => `<button class="paper act choice" type="button" data-action='${esc(JSON.stringify(action))}'>${tiles}</button>`;
 
 export function actionsHTML(v, ui) {
   const o = v.options;
   if (!o) return '';
   if (o.kind === 'turn') {
-    if (ui.riichiMode) return `<span class="hint">Elige el descarte de riichi</span>${btn('Cancelar', { ui: 'riichiOff' }, 'pass')}`;
+    if (ui.riichiMode) return `<span class="hint">Elige el descarte de riichi</span>${btn('Cancelar', '取消', { ui: 'riichiOff' }, 'pass')}`;
     if (ui.kanSelect) {
       const kans = [...o.ankan.map((t) => ({ type: 'ankan', t })), ...o.kakan.map((t) => ({ type: 'kakan', t }))];
-      return kans.map((a) => `<button class="act choice" data-action='${JSON.stringify(a)}'>${tileOfType(a.t)}</button>`).join('') + btn('Cancelar', { ui: 'kanOff' }, 'pass');
+      return kans.map((a) => choice(a, tileOfType(a.t))).join('') + btn('Cancelar', '取消', { ui: 'kanOff' }, 'pass');
     }
     let h = '';
-    if (o.tsumo) h += btn('Tsumo', { type: 'tsumo' }, 'win');
-    if (o.riichi.length) h += btn('Riichi', { ui: 'riichiOn' }, 'riichi');
+    if (o.tsumo) h += btn('Tsumo', 'ツモ', { type: 'tsumo' }, 'win');
+    if (o.riichi.length) h += btn('Riichi', 'リーチ', { ui: 'riichiOn' }, 'riichi');
     const kanCount = o.ankan.length + o.kakan.length;
-    if (kanCount === 1) h += btn('Kan', o.ankan.length ? { type: 'ankan', t: o.ankan[0] } : { type: 'kakan', t: o.kakan[0] });
-    else if (kanCount > 1) h += btn('Kan', { ui: 'kanOn' });
-    if (o.kyuushu) h += btn('Kyuushu', { type: 'kyuushu' });
+    if (kanCount === 1) h += btn('Kan', 'カン', o.ankan.length ? { type: 'ankan', t: o.ankan[0] } : { type: 'kakan', t: o.kakan[0] });
+    else if (kanCount > 1) h += btn('Kan', 'カン', { ui: 'kanOn' });
+    if (o.kyuushu) h += btn('Nueve terminales', '九種九牌', { type: 'kyuushu' });
     return h;
   }
   // response
   if (ui.chiSelect) {
-    return o.chi.map((c) => `<button class="act choice" data-action='${JSON.stringify({ type: 'chi', tiles: c.tiles })}'>${c.tiles.map((x) => tile(x)).join('')}</button>`).join('') + btn('Cancelar', { ui: 'chiOff' }, 'pass');
+    return o.chi.map((c) => choice({ type: 'chi', tiles: c.tiles }, c.tiles.map((x) => tile(x)).join(''))).join('') + btn('Cancelar', '取消', { ui: 'chiOff' }, 'pass');
   }
   if (ui.ponSelect) {
-    return o.pon.map((p) => `<button class="act choice" data-action='${JSON.stringify({ type: 'pon', tiles: p })}'>${p.map((x) => tile(x)).join('')}</button>`).join('') + btn('Cancelar', { ui: 'ponOff' }, 'pass');
+    return o.pon.map((p) => choice({ type: 'pon', tiles: p }, p.map((x) => tile(x)).join(''))).join('') + btn('Cancelar', '取消', { ui: 'ponOff' }, 'pass');
   }
   let h = '';
-  if (o.ron) h += btn('Ron', { type: 'ron' }, 'win');
-  if (o.pon) h += o.pon.length === 1 ? btn('Pon', { type: 'pon', tiles: o.pon[0] }) : btn('Pon', { ui: 'ponOn' });
-  if (o.minkan) h += btn('Kan', { type: 'minkan' });
-  if (o.chi) h += o.chi.length === 1 ? btn('Chi', { type: 'chi', tiles: o.chi[0].tiles }) : btn('Chi', { ui: 'chiOn' });
-  h += btn('Pasar', { type: 'pass' }, 'pass');
+  if (o.pon) h += o.pon.length === 1 ? btn('Pon', 'ポン', { type: 'pon', tiles: o.pon[0] }) : btn('Pon', 'ポン', { ui: 'ponOn' });
+  if (o.chi) h += o.chi.length === 1 ? btn('Chi', 'チー', { type: 'chi', tiles: o.chi[0].tiles }) : btn('Chi', 'チー', { ui: 'chiOn' });
+  if (o.minkan) h += btn('Kan', 'カン', { type: 'minkan' });
+  if (o.ron) h += btn('Ron', 'ロン', { type: 'ron' }, 'win');
+  h += btn('Pasar', '見送り', { type: 'pass' }, 'pass');
   return h;
 }
 
@@ -168,7 +159,7 @@ export function showCallouts(root, v, ui) {
     for (const seat of e.seats || [e.seat]) {
       const el = root.querySelector(`.callout[data-seat="${seat}"]`);
       if (!el) continue;
-      el.innerHTML = `<span class="t-${e.type}">${text}</span>`;
+      el.innerHTML = `<span class="t-${e.type}"><b>${text[0]}</b><i>${text[1]}</i></span>`;
       el.classList.remove('show');
       void el.offsetWidth;
       el.classList.add('show');
@@ -177,60 +168,105 @@ export function showCallouts(root, v, ui) {
   ui.lastEvent = Math.max(ui.lastEvent, ...v.events.map((e) => e.id));
 }
 
-// ---------------------------------------------------------------- modals
+// ---------------------------------------------------------------- result
 
-const yakuLabel = (k) => {
-  const n = YAKU_NAMES[k] || [k, k];
-  return `<span class="jp">${n[0]}</span> ${n[1]}`;
+const WIND_ES = ['Este', 'Sur', 'Oeste', 'Norte'];
+// limit hands get a big stamp with their kanji faint behind it
+const LIMITS = {
+  Mangan: '満貫', Haneman: '跳満', Baiman: '倍満', Sanbaiman: '三倍満',
+  'Kazoe Yakuman': '数え役満', Yakuman: '役満', '2x Yakuman': '二倍役満',
+};
+const limitName = (label) => (label === '2x Yakuman' ? 'Doble Yakuman' : label);
+// yaku whose name says nothing in Spanish get a short note instead of kanji
+const YAKU_NOTE = {
+  pinfu: 'mano sin puntos extra', tanyao: 'solo del 2 al 8', tsumo: 'robada con la mano cerrada',
+  haku: 'trío de dragón blanco', hatsu: 'trío de dragón verde', chun: 'trío de dragón rojo',
+  aka: 'cincos rojos',
 };
 
-function deltasHTML(v, r) {
-  const rows = v.players.map((p, i) => {
+// The four seats in wind order on wooden plaques, with what each one got.
+function plaquesHTML(v, r, winners) {
+  const order = [0, 1, 2, 3].sort((a, b) => v.players[a].wind - v.players[b].wind);
+  return order.map((i) => {
+    const p = v.players[i];
     const d = r.deltas[i];
-    const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
-    return `<tr><td>${WIND_KANJI[p.wind]}</td><td>${esc(p.name)}</td><td>${r.scores[i]}</td><td class="${cls}">${d > 0 ? '+' : ''}${d || ''}</td></tr>`;
-  });
-  return `<table class="deltas">${rows.join('')}</table>`;
+    const delta = d ? ` <b class="${d > 0 ? 'pos' : 'neg'}">${d > 0 ? '+' : '−'}${Math.abs(d)}</b>` : '';
+    return `<div class="plaque${winners.includes(i) ? ' won' : ''}${i === v.seat ? ' me' : ''}"><span class="name">${WIND_ES[p.wind]} · ${esc(p.name)}</span><span class="score">${r.scores[i]}${delta}</span></div>`;
+  }).join('');
 }
 
-function handRow(hand, winTile, melds, owner) {
-  return `<div class="handrow">${hand.map((x) => tile(x)).join('')}${winTile !== undefined ? `<span class="gap"></span>${tile(winTile)}` : ''}<span class="gap"></span>${(melds || []).map((m) => meldHTML(m, owner)).join('')}</div>`;
+function acceptHTML(v, r) {
+  if (r.ready[v.seat]) return '<div class="accept waiting">Esperando a los demás…<span class="timer"></span></div>';
+  return '<button class="paper act accept" type="button" data-action=\'{"type":"ok"}\'><span class="es">Aceptar</span><span class="jp"><span class="timer"></span> · 確認</span></button>';
 }
 
+function stampHTML(name, kanji, cls = '') {
+  return `<div class="stamp-big ${cls}"><span class="bgk" aria-hidden="true">${kanji}</span><span class="name">${name}</span></div>`;
+}
+
+// Score sheet over the top of the screen; the 3D camera frames the winning
+// hand and its dora underneath (see table3d.js).
 export function resultHTML(v) {
   const r = v.result;
-  let h = '';
+  const round = `${WIND_ES[v.round]} ${v.kyokuNum + 1}${v.honba ? ` · Honba ${v.honba}` : ''}`;
+  let body = '';
+  let winners = [];
   if (r.type === 'agari') {
-    for (const w of r.wins) {
-      const p = v.players[w.seat];
-      const how = w.tsumo ? 'Tsumo' : `Ron a ${esc(v.players[w.from].name)}`;
-      const yaku = w.yaku.map(([k, han]) => `<li>${yakuLabel(k)}<b>${w.yakuman ? '役満' : `${han} han`}</b></li>`).join('');
-      const pts = w.yakuman ? w.label : `${w.han} han ${w.fu} fu ${w.label}`;
-      h += `<div class="win">
-        <h3>${esc(p.name)} — ${how}</h3>
-        ${handRow(w.hand, w.winTile, w.melds, w.seat)}
-        <div class="inds"><span class="lbl">Dora</span>${r.dora.map((x) => tile(x)).join('')}${w.ura.length ? `<span class="lbl">Ura</span>${w.ura.map((x) => tile(x)).join('')}` : ''}</div>
-        <ul class="yaku">${yaku}</ul>
-        <div class="pts">${pts} · ${w.points} pts${w.pao !== null ? ` · Pao: ${esc(v.players[w.pao].name)}` : ''}</div>
-      </div>`;
-    }
+    const [w, ...more] = r.wins;
+    winners = r.wins.map((x) => x.seat);
+    const p = v.players[w.seat];
+    const how = w.tsumo ? 'Tsumo' : 'Ron';
+    const extra = [w.tsumo ? 'pagan todos' : `Ron a ${esc(v.players[w.from].name)}`];
+    if (v.honba) extra.push(`incluye ${v.honba} honba`);
+    if (w.pao !== null) extra.push(`pao: paga ${esc(v.players[w.pao].name)}`);
+    // (ura dora is listed even when it adds nothing)
+    const shown = w.yaku.filter(([, han]) => han || w.yakuman);
+    const yaku = shown.map(([k, han]) => {
+      const n = YAKU_NAMES[k] || [k, k];
+      const note = YAKU_NOTE[k] ? `<small class="note">${YAKU_NOTE[k]}</small>` : `<small class="jp">${n[0]}</small>`;
+      const count = w.yakuman ? '' : ` <em>${han}</em>`;
+      return `<li>${n[1]}${count} ${note}</li>`;
+    }).join('');
+    const label = LIMITS[w.label] ? stampHTML(limitName(w.label), LIMITS[w.label], w.yakuman || w.label === 'Kazoe Yakuman' ? 'yakuman' : '') : '';
+    body = `<div class="r-head">
+        <div class="r-round">${round} · gana ${esc(p.name)} (${WIND_ES[p.wind]})</div>
+        <div class="r-hanfu">${w.yakuman ? '' : `<span>${w.han} han</span><span>${w.fu} fu</span>`}<span>${how}</span></div>
+        <div class="r-points">${w.points}</div>
+        <div class="r-sub">${extra.join(' · ')}</div>
+        ${more.map((m) => `<div class="r-sub also">También gana ${esc(v.players[m.seat].name)}: ${m.points}${m.label ? ` · ${limitName(m.label)}` : ''}</div>`).join('')}
+      </div>
+      ${label ? `<div class="streak" aria-hidden="true"></div>${label}` : ''}
+      <ul class="r-yaku${shown.length > 4 ? ' many' : ''}">${yaku}</ul>`;
   } else {
     const n = DRAW_NAMES[r.reason] || [r.reason, r.reason];
-    h += `<h3>${n[0]} · ${n[1]}</h3>`;
+    const name = { exhaustive: 'Empate', nagashi: 'Nagashi Mangan', kyuushu: 'Nueve terminales', suufon: 'Cuatro vientos', suucha: 'Cuatro riichi', suukaikan: 'Cuatro kanes', sanchahou: 'Triple ron' }[r.reason] || n[1];
+    const why = {
+      exhaustive: 'Se acabó la pared', nagashi: 'Descartes solo de terminales y honores',
+      kyuushu: `${r.seat !== undefined ? esc(v.players[r.seat].name) : 'Un jugador'} anuló la mano`,
+      suufon: 'Los cuatro descartaron el mismo viento', suucha: 'Los cuatro declararon riichi',
+      suukaikan: 'Cuatro kanes de jugadores distintos', sanchahou: 'Tres jugadores hicieron ron',
+    }[r.reason] || '';
+    winners = r.nagashi || [];
+    let list = '';
     if (r.reason === 'exhaustive' || r.reason === 'nagashi') {
-      h += '<div class="tenpai">';
-      v.players.forEach((p, i) => {
+      list = `<ul class="r-yaku">${v.players.map((pl, i) => {
         const t = r.tenpai.includes(i);
-        h += `<div><b>${esc(p.name)}</b>: ${t ? 'Tenpai' : 'Noten'}${r.nagashi && r.nagashi.includes(i) ? ' · Nagashi Mangan' : ''}${t ? handRow(r.hands[i]) : ''}</div>`;
-      });
-      h += '</div>';
+        return `<li>${esc(pl.name)} <em>${t ? 'Tenpai' : 'Noten'}</em> <small class="jp">${t ? '聴牌' : '不聴'}</small>${r.nagashi && r.nagashi.includes(i) ? ' <small class="note">nagashi mangan</small>' : ''}</li>`;
+      }).join('')}</ul>`;
     }
-    if (r.reason === 'kyuushu' && r.hand) h += `<div><b>${esc(v.players[r.seat].name)}</b>${handRow(r.hand)}</div>`;
+    if (r.reason === 'kyuushu' && r.hand) list = `<div class="r-hand">${r.hand.map((x) => tile(x)).join('')}</div>`;
+    body = `<div class="r-head">
+        <div class="r-round">${round} · sin ganador</div>
+        <div class="r-hanfu"><span>${why}</span></div>
+      </div>
+      <div class="streak" aria-hidden="true"></div>${stampHTML(name, n[0], 'draw')}
+      ${list}`;
   }
-  h += deltasHTML(v, r);
-  const ready = r.ready[v.seat];
-  h += `<div class="modal-actions">${ready ? '<span class="hint">Esperando a los demás…</span>' : '<button class="act" data-action=\'{"type":"ok"}\'>OK</button>'}<span class="timer"></span></div>`;
-  return h;
+  return `<div class="r-sheet">
+      <div class="r-glow" aria-hidden="true"></div>
+      ${body}
+    </div>
+    <div class="r-bottom">${plaquesHTML(v, r, winners)}${acceptHTML(v, r)}</div>`;
 }
 
 // Teammate's hand: docked at the side of the screen next to the teammate's
@@ -253,7 +289,7 @@ export function renderPartner(v, ui) {
   panel.style.width = `${width}px`;
   panel.style.setProperty('--pt', `${tw}px`);
   const name = v.players[p.seat].name;
-  setHTML(document.getElementById('partner-toggle'), `${open ? '▾' : '▸'} Mano de ${esc(name)} <span class="hint">(compañero)</span>`);
+  setHTML(document.getElementById('partner-toggle'), `${open ? '▾' : '▸'} Mano de ${esc(name)} <span class="hint">compañero · 相方</span>`);
   document.getElementById('partner-toggle').setAttribute('aria-expanded', String(open));
   const items = p.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
   if (p.drawn !== null) {
@@ -265,23 +301,35 @@ export function renderPartner(v, ui) {
   for (const el of hand.querySelectorAll('.tile')) el.classList.toggle('asked', Number(el.dataset.id) === p.myRequest);
 }
 
-export function finalHTML(v) {
-  const rows = v.final.map((f) => `<tr><td>${f.rank}º</td><td>${esc(f.name)}${f.seat === v.seat ? ' (tú)' : ''}</td><td>${f.score}</td><td class="${f.points >= 0 ? 'pos' : 'neg'}">${f.points > 0 ? '+' : ''}${f.points.toFixed(1)}</td></tr>`).join('');
+// Paper score sheet at the end of the game.
+export function finalHTML(v, room) {
+  const fmt = (x) => `${x > 0 ? '+' : x < 0 ? '−' : '±'}${Math.abs(Math.round(x * 10) / 10).toFixed(1)}`;
+  const rows = v.final.map((f) => `<span class="rank">${f.rank}.º</span>
+      <span class="who">${esc(f.name)}${f.seat === v.seat ? ' <small>(tú)</small>' : ''}</span>
+      <span class="num">${f.score}</span>
+      <span class="num ${f.points >= 0 ? 'pos' : 'neg'}">${fmt(f.points)}</span>`).join('');
   let teams = '';
   if (v.players.every((p) => p.team)) {
     const sum = { N: 0, S: 0 };
     for (const f of v.final) sum[v.players[f.seat].team] += f.points;
-    const fmt = (x) => `${x > 0 ? '+' : ''}${(Math.round(x * 10) / 10).toFixed(1)}`;
     const myTeam = v.players[v.seat].team;
     const win = sum.N === sum.S ? null : sum.N > sum.S ? 'N' : 'S';
     const label = { N: 'Equipo Norte', S: 'Equipo Sur' };
     teams = `<div class="teamres">${['N', 'S'].map((t) => `<div class="${t === win ? 'won' : ''} ${t === myTeam ? 'mine' : ''}">
-        <b>${label[t]}</b><span>${v.players.filter((p) => p.team === t).map((p) => esc(p.name)).join(' · ')}</span>
-        <span class="${sum[t] >= 0 ? 'pos' : 'neg'}">${fmt(sum[t])}</span></div>`).join('')}</div>
-      <p class="pts">${win ? `¡Gana el ${label[win]}!${win === myTeam ? ' 🎉' : ''}` : 'Empate entre equipos'}</p>`;
+        <b>${label[t]}${t === myTeam ? ' <small>(tu equipo)</small>' : ''}</b><span class="names">${v.players.filter((p) => p.team === t).map((p) => esc(p.name)).join(' · ')}</span>
+        <span class="num ${sum[t] >= 0 ? 'pos' : 'neg'}">${fmt(sum[t])}</span></div>`).join('')}</div>
+      <p class="team-verdict">${win ? `¡Gana el ${label[win]}!` : 'Empate entre equipos'}</p>`;
   }
-  return `<h2>Fin de la partida</h2>
-    ${teams}
-    <table class="deltas final"><tr><th></th><th>Jugador</th><th>Puntos</th><th>Resultado</th></tr>${rows}</table>
-    <div class="modal-actions"><button class="act" data-ui="lobby">Volver al lobby</button></div>`;
+  const where = room && !room.startsWith('bots-') ? ` · sala «${esc(room)}»` : ' · práctica';
+  return `<div class="f-sheet">
+      <span class="stamp-win" aria-hidden="true">Gana<i>勝</i></span>
+      <div class="f-head"><span class="f-title">Resultados <span class="jp">成績表</span></span><span class="f-where">Fin de la partida · al Este${where}</span></div>
+      ${teams}
+      <div class="f-grid">
+        <span class="th">Puesto</span><span class="th">Jugador</span><span class="th num">Puntos</span><span class="th num">Resultado</span>
+        ${rows}
+      </div>
+      <p class="f-note">Uma +20/+10/−10/−20 · oka +20 al primero · retorno 30.000 · resultado en miles</p>
+    </div>
+    <div class="f-actions"><button class="paper" type="button" data-ui="lobby"><span class="es">Volver al lobby</span><span class="jp">退出</span></button></div>`;
 }
