@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, noCalls: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -239,6 +239,7 @@ function ensure3d() {
         onPick: (id) => discard(id),
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
+      t.setOneClick(state.ui.oneClick);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
       // the top band folds away while the camera shows the whole table
       t.onView((name) => {
@@ -542,6 +543,15 @@ $('#partner-toggle').addEventListener('click', () => {
 
 $('#nocalls').addEventListener('change', (e) => {
   state.ui.noCalls = e.target.checked;
+});
+
+// Discard style: click to pick a tile up and again to discard it (the
+// default), or a single click.
+$('#oneclick').checked = state.ui.oneClick;
+$('#oneclick').addEventListener('change', (e) => {
+  state.ui.oneClick = e.target.checked;
+  store.set('mj.oneClick', state.ui.oneClick ? '1' : '0');
+  if (table3d) table3d.then((t) => t.setOneClick(state.ui.oneClick));
 });
 
 // ------------------------------------------------------------------ menu

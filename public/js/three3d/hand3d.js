@@ -43,6 +43,12 @@ export function createHand3D({ world, kit, onPick }) {
   let size = 60; // px per tile width
   let legal = new Set();
   let hover = null;
+  // Discarding takes two clicks by default, as in most mahjong games: the
+  // first one picks the tile up, a second one on it discards it (a click on
+  // another tile picks that one instead). With oneClick a single click
+  // discards the tile under the cursor.
+  let oneClick = false;
+  let selected = null;
   let last = null;
   let lastDrawn = null; // drawn tile of the previous layout
 
@@ -72,6 +78,7 @@ export function createHand3D({ world, kit, onPick }) {
     const o = v.options;
     const myTurn = o && o.kind === 'turn';
     legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
+    if (!legal.has(selected)) selected = null;
     // tedashi: the tile just drawn now belongs inside the hand
     const slotted = lastDrawn !== null && v.drawn === null && v.hand.includes(lastDrawn) ? lastDrawn : null;
     lastDrawn = v.drawn;
@@ -130,7 +137,7 @@ export function createHand3D({ world, kit, onPick }) {
       }
       // a fresh draw flies twice as fast as the hand rearranging
       const step = size * (t.fast ? 156 : 78) * dt;
-      const lift = hover === id && legal.has(id) ? size * 0.22 : 0;
+      const lift = selected === id ? size * 0.38 : hover === id && legal.has(id) ? size * (oneClick ? 0.22 : 0.1) : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
       if (t.hop) {
         // up, across above the hand, then straight down
@@ -168,12 +175,23 @@ export function createHand3D({ world, kit, onPick }) {
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
     const id = pick(ev);
-    if (id !== null && legal.has(id)) onPick(id);
+    if (id === null || !legal.has(id)) {
+      selected = null;
+      return;
+    }
+    if (oneClick || selected === id) {
+      selected = null;
+      onPick(id);
+    } else selected = id;
   });
 
   fit();
   return {
     layout,
+    setOneClick(on) {
+      oneClick = !!on;
+      selected = null;
+    },
     // test hook: screen point (top-left origin) of a hand tile
     tileOnScreen(id) {
       const t = tiles.get(id);

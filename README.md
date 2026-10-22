@@ -42,11 +42,14 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      [Juego por equipos](#juego-por-equipos).
    - **Práctica**: contra bots, sin código de sala; con **Con Bot 1 de
      compañero** se juega por equipos. Ver [Práctica](#práctica-contra-bots).
-2. Clic en una ficha para descartarla. Los botones (Riichi, Tsumo, Ron, Pon,
+2. Para descartar, un clic levanta la ficha y otro clic sobre ella la
+   descarta (un clic en otra ficha levanta esa; fuera de la mano, la baja).
+   En el menú, **Descartar con un solo clic** descarta al primer clic. Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
    - **No llamar**: pasa automáticamente en chi/pon/kan; el ron se sigue
      ofreciendo.
+   - **Descartar con un solo clic** (queda guardado en el navegador).
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote

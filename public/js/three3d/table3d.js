@@ -1162,6 +1162,8 @@ export function createTable3D(container, { onPick } = {}) {
       pointsListener = cb;
     },
     pointsOpen: () => drawerState.open,
+    // discard with a single click (default: click to pick up, click again)
+    setOneClick: hand.setOneClick,
     // the camera view in use: 'player', 'overview', 'drawer' or 'free'
     onView: world.onView,
     setCallouts(els) {
