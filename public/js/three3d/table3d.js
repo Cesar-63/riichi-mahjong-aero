@@ -4,7 +4,7 @@
 // draws, discards and calls animate by themselves. The player's own hand is
 // not lying on the table: like Tenhou's 3D view it faces the screen, as 3D
 // tiles in an overlay scene (hand3d.js).
-import { createWorld } from './world.js';
+import { createWorld, TABLE } from './world.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
@@ -148,27 +148,71 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // how long a new play has to wait for the ones already moving
   const laneWait = () => Math.max(0, laneEnd - performance.now());
 
-  function sync(desired, spawns) {
+  // A call's path: to where its tiles gather (via.gather), pushed out
+  // against the edge (via.edge), a short pause there, then a slow slide
+  // along the edge into place. The push, the pause and the slide take their
+  // own time: their stretches of the path count longer than they are.
+  function callPath(from, via, to) {
+    const { gather, edge } = via;
+    const path = makePath(from, gather);
+    const stretch = (pt, len) => {
+      path.pts.push(pt.clone());
+      path.total += len;
+      path.lens.push(path.total);
+    };
+    path.viaIdx = path.pts.length - 1; // where the tiles gather
+    stretch(edge.p, gather.p.distanceTo(edge.p) * (M.speed / M.callSlide));
+    stretch(edge.p, (M.callPause / 1000) * M.speed);
+    stretch(to.p, edge.p.distanceTo(to.p) * (M.speed / M.callSlide));
+    path.q1 = to.q.clone();
+    return path;
+  }
+
+  // The tiles of one new call move together: those already gathered (from
+  // the hand) wait there for the one coming from the pond. Only paths made
+  // in this update (fresh) are lined up, once.
+  function syncCall(keys, fresh) {
+    const paths = keys.map((k) => objects.get(k)).filter((o) => o && fresh.has(o) && o.path.viaIdx !== undefined).map((o) => o.path);
+    const reach = (p) => p.lens[p.viaIdx];
+    const last = Math.max(0, ...paths.map(reach));
+    for (const p of paths) {
+      const extra = last - reach(p);
+      if (extra <= 1e-6) continue;
+      p.pts.splice(p.viaIdx + 1, 0, p.pts[p.viaIdx].clone());
+      p.lens.splice(p.viaIdx + 1, 0, p.lens[p.viaIdx] + extra);
+      for (let i = p.viaIdx + 2; i < p.lens.length; i++) p.lens[i] += extra;
+      p.total += extra;
+      p.viaIdx += 1;
+    }
+  }
+
+  function sync(desired, spawns, calls = []) {
     const moves = [];
+    const fresh = new Set(); // objects given a new path now
     for (const [key, d] of desired) {
       let o = objects.get(key);
+      // only a tile that is not part of a call yet goes by the edge
+      const via = d.via && !(o && o.meld) ? d.via : null;
       if (!o) {
         const obj = makeTile(d.id);
-        const from = spawns.get(key) || d.target;
+        const from = spawns.get(key) || (via && via.gather) || d.target;
         obj.position.copy(from.p);
         obj.quaternion.copy(from.q);
         scene.add(obj);
         o = { obj };
         objects.set(key, o);
         if (!samePose(from, d.target)) {
-          o.path = makePath(from, d.target, from);
+          o.path = via ? callPath(from, via, d.target) : makePath(from, d.target);
+          fresh.add(o);
           o.path.speed = laneSpeed(d.lane);
           o.dist = 0;
           o.wait = 0;
           if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
-        o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
+        const here = { p: o.obj.position.clone(), q: o.obj.quaternion.clone() };
+        o.path = via ? callPath(here, via, d.target) : makePath(here, d.target);
+        fresh.add(o);
         o.path.speed = laneSpeed(d.lane);
         o.dist = 0;
         o.wait = 0;
@@ -176,6 +220,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       }
       o.target = d.target;
       o.flags = d.flags || {};
+      o.meld = !!d.via;
     }
     for (const [key, o] of objects) {
       if (!desired.has(key)) {
@@ -188,6 +233,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
         objects.delete(key);
       }
     }
+    for (const keys of calls) syncCall(keys, fresh);
     queuePlays(moves);
   }
 
@@ -375,9 +421,14 @@ export function createTable3D(container, { onPick, signal } = {}) {
     return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
-  // Calls lie a little nearer their owner than the hand's line, clear of
-  // the end of the next player's wall, which reaches into that corner.
-  const MELD_Z = fzo(97);
+  // Calls lie against the table's edge in front of their owner, pushed into
+  // the right-hand corner (Tetsuya style). The tiles of a new call first
+  // come together a little in from the edge and towards the middle, are
+  // pushed together against the edge and then slide along it into place.
+  const EDGE = TABLE / 2 - 0.04; // seat-local x and z of the felt's edges, less a hair
+  const MELD_Z = EDGE - H / 2;
+  const MELD_SLIDE = 3.2; // how far from its place along the edge a new call is gathered
+  const MELD_IN = 1.3; // and how far in from the edge
   // Seat-local z of the line a winner's calls slide into: the revealed
   // hand's, but stopping short of whatever still stands in that corner: the
   // end of the next player's wall (wall: the wall tiles about to be placed)
@@ -773,7 +824,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
         poseAt(o.path, o.dist, o.obj);
         if (o.dist >= o.path.total) o.path = null;
       }
+      if (o.flags && o.flags.hidden) o.obj.visible = false;
       updateBlob(o);
+      o.blob.visible = o.obj.visible;
     }
     for (const st of sticks.values()) {
       if (st.wait > 0) {
@@ -805,7 +858,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const rel = (abs) => (abs - me + 4) % 4;
     const desired = new Map();
     const spawns = new Map();
-    const put = (key, id, target, flags, lane) => desired.set(key, { id, target, flags, lane });
+    // via: a pose it passes first (a new call, set against the edge before
+    // it slides into the corner)
+    const put = (key, id, target, flags, lane, via) => desired.set(key, { id, target, flags, lane, via });
     const prevPos = (key) => {
       const o = objects.get(key);
       return o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : null;
@@ -833,6 +888,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     if (w && w.lastDraw) ui.lastDraw3d = w.lastDraw.n;
 
     const laid = laidDown(v);
+    const calls = []; // the tile keys of every call, to slide each one as a whole
     // where each winner's calls go (only the wall is placed so far)
     meldLines = new Map();
     if (isAgari(v)) {
@@ -894,7 +950,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
       // winner's slide towards the line of the laid-down hand (the dora row
       // goes in front of both). Not in a draw: with every hand laid down, they
       // would run into the next player's hand at the corner.
-      let mx = fx(r === 0 ? 98 : 97);
+      let mx = EDGE;
+      // my own calls show next to my hand on screen (hand3d.js); on the
+      // table they only appear once my hand is laid down
+      const mine = r === 0 && !laid.has(abs) ? { hidden: true } : null;
       const meldZ = meldLines.has(abs) ? meldLines.get(abs) : MELD_Z;
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
@@ -906,20 +965,25 @@ export function createTable3D(container, { onPick, signal } = {}) {
           others.splice(pos, 0, { id: m.called, pose: 'side', added: m.added });
           parts = others;
         }
+        calls.push(parts.map((t) => `t${t.id}`));
         for (let i = parts.length - 1; i >= 0; i--) {
           const t = parts[i];
           const width = t.pose === 'side' ? H : W;
           mx -= width;
           const z = meldZ + (t.pose === 'side' ? H / 2 - W / 2 : 0);
-          put(`t${t.id}`, t.id, place(r, mx + width / 2, D / 2, z, t.pose), null, 'call');
-          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'call');
+          const cx = mx + width / 2;
+          put(`t${t.id}`, t.id, place(r, cx, D / 2, z, t.pose), mine, 'call', {
+            gather: place(r, cx - MELD_SLIDE, D / 2, z - MELD_IN, t.pose),
+            edge: place(r, cx - MELD_SLIDE, D / 2, z, t.pose),
+          });
+          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), mine, 'call');
           mx -= GAP + 0.02;
         }
         mx -= 0.35;
       });
     });
 
-    sync(desired, spawns);
+    sync(desired, spawns, calls);
     syncSticks(v, rel);
     syncRestDice(v);
     syncWin(v, ui, rel);

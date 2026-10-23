@@ -69,16 +69,41 @@ export function createHand3D({ world, kit, onPick }) {
   let settle = null; // timer that sorts a dropped tile back
   let drag = null; // { id, sx, sy, moved, x, y } while a tile is held
 
+  // tile size (px per tile width) for a row this many tile widths long
+  function sizeFor(units) {
+    return Math.max(18, Math.min(64, (camera.right * 0.92) / Math.max(15.8, units), (camera.top * 0.125) / H));
+  }
   function fit() {
     const w = renderer.domElement.clientWidth || window.innerWidth;
     const h = renderer.domElement.clientHeight || window.innerHeight;
     camera.right = w;
     camera.top = h;
     camera.updateProjectionMatrix();
-    size = Math.max(18, Math.min(64, (w * 0.92) / 15.8, (h * 0.125) / H));
+    size = sizeFor(15.8);
     document.documentElement.style.setProperty('--hand3d-h', `${Math.round(size * H + 30)}px`);
     if (last) layout(...last);
   }
+
+  // My calls, shown at the right of my hand (they lie against the table's
+  // edge, out of the player camera's sight): each part is a tile standing
+  // like the hand ('up'), lying sideways ('side', the called tile) or
+  // showing its back ('back', the ends of a closed kan), with a kakan's
+  // added tile on top of the sideways one.
+  function meldParts(v) {
+    const me = v.players[v.seat];
+    return (me ? me.melds : []).map((m) => {
+      if (m.type === 'ankan') return m.tiles.map((id, i) => ({ id, pose: i === 0 || i === 3 ? 'back' : 'up' }));
+      const relFrom = (m.from - v.seat + 4) % 4;
+      const others = m.tiles.filter((t) => t !== m.called && t !== m.added).map((id) => ({ id, pose: 'up' }));
+      const pos = relFrom === 3 ? 0 : relFrom === 2 ? 1 : others.length;
+      others.splice(pos, 0, { id: m.called, pose: 'side', added: m.added });
+      return others;
+    });
+  }
+  const partW = (p) => (p.pose === 'side' ? H : 1);
+  const MELD_GAP = 0.3; // between calls, in tile widths
+  const MELDS_GAP = 0.8; // between the hand and the calls
+  const meldUnits = (melds) => melds.reduce((a, parts) => a + parts.reduce((b, p) => b + partW(p) + GAP * 1.5, 0) + MELD_GAP, melds.length ? MELDS_GAP : 0);
   window.addEventListener('resize', fit, { signal: world.signal });
 
   // The row of the hand, left to right, and the drawn tile when it sits
@@ -97,8 +122,9 @@ export function createHand3D({ world, kit, onPick }) {
     const pitch = size * (1 + GAP * 1.5); // a visible line of air between tiles
     // the hand is laid out as if it always held a drawn tile, so the slot for
     // the draw stays free and the hand does not shift on every draw
-    const total = (v.hand.length + 1) * pitch - (pitch - size) + gap;
-    return { gap, pitch, total, x0: (camera.right - total) / 2 + size / 2, y: 16 + (size * H) / 2 };
+    const handW = (v.hand.length + 1) * pitch - (pitch - size) + gap;
+    const total = handW + meldUnits(meldParts(v)) * size;
+    return { gap, pitch, total, handW, x0: (camera.right - total) / 2 + size / 2, y: 16 + (size * H) / 2 };
   }
 
   // spawn: optional { id, x, y } screen point (bottom-left origin) a new tile flies in from
@@ -113,7 +139,14 @@ export function createHand3D({ world, kit, onPick }) {
     }
     const { row, apart } = rowOf(v);
     const ids = apart !== null ? [...row, apart] : row;
-    const { gap, pitch, total, x0, y } = geometry(v);
+    // calls take room too: the tiles shrink to keep everything on screen
+    const melds = meldParts(v);
+    const wanted = sizeFor(v.hand.length + 1.5 + meldUnits(melds));
+    if (wanted !== size) {
+      size = wanted;
+      document.documentElement.style.setProperty('--hand3d-h', `${Math.round(size * H + 30)}px`);
+    }
+    const { gap, pitch, total, handW, x0, y } = geometry(v);
     const o = v.options;
     const myTurn = o && o.kind === 'turn';
     legal = new Set(myTurn ? (ui.riichiMode ? o.riichi : o.discard) : []);
@@ -154,6 +187,39 @@ export function createHand3D({ world, kit, onPick }) {
       const glow = id === v.partnerRequest ? 0xff9a1a : 0;
       kit.style(t.mesh, myTurn && !legal.has(id) ? 0.6 : 1, glow);
     });
+    // the calls, after the hand and the drawn tile's slot
+    let mx = x0 - size / 2 + handW + MELDS_GAP * size;
+    for (const parts of melds) {
+      for (const p of parts) {
+        const w = partW(p) * size;
+        const place = (id, py, pose) => {
+          seen.add(id);
+          let t = tiles.get(id);
+          if (!t) {
+            const mesh = kit.makeTile(id);
+            mesh.castShadow = mesh.receiveShadow = false;
+            scene.add(mesh);
+            t = { mesh, scale: size };
+            tiles.set(id, t);
+            mesh.position.set(mx + w / 2, py + size * 1.2, 0);
+            mesh.scale.setScalar(size);
+          }
+          t.meld = true;
+          t.index = undefined;
+          // sideways: turned a quarter; a closed kan's ends show their backs
+          t.mesh.rotation.set(TILT, pose === 'back' ? Math.PI : 0, pose === 'side' ? Math.PI / 2 : 0);
+          t.target = new THREE.Vector3(mx + w / 2, py, 0);
+          t.mesh.visible = visible > 0;
+          kit.style(t.mesh, 1, 0);
+        };
+        // standing tiles share the hand's line; a sideways one sits on the same floor
+        const py = p.pose === 'side' ? y - ((H - 1) * size) / 2 : y;
+        place(p.id, py, p.pose);
+        if (p.added !== undefined) place(p.added, py + size, 'side');
+        mx += w + GAP * 1.5 * size;
+      }
+      mx += MELD_GAP * size;
+    }
     for (const [id, t] of tiles) {
       if (!seen.has(id)) {
         scene.remove(t.mesh);
@@ -213,7 +279,7 @@ export function createHand3D({ world, kit, onPick }) {
     const rect = renderer.domElement.getBoundingClientRect();
     ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hit = ray.intersectObjects([...tiles.values()].filter((t) => t.mesh.visible).map((t) => t.mesh), false)[0];
+    const hit = ray.intersectObjects([...tiles.values()].filter((t) => t.mesh.visible && !t.meld).map((t) => t.mesh), false)[0];
     return hit ? hit.object.userData.id : null;
   };
   // pointer position in the overlay's coordinates (origin bottom-left),

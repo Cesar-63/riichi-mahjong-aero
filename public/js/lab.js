@@ -131,7 +131,8 @@ const PRESETS = [
   ['Rival derecha', [24, 9, 0], [12, 0.5, 0]],
   ['Rival enfrente', [0, 9, -24], [0, 0.5, -12]],
   ['Rival izquierda', [-24, 9, 0], [-12, 0.5, 0]],
-  ['Esquina derecha', [17, 6, 20], [10, 0.5, 11]],
+  ['Tus llamadas (esquina)', [13, 7, 24], [10, 0.5, 13.5]],
+  ['Llamadas del rival derecho', [5, 11, -3], [13.5, 0.3, -11]],
 ];
 let cam = null; // { target: [x, y, z], yaw, pitch, dist }
 function orbitFrom(pos, target) {

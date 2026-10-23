@@ -297,11 +297,11 @@ function addParlour(group) {
   group.add(felt);
   // wooden frame: four rails a little above the felt, cut at 45 degrees so
   // they meet in a diagonal (mitre) joint at every corner; plain unvarnished
-  // wood, matte and a little grey
-  const railTex = woodTexture('#7f6446', '#4e3824', '#9c7f5c');
+  // wood weathered grey, as on Tetsuya's tables
+  const railTex = woodTexture('#7c776d', '#57524a', '#958f84');
   railTex.repeat.set(2, 1);
   const wood = new THREE.MeshStandardMaterial({ map: railTex, roughness: 0.92, envMapIntensity: 0.08 });
-  const darkTex = woodTexture('#43301e', '#1e140a', '#6a4c2e');
+  const darkTex = woodTexture('#3b3834', '#1d1b18', '#57534c');
   darkTex.repeat.set(2, 1);
   const darkWood = new THREE.MeshStandardMaterial({ map: darkTex, roughness: 0.9, envMapIntensity: 0.1 });
   const R = 1.3;

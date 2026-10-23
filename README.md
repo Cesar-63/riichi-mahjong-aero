@@ -91,9 +91,8 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa amplia (30
 fichas de lado, con bastante paño libre entre los descartes y los muros, como
-en esos juegos) de madera sin
-barnizar (mate, con vetas y el marco cortado en diagonal en las esquinas,
-como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
+en esos juegos) con marco de madera sin barnizar, gastada y grisácea (mate,
+con vetas y cortado en diagonal en las esquinas, como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
 y débil cuya luz se apaga hacia los bordes, con sillas en penumbra, y fichas
 de reverso amarillo envejecido. Colores y brillos van más bien apagados,
 también el papel de la interfaz. La mesa no tiene placa central: los dados quedan
@@ -164,7 +163,15 @@ primera partida.
   línea oscura fina en el borde y entre fichas vecinas queda siempre un poco
   de aire (muros, manos, descartes, llamadas y tu mano), así nunca se ven
   fundidas en un solo bloque.
-- Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
+- **Llamadas**, como en Tetsuya: quedan apoyadas contra el borde de la mesa,
+  frente a su dueño, corridas hasta la esquina derecha. Las fichas de una
+  llamada nueva se juntan un poco hacia dentro y hacia el centro, se empujan
+  juntas contra el borde y se deslizan por él hasta la esquina, junto a las
+  llamadas anteriores. Como el borde propio no se ve desde la cámara del
+  jugador, tus llamadas se muestran también a la derecha de tu mano (la ficha
+  llamada de lado, las puntas de un kan cerrado boca abajo); en la mesa
+  aparecen cuando tu mano se tumba al final.
+- Muros en molinete, descartes y dora en el muro muerto. Cada ficha
   viaja a su lugar, así robos, descartes y llamadas se animan solos.
 - **Movimientos firmes**: las fichas se mueven a velocidad constante por
   tramos rectos, sin aceleraciones. Una ficha que cambia de lugar o se da
