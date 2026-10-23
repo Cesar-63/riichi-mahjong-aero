@@ -4,7 +4,7 @@
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { RoundedBoxGeometry } from '../../vendor/three/RoundedBoxGeometry.js';
 
-export const TABLE = 26; // table side in world units (1 unit = one tile width)
+export const TABLE = 30; // table side in world units (1 unit = one tile width)
 
 export function createWorld(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -65,18 +65,23 @@ export function createWorld(container) {
     const portrait = camera.aspect < 1.05;
     // distance that fits the table's width (plus rim) in the horizontal field of view
     const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
-    const dist = portrait ? Math.max(36, 15.5 / Math.tan(halfH) * 0.92) : 36;
+    // the views were framed for a 26-wide table: they step back to match
+    const k = TABLE / 26;
+    const dist = (portrait ? Math.max(36, 15.5 / Math.tan(halfH) * 0.92) : 36) * k;
     views.overview = {
       pos: new THREE.Vector3(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72)),
-      target: new THREE.Vector3(0, -2.2, portrait ? 1.2 : 1.6),
+      target: new THREE.Vector3(0, -2.2 * k, (portrait ? 1.2 : 1.6) * k),
     };
+    // aimed a little nearer than the scaled view, so the player's own wall
+    // (further out on the larger table) still shows above the hand
     views.player = portrait ? views.overview : {
-      pos: new THREE.Vector3(0, 14.5, 24),
-      target: new THREE.Vector3(0, -0.6, -2.8),
+      pos: new THREE.Vector3(0, 14.5 * k, 24 * k),
+      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 1.8),
     };
+    // the drawer comes out of the player's edge of the table
     views.drawer = {
-      pos: new THREE.Vector3(0, portrait ? 13 : 9.5, portrait ? 23 : 21.5),
-      target: new THREE.Vector3(0, -1.1, 15.3),
+      pos: new THREE.Vector3(0, portrait ? 13 : 9.5, (portrait ? 23 : 21.5) + (TABLE - 26) / 2),
+      target: new THREE.Vector3(0, -1.1, 15.3 + (TABLE - 26) / 2),
     };
     camera.updateProjectionMatrix();
     if (!snapped) {
@@ -308,7 +313,7 @@ function addParlour(group) {
     rail.position.y = 8.2;
     chair.add(rail);
     const a = (i * Math.PI) / 2;
-    chair.position.set(Math.sin(a) * (TABLE / 2 + 7), -3, Math.cos(a) * (TABLE / 2 + 7));
+    chair.position.set(Math.sin(a) * (TABLE / 2 + 8), -3, Math.cos(a) * (TABLE / 2 + 8));
     chair.rotation.y = a;
     if (i === 0) chair.visible = false; // the player's own chair would block the view
     group.add(chair);

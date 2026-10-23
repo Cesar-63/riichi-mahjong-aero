@@ -89,7 +89,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Ambientación: salón Tetsuya
 
-Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa de madera sin
+Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa amplia (30
+fichas de lado, con bastante paño libre entre los descartes y los muros, como
+en esos juegos) de madera sin
 barnizar (mate, con vetas y el marco cortado en diagonal en las esquinas,
 como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
 y débil cuya luz se apaga hacia los bordes, con sillas en penumbra, y fichas

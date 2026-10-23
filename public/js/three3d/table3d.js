@@ -13,6 +13,11 @@ import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js
 const S = 1 / 4.1; // world units per 2.5D board unit
 const fx = (x) => (x - 50) * S; // 2.5D board coords -> seat-local world coords
 const fz = (y) => (y - 50) * S;
+// The table is larger than the 2.5D board it was laid out from (Tetsuya's
+// tables leave plenty of felt round the ponds): everything beyond the
+// ponds (walls, hands, calls) sits this much further out.
+const OUT = 2;
+const fzo = (y) => fz(y) + OUT;
 const STACKS = 17;
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 const PITCH = W + GAP; // distance between neighbouring tiles in a row
@@ -304,7 +309,7 @@ export function createTable3D(container, { onPick } = {}) {
   // hand's own row, so the hidden hand is simply replaced.
   const X_AXIS = new THREE.Vector3(1, 0, 0);
   function tipOver(r, x, faceUp) {
-    const standZ = fz(95);
+    const standZ = fzo(95);
     const target = place(r, x, D / 2, faceUp ? standZ - H / 2 - D / 2 : standZ + H / 2 + D / 2, faceUp ? 'up' : 'down');
     const edge = new THREE.Vector3(0, -H / 2, faceUp ? -D / 2 : D / 2).applyQuaternion(target.q);
     const pivot = target.p.clone().add(edge);
@@ -325,7 +330,7 @@ export function createTable3D(container, { onPick } = {}) {
     scene.add(mesh);
     return { mesh, id, standAt, fallAt, tip: tipOver(r, x, faceUp), placed: r === 0 };
   }
-  const revealZ = (faceUp) => (faceUp ? fz(95) - H / 2 - D / 2 : fz(95) + H / 2 + D / 2);
+  const revealZ = (faceUp) => (faceUp ? fzo(95) - H / 2 - D / 2 : fzo(95) + H / 2 + D / 2);
 
   function addLabel(labels, r, x, z, text, color, at) {
     const mesh = tableLabel(text, color);
@@ -367,14 +372,25 @@ export function createTable3D(container, { onPick } = {}) {
     return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
+  // Calls lie a little nearer their owner than the hand's line, clear of
+  // the end of the next player's wall, which reaches into that corner.
+  const MELD_Z = fzo(97);
   // Seat-local z of the line a winner's calls slide into: the revealed
-  // hand's, or a little nearer the owner when the player on their right won
-  // too (double ron), since that player's revealed hand starts at the very
-  // corner where the calls end.
-  function winMeldZ(v, abs) {
-    const next = (abs + 1) % 4;
-    return v.result.wins.some((w) => w.seat === next) ? revealZ(true) + 0.52 : revealZ(true);
+  // hand's, but stopping short of whatever still stands in that corner: the
+  // end of the next player's wall (wall: the wall tiles about to be placed)
+  // or, in a double ron, the start of that player's revealed hand.
+  function winMeldZ(v, abs, wall, rel) {
+    let z = revealZ(true);
+    if (v.result.wins.some((w) => w.seat === (abs + 1) % 4)) z = revealZ(true) + 0.52;
+    const toLocal = qSeat[rel(abs)].clone().invert();
+    for (const d of wall) {
+      const l = d.target.p.clone().applyQuaternion(toLocal);
+      // a wall tile there lies across: W deep towards the calls
+      if (l.x > 6.5 && l.z > 8.5) z = Math.max(z, l.z + W / 2 + 0.1 + H / 2);
+    }
+    return Math.min(z, MELD_Z);
   }
+  let meldLines = new Map(); // winner seat -> z of their calls (set by update)
 
   // seats whose concealed hand is laid down on the table right now
   function laidDown(v) {
@@ -425,7 +441,7 @@ export function createTable3D(container, { onPick } = {}) {
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand and its calls
       // (towards their owner)
-      const z = Math.max(revealZ(true) + H + 0.22, winMeldZ(v, w.seat) + H + 0.12);
+      const z = Math.max(revealZ(true) + H + 0.22, (meldLines.get(w.seat) ?? revealZ(true)) + H + 0.12);
       const ura = w.ura || [];
       const uraTypes = new Set(ura.map((d) => doraFromIndicator(tileType(d))));
       let x = fx(x0);
@@ -629,7 +645,7 @@ export function createTable3D(container, { onPick } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2, openZ: 15.5, y: -0.9, speed: 7 };
+  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9, speed: 7 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -778,7 +794,7 @@ export function createTable3D(container, { onPick } = {}) {
     const seat = (4 - Math.floor(c / STACKS)) % 4;
     const j = STACKS - 1 - (c % STACKS);
     const top = (slot & 1) === 0;
-    return place(rel(seat), fx(12) - (STACKS - 1) * GAP + j * PITCH + W / 2, top ? D * 1.5 : D * 0.5, fz(82) + H / 2, 'down');
+    return place(rel(seat), fx(12) - (STACKS - 1) * GAP + j * PITCH + W / 2, top ? D * 1.5 : D * 0.5, fzo(82) + H / 2, 'down');
   }
 
   function update(v, ui) {
@@ -814,14 +830,20 @@ export function createTable3D(container, { onPick } = {}) {
     if (w && w.lastDraw) ui.lastDraw3d = w.lastDraw.n;
 
     const laid = laidDown(v);
+    // where each winner's calls go (only the wall is placed so far)
+    meldLines = new Map();
+    if (isAgari(v)) {
+      const wall = [...desired.values()];
+      for (const win of v.result.wins) meldLines.set(win.seat, winMeldZ(v, win.seat, wall, rel));
+    }
     v.players.forEach((p, abs) => {
       const r = rel(abs);
       // opponents' hands (the player's own hand is the screen overlay);
       // a winner's concealed hand is replaced by the face-up reveal
       if (r !== 0 && !laid.has(abs)) {
-        for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fz(95), 'stand'));
+        for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fzo(95), 'stand'));
         if (p.hasDrawn) {
-          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fz(95), 'stand'), null, 'draw');
+          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw');
           if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
         }
       }
@@ -858,7 +880,7 @@ export function createTable3D(container, { onPick } = {}) {
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
           // my discards come in from the hand overlay at the bottom of the screen
-          spawns.set(key, place(0, target.p.x * 0.6, 2.6, fz(104), 'stand'));
+          spawns.set(key, place(0, target.p.x * 0.6, 2.6, fzo(104), 'stand'));
         } else if (!objects.has(key)) {
           // opponents' discards leave from their hand: drawn slot for tsumogiri, else inside the hand
           const from = d.tsumogiri ? prevPos(`h${abs}:d`) : prevPos(`h${abs}:${d.tile % Math.max(1, p.handCount)}`);
@@ -866,11 +888,11 @@ export function createTable3D(container, { onPick } = {}) {
         }
       });
       // melds, right-justified next to the hand, first meld outermost; a
-      // winner's slide into the line of the laid-down hand (the dora row goes
-      // in front of both). Not in a draw: with every hand laid down, they
+      // winner's slide towards the line of the laid-down hand (the dora row
+      // goes in front of both). Not in a draw: with every hand laid down, they
       // would run into the next player's hand at the corner.
       let mx = fx(r === 0 ? 98 : 97);
-      const meldZ = isAgari(v) && laid.has(abs) ? winMeldZ(v, abs) : fz(95);
+      const meldZ = meldLines.has(abs) ? meldLines.get(abs) : MELD_Z;
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
         let parts;
@@ -952,8 +974,8 @@ export function createTable3D(container, { onPick } = {}) {
   // The tiles spin in a disc over the whole middle of the table first, then
   // the pile is pushed together (and squared up) inside the line where the
   // walls get built.
-  const PILE = { radius: 10.8, open: 13, closed: 10.2, squeeze: [0.2, 0.3] };
-  const PRE_OUT = 2.6; // walls are built this far outside their final place
+  const PILE = { radius: 12.4, open: 15, closed: 11.3, squeeze: [0.2, 0.3] };
+  const PRE_OUT = 1.7; // walls are built this far outside their final place (still on the felt)
   const buildStart = (t) => PHASES.build[0] + t.order * 0.15;
   let intro = null;
   let introKey = '';
@@ -1066,8 +1088,8 @@ export function createTable3D(container, { onPick } = {}) {
     const deal = [];
     const handTarget = (abs, i) => {
       const r = rel(abs);
-      if (r === 0) return { p: place(0, (i - 6.5) * 0.9, 6, fz(112), 'stand').p, q: place(0, 0, 0, 0, 'stand').q, mine: true };
-      return place(r, rowX(12, i) + (i === 13 ? 0.35 : 0), H / 2, fz(95), 'stand');
+      if (r === 0) return { p: place(0, (i - 6.5) * 0.9, 6, fzo(112), 'stand').p, q: place(0, 0, 0, 0, 'stand').q, mine: true };
+      return place(r, rowX(12, i) + (i === 13 ? 0.35 : 0), H / 2, fzo(95), 'stand');
     };
     let slot = 0;
     const order = [0, 1, 2, 3].map((i) => (v.dealer + i) % 4);
