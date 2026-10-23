@@ -367,14 +367,25 @@ export function createTable3D(container, { onPick } = {}) {
     return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
+  // Calls lie a little nearer their owner than the hand's line, clear of
+  // the end of the next player's wall, which reaches into that corner.
+  const MELD_Z = fz(97);
   // Seat-local z of the line a winner's calls slide into: the revealed
-  // hand's, or a little nearer the owner when the player on their right won
-  // too (double ron), since that player's revealed hand starts at the very
-  // corner where the calls end.
-  function winMeldZ(v, abs) {
-    const next = (abs + 1) % 4;
-    return v.result.wins.some((w) => w.seat === next) ? revealZ(true) + 0.52 : revealZ(true);
+  // hand's, but stopping short of whatever still stands in that corner: the
+  // end of the next player's wall (wall: the wall tiles about to be placed)
+  // or, in a double ron, the start of that player's revealed hand.
+  function winMeldZ(v, abs, wall, rel) {
+    let z = revealZ(true);
+    if (v.result.wins.some((w) => w.seat === (abs + 1) % 4)) z = revealZ(true) + 0.52;
+    const toLocal = qSeat[rel(abs)].clone().invert();
+    for (const d of wall) {
+      const l = d.target.p.clone().applyQuaternion(toLocal);
+      // a wall tile there lies across: W deep towards the calls
+      if (l.x > 6.5 && l.z > 8.5) z = Math.max(z, l.z + W / 2 + 0.1 + H / 2);
+    }
+    return Math.min(z, MELD_Z);
   }
+  let meldLines = new Map(); // winner seat -> z of their calls (set by update)
 
   // seats whose concealed hand is laid down on the table right now
   function laidDown(v) {
@@ -425,7 +436,7 @@ export function createTable3D(container, { onPick } = {}) {
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand and its calls
       // (towards their owner)
-      const z = Math.max(revealZ(true) + H + 0.22, winMeldZ(v, w.seat) + H + 0.12);
+      const z = Math.max(revealZ(true) + H + 0.22, (meldLines.get(w.seat) ?? revealZ(true)) + H + 0.12);
       const ura = w.ura || [];
       const uraTypes = new Set(ura.map((d) => doraFromIndicator(tileType(d))));
       let x = fx(x0);
@@ -814,6 +825,12 @@ export function createTable3D(container, { onPick } = {}) {
     if (w && w.lastDraw) ui.lastDraw3d = w.lastDraw.n;
 
     const laid = laidDown(v);
+    // where each winner's calls go (only the wall is placed so far)
+    meldLines = new Map();
+    if (isAgari(v)) {
+      const wall = [...desired.values()];
+      for (const win of v.result.wins) meldLines.set(win.seat, winMeldZ(v, win.seat, wall, rel));
+    }
     v.players.forEach((p, abs) => {
       const r = rel(abs);
       // opponents' hands (the player's own hand is the screen overlay);
@@ -866,11 +883,11 @@ export function createTable3D(container, { onPick } = {}) {
         }
       });
       // melds, right-justified next to the hand, first meld outermost; a
-      // winner's slide into the line of the laid-down hand (the dora row goes
-      // in front of both). Not in a draw: with every hand laid down, they
+      // winner's slide towards the line of the laid-down hand (the dora row
+      // goes in front of both). Not in a draw: with every hand laid down, they
       // would run into the next player's hand at the corner.
       let mx = fx(r === 0 ? 98 : 97);
-      const meldZ = isAgari(v) && laid.has(abs) ? winMeldZ(v, abs) : fz(95);
+      const meldZ = meldLines.has(abs) ? meldLines.get(abs) : MELD_Z;
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
         let parts;
