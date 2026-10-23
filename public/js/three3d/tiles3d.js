@@ -37,7 +37,7 @@ export function createTileKit(renderer) {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   function paintSides() {
     // sides get less light than the back face, so the band is a bit brighter
-    const back = new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.35).convertSRGBToLinear();
+    const back = new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.15).convertSRGBToLinear();
     const ivory = new THREE.Color(look.ivory).convertSRGBToLinear();
     const shade = new THREE.Color(look.ivoryLo).convertSRGBToLinear();
     for (let i = 0; i < pos.count; i++) {
@@ -89,13 +89,14 @@ export function createTileKit(renderer) {
   const back = canvasTex(192, 256);
   function paintBack() {
     const { g } = back;
+    // a nearly flat colour (real tile backs are one plastic colour), only
+    // the faintest shading and a soft bevel at the rim
     const grad = g.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, look.backHi);
-    grad.addColorStop(0.45, look.back);
-    grad.addColorStop(1, look.backLo);
+    grad.addColorStop(0, new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.12).getStyle());
+    grad.addColorStop(1, new THREE.Color(look.back).lerp(new THREE.Color(look.backLo), 0.1).getStyle());
     g.fillStyle = grad;
     g.fillRect(0, 0, 192, 256);
-    bevel(g, 192, 256, 'rgba(255,255,255,.45)', 'rgba(0,0,0,.25)', 10);
+    bevel(g, 192, 256, 'rgba(255,255,255,.22)', 'rgba(0,0,0,.16)', 8);
     outline(g, 192, 256, 'rgba(0,0,0,.5)', 4);
     back.t.needsUpdate = true;
   }
