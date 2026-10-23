@@ -468,12 +468,18 @@ function discard(tile) {
   const o = v && v.options;
   if (state.busy || !o || o.kind !== 'turn' || !(riichi ? o.riichi : o.discard).includes(tile)) return;
   state.pending = { version: state.version };
-  showGame(predictDiscard(v, tile, riichi));
-  send(riichi ? { type: 'riichi', tile } : { type: 'discard', tile }).finally(() => {
+  // the prediction becomes the view on screen (the 3D table only draws the
+  // current view), until the server's answer replaces it
+  state.view = predictDiscard(v, tile, riichi);
+  showGame(state.view);
+  send(riichi ? { type: 'riichi', tile } : { type: 'discard', tile }).catch(() => {
+    toast('Sin conexión, la ficha vuelve a tu mano');
+  }).finally(() => {
     // no usable answer (network error): back to the last real table
     if (state.pending) {
       state.pending = null;
-      if (state.view) showGame(state.view);
+      state.view = v;
+      showGame(v);
     }
   });
 }
