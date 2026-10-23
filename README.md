@@ -244,14 +244,15 @@ Al empezar cada mano el servidor pausa los relojes y los bots durante
 `INTRO_SECONDS` (7 s por defecto; 0 la desactiva) y la mesa reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
-   el centro de la mesa, cada una a su ritmo,
-   acercándose y alejándose y dándose vuelta, mientras dos "manos" las
-   arremolinan. Es una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
-   fichas se empujan y se deslizan unas contra otras (una esquina puede
-   montarse un momento sobre la vecina, como pasa de verdad, pero nunca se
-   atraviesan); al final se juntan y se enderezan para dejar lugar a los
-   muros.
+1. **Revolver**: las fichas boca abajo caen amontonadas al centro y dos
+   "manos" las revuelven por toda la mesa siguiendo recorridos irregulares,
+   arrastrándolas y empujándolas, con un remolino suelto cuyo centro también
+   se mueve: nunca giran como un disco ordenado. Es una pequeña simulación
+   física (`public/js/three3d/shuffle.js`): cada ficha conserva su impulso y
+   frena con el roce del paño, chocan entre sí y rebotan (y se ponen a
+   girar), y rebotan contra el borde de la mesa; una esquina puede montarse
+   un momento sobre la vecina, como pasa de verdad, pero nunca se atraviesan.
+   Al final se juntan y se enderezan para dejar lugar a los muros.
 2. **Armar los muros**: cada ficha sube de la pila, cruza por encima de las
    demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
    primero la de abajo y encima la de arriba, y las filas se empujan a su

@@ -974,10 +974,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
   const DICE = TUNING.dice;
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  // The tiles spin in a disc over the whole middle of the table first, then
-  // the pile is pushed together (and squared up) inside the line where the
-  // walls get built.
-  const PILE = { radius: 12.4, open: 15, closed: 11.3, squeeze: [0.2, 0.3] };
+  // The tiles are stirred all over the table first (start: the heap they
+  // start from; open: the table's edge they bounce off), then the pile is
+  // pushed together (and squared up) inside the line where the walls get
+  // built.
+  const PILE = { start: 10.5, open: 14.8, closed: 11.3, squeeze: [0.2, 0.3] };
   const PRE_OUT = 1.7; // walls are built this far outside their final place (still on the felt)
   const buildStart = (t) => PHASES.build[0] + t.order * 0.15;
   let intro = null;
@@ -1059,7 +1060,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
     const rnd = (a, b) => a + Math.random() * (b - a);
-    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, PILE.radius], square: PILE.open, panel: 0 });
+    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, 40], start: PILE.start, square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
     introFlipped = v.dora[0];
     // the previous hand's riichi sticks were paid out
@@ -1154,7 +1155,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     let myTiles = 0;
     if (p < PHASES.push[0]) {
       const q = clamp01(span(p, PILE.squeeze));
-      intro.pile.setArea({ ring: [0, PILE.radius + q * 5], square: PILE.open - q * (PILE.open - PILE.closed) });
+      intro.pile.setArea({ square: PILE.open - q * (PILE.open - PILE.closed) });
       for (const t of intro.tiles) t.sim.active = p < buildStart(t);
       // the swirl slows down and squares the pile up before the walls are built
       intro.pile.step(dt || 1 / 60, 1 - q * 0.75, q);
