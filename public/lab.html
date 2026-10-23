@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratorio de animaciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Kaushan+Script&family=Shippori+Mincho+B1:wght@500;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // The lab's own clock: every animation of the table runs on
+    // performance.now(), so making it virtual lets the lab pause, slow down
+    // and step the whole table. It is set before any module loads.
+    (() => {
+      const real = performance.now.bind(performance);
+      const clock = { t: real(), last: real(), speed: 1, paused: false, step: 0, ff: 0 };
+      window.labClock = clock;
+      performance.now = () => clock.t;
+      const pump = () => {
+        const r = real();
+        if (clock.ff > 0) {
+          // fast-forward: big even steps (the table caps a frame at 0.1 s)
+          const d = Math.min(100, clock.ff);
+          clock.t += d;
+          clock.ff -= d;
+        } else if (!clock.paused) clock.t += (r - clock.last) * clock.speed;
+        clock.t += clock.step;
+        clock.step = 0;
+        clock.last = r;
+        // CSS animations (the calls) follow the same clock
+        const rate = clock.paused && clock.ff <= 0 ? 0 : clock.ff > 0 ? 1 : clock.speed;
+        for (const a of document.getAnimations()) if (a.playbackRate !== rate) a.playbackRate = rate;
+        requestAnimationFrame(pump);
+      };
+      requestAnimationFrame(pump);
+    })();
+  </script>
+  <style>
+    body { overflow: hidden; }
+    #lab-stage { position: fixed; left: 0; top: 0; bottom: 0; right: 360px; }
+    #lab-stage .callouts { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+    #lab-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 360px;
+      overflow: auto;
+      padding: 14px 16px 30px;
+      color: var(--cream);
+      background: var(--navy);
+      border-left: 1px solid var(--navy-rim);
+      font-size: 13px;
+    }
+    #lab-panel h1 { margin: 0 0 2px; font-family: var(--f-title); font-weight: 400; font-size: 24px; }
+    #lab-panel h2 {
+      margin: 18px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--navy-inner);
+      font-family: var(--f-title);
+      font-weight: 400;
+      font-size: 17px;
+    }
+    #lab-panel h3 { margin: 12px 0 6px; font-size: 13px; color: var(--gold); font-weight: 700; }
+    #lab-panel p { margin: 4px 0; color: var(--navy-text); line-height: 1.4; }
+    #lab-panel select, #lab-panel input[type="number"], #lab-panel textarea {
+      font: inherit;
+      color: var(--cream);
+      background: #0a1128;
+      border: 1px solid #5a6896;
+      padding: 4px 6px;
+    }
+    #lab-panel select { width: 100%; }
+    .lab-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+    .lab-row .paper { padding: 5px 10px; font-size: 13px; transform: none; }
+    .lab-row .paper[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--red); color: var(--red-ink); }
+    .lab-time { font-variant-numeric: tabular-nums; color: var(--gold); min-width: 92px; }
+    #lab-seek { width: 100%; accent-color: var(--gold); }
+    .lab-steps { display: flex; gap: 2px; height: 6px; margin-top: 2px; position: relative; }
+    .lab-steps i { position: absolute; top: 0; width: 2px; height: 6px; background: var(--gold); opacity: .7; }
+    .lab-param { display: grid; grid-template-columns: minmax(0, 1fr) 70px; gap: 2px 8px; align-items: center; margin: 6px 0; }
+    .lab-param label { grid-column: 1 / -1; color: var(--navy-text); }
+    .lab-param input[type="range"] { width: 100%; accent-color: var(--gold); }
+    .lab-param.changed label { color: var(--gold); }
+    .lab-param.changed label::after { content: " ●"; }
+    #lab-out { width: 100%; min-height: 90px; margin-top: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+    #lab-cam { font-family: ui-monospace, monospace; font-size: 11px; color: var(--navy-text); word-break: break-all; }
+    @media (max-width: 800px) {
+      #lab-stage { right: 0; bottom: 45vh; }
+      #lab-panel { top: auto; width: 100%; height: 45vh; border-left: 0; border-top: 1px solid var(--navy-rim); }
+    }
+  </style>
+</head>
+<body>
+  <div id="lab-stage">
+    <div class="callouts">
+      <div class="callout" data-seat="0"></div><div class="callout" data-seat="1"></div>
+      <div class="callout" data-seat="2"></div><div class="callout" data-seat="3"></div>
+    </div>
+  </div>
+  <aside id="lab-panel">
+    <h1>Laboratorio de animaciones</h1>
+    <p>Escenas fijas de la mesa 3D para mirar las animaciones de cerca y afinarlas. Nada de esto toca una partida real.</p>
+
+    <h2>Escena</h2>
+    <select id="lab-scene"></select>
+    <p id="lab-note"></p>
+
+    <h2>Tiempo</h2>
+    <div class="lab-row">
+      <button class="paper" type="button" id="lab-restart" title="Volver al comienzo (R)">⏮ Comienzo</button>
+      <button class="paper" type="button" id="lab-play" title="Pausa / seguir (espacio)">⏸ Pausa</button>
+      <button class="paper" type="button" id="lab-step" title="Un cuadro, 1/60 s (→)">Cuadro ▸</button>
+    </div>
+    <div class="lab-row">
+      <span>Velocidad</span>
+      <select id="lab-speed" style="width:auto">
+        <option value="0.05">0,05×</option><option value="0.1">0,1×</option><option value="0.25">0,25×</option>
+        <option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option>
+      </select>
+      <label class="check"><input type="checkbox" id="lab-loop" checked> Repetir</label>
+    </div>
+    <div class="lab-row"><span class="lab-time" id="lab-time">0 ms</span><span id="lab-ff" class="hidden">adelantando…</span></div>
+    <input type="range" id="lab-seek" min="0" max="1000" step="10" value="0" aria-label="Ir a un momento">
+    <div class="lab-steps" id="lab-marks" title="Cada marca es una jugada que llega a la mesa"></div>
+
+    <h2>Cámara</h2>
+    <div class="lab-row" id="lab-presets"></div>
+    <p>Libre: arrastra con el <b>botón derecho</b> para girar, <b>Mayús + arrastre</b> (o botón del medio) para mover y la <b>rueda</b> para acercar.</p>
+    <div class="lab-row">
+      <button class="paper" type="button" id="lab-copycam">Copiar cámara</button>
+      <label class="check"><input type="checkbox" id="lab-hand" checked> Tu mano de frente</label>
+    </div>
+    <div id="lab-cam"></div>
+
+    <h2>Acciones</h2>
+    <div class="lab-row"><button class="paper" type="button" id="lab-drawer">Abrir / cerrar cajón de puntos</button></div>
+
+    <h2>Ajustes</h2>
+    <p>Cambian en vivo. Los marcados con ● difieren de los del juego; "Copiar cambios" te da el texto para mandármelo.</p>
+    <div class="lab-row">
+      <button class="paper" type="button" id="lab-copy">Copiar cambios</button>
+      <button class="paper" type="button" id="lab-reset">Restablecer todo</button>
+    </div>
+    <textarea id="lab-out" readonly placeholder="(sin cambios)"></textarea>
+    <div id="lab-params"></div>
+  </aside>
+  <script type="module" src="js/lab.js"></script>
+</body>
+</html>

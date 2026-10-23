@@ -348,6 +348,31 @@ npm test         # tests del motor, puntuación y salas
 Para probar solo, abre 4 ventanas (o una normal y tres de incógnito, porque la
 sesión vive en `localStorage`) y únete a la misma sala.
 
+## Laboratorio de animaciones
+
+`/lab.html` (en local `http://localhost:3000/lab.html`, y también en el sitio
+publicado; no está enlazado desde el juego) reproduce escenas fijas sobre la
+mesa 3D real para mirar las animaciones de cerca y afinarlas:
+
+- **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
+  descartes, pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
+  tsumo, tu tsumo con tres kan y empate. Salen de
+  `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
+  del juego (manos y muros preparados, siempre iguales).
+- **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
+  0,05×, comienzo (R) y una barra para saltar a cualquier momento (con una
+  marca por cada jugada). Toda la mesa usa un reloj propio de la página, así
+  que también se detienen y frenan los avisos de llamada.
+- **Cámara**: vistas preparadas (la del juego, mesa completa, desde arriba,
+  tu mano, el centro, cada rival, la esquina de tus llamadas) y cámara libre:
+  botón derecho para girar, Mayús + arrastre para mover, rueda para acercar.
+  Se puede ocultar tu mano de frente.
+- **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
+  fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
+  cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
+  con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
+  de una animación ya empezada) se ven al volver al comienzo.
+
 ## Fichas
 
 Las imágenes vienen del set `Regular` de
@@ -367,6 +392,9 @@ server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
 public/js/shared/        Modelo de fichas compartido con el servidor
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
+public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
+scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 dev-server.js            Servidor local
 test/                    node:test
 ```

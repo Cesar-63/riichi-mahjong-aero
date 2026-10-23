@@ -7,6 +7,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "node dev-server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "lab:scenarios": "node scripts/lab-scenarios.mjs"
   }
 }
