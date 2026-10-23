@@ -3,15 +3,17 @@
 // lamp, chairs in the dark).
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { RoundedBoxGeometry } from '../../vendor/three/RoundedBoxGeometry.js';
+import { TUNING } from './tuning.js';
 
 export const TABLE = 30; // table side in world units (1 unit = one tile width)
 
-export function createWorld(container) {
+// signal: an AbortSignal that removes the window listeners (the lab makes
+// a fresh table for every run)
+export function createWorld(container, { signal } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.95;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
@@ -23,18 +25,27 @@ export function createWorld(container) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envScene = new THREE.Scene();
   envScene.add(gradientDome([0x050403, 0x16110c, 0x2a2118], new THREE.Vector3(0, 1, 0), 0xfff0d0, 0.9));
-  addParlour(scene);
+  const lights = addParlour(scene);
   scene.environment = pmrem.fromScene(envScene, 0.02).texture;
-  scene.environmentIntensity = 0.35;
   scene.background = new THREE.Color(0x080706);
   scene.fog = new THREE.Fog(0x080706, 60, 140);
-  // a parlour lit by one weak lamp: kept on the dim side
-  renderer.toneMappingExposure = 0.95;
+  // a parlour lit by one weak lamp, kept on the dim side (tuning.js; read
+  // every frame so the lab can change it live)
+  const applyLight = () => {
+    const L = TUNING.light;
+    renderer.toneMappingExposure = L.exposure;
+    scene.environmentIntensity = L.environment;
+    lights.lamp.intensity = L.lamp;
+    lights.hemi.intensity = L.hemi;
+    lights.ambient.intensity = L.ambient;
+  };
+  applyLight();
 
   const clock = new THREE.Clock();
   const tickers = [];
   const tickersEarly = [];
   const overlays = [];
+  let overlaysOn = true;
   renderer.autoClear = false;
   // Camera views: 'player' (low, close to the player's side, Tetsuya style),
   // 'overview' (the whole table) and 'drawer' (looking down at the point
@@ -45,7 +56,8 @@ export function createWorld(container) {
   const views = { player: null, overview: null, drawer: null };
   let mode = 'player';
   let forced = null;
-  const current = () => (forced && typeof forced === 'object' ? forced : views[forced || mode]);
+  let locked = null; // the lab's free camera, over everything else
+  const current = () => locked || (forced && typeof forced === 'object' ? forced : views[forced || mode]);
   // listeners hear the name of the view in use ('free' for a { pos, target })
   const viewListeners = [];
   let announced = null;
@@ -94,34 +106,45 @@ export function createWorld(container) {
   };
   tickersEarly.push((dt) => {
     const v = current();
-    const k = 1 - Math.exp(-dt * 4.5);
+    const k = locked ? 1 : 1 - Math.exp(-dt * 4.5);
     camera.position.lerp(v.pos, k);
     look.lerp(v.target, k);
     camera.lookAt(look);
   });
-  window.addEventListener('resize', fit);
+  window.addEventListener('resize', fit, { signal });
   fit();
 
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const t = clock.elapsedTime;
+    applyLight();
     for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
     renderer.clear();
     renderer.render(scene, camera);
     // overlays (the player's hand) are drawn on top with their own depth
-    for (const [s2, c2] of overlays) {
+    for (const [s2, c2] of overlaysOn ? overlays : []) {
       renderer.clearDepth();
       renderer.render(s2, c2);
     }
   });
 
   return {
-    THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry,
+    THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
     setView: (m) => { mode = m; announce(); },
     forceView: (m) => { forced = m; announce(); },
     onView: (f) => { viewListeners.push(f); f(announced || mode); },
     addOverlay: (s2, c2) => overlays.push([s2, c2]),
+    // lab: a { pos, target } that overrides every view (null: back to normal)
+    lockView: (v) => { locked = v; },
+    // lab: hide the overlays (the player's hand facing the screen)
+    showOverlays: (on) => { overlaysOn = on; },
+    destroy() {
+      renderer.setAnimationLoop(null);
+      renderer.dispose();
+      renderer.forceContextLoss();
+      renderer.domElement.remove();
+    },
   };
 }
 
@@ -326,9 +349,11 @@ function addParlour(group) {
   group.add(floor);
 
   // one warm, weak lamp over the table, fading out softly towards the edges
-  group.add(new THREE.HemisphereLight(0xffdcb0, 0x0a0806, 0.26));
-  group.add(new THREE.AmbientLight(0xffe6c8, 0.08));
-  const lamp = new THREE.SpotLight(0xffd9a6, 820, 90, Math.PI / 4.2, 0.75, 1.6);
+  // intensities come from tuning.js (see applyLight)
+  const hemi = new THREE.HemisphereLight(0xffdcb0, 0x0a0806, 0);
+  const ambient = new THREE.AmbientLight(0xffe6c8, 0);
+  group.add(hemi, ambient);
+  const lamp = new THREE.SpotLight(0xffd9a6, 0, 90, Math.PI / 4.2, 0.75, 1.6);
   lamp.position.set(0, 34, 4);
   lamp.target.position.set(0, 0, 0);
   lamp.castShadow = true;
@@ -338,4 +363,5 @@ function addParlour(group) {
   lamp.shadow.camera.near = 12;
   lamp.shadow.camera.far = 60;
   group.add(lamp, lamp.target);
+  return { lamp, hemi, ambient };
 }

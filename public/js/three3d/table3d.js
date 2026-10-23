@@ -8,6 +8,7 @@ import { createWorld } from './world.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
+import { TUNING } from './tuning.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -25,8 +26,10 @@ const PITCH = W + GAP; // distance between neighbouring tiles in a row
 const rowX = (x0, i) => fx(x0) + i * PITCH + W / 2;
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
-export function createTable3D(container, { onPick } = {}) {
-  const world = createWorld(container);
+// signal (optional AbortSignal): aborting it removes the window listeners;
+// the lab also calls destroy() to free the renderer
+export function createTable3D(container, { onPick, signal } = {}) {
+  const world = createWorld(container, { signal });
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -57,11 +60,11 @@ export function createTable3D(container, { onPick } = {}) {
   // comes straight down. It turns while it rises when it ends lying (so a
   // discard is already flat before it reaches the pond) and while it comes
   // down when it ends standing (a draw only stands up at the hand).
-  const SPEED = 48; // world units per second
-  const FAST = 96; // draws and discards: they have to feel immediate
-  const MINE = 150; // my own discard answers my click
+  // speeds in world units per second (tuning.js): draws and discards are
+  // fast, they have to feel immediate; my own discard answers my click
+  const M = TUNING.motion;
   const FAST_LANES = new Set(['discard', 'draw']);
-  const laneSpeed = (lane) => (lane === 'mine' ? MINE : FAST_LANES.has(lane) ? FAST : SPEED);
+  const laneSpeed = (lane) => (lane === 'mine' ? M.mine : FAST_LANES.has(lane) ? M.fast : M.speed);
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -248,7 +251,7 @@ export function createTable3D(container, { onPick } = {}) {
   // ends with 'done'.
   // placeMs/placeGap: my hand set down standing; fallAt: the first tile
   // starts to fall; tileMs between tiles falling; dropMs: one fall
-  const WIN = { callMs: 900, placeMs: 150, placeGap: 18, fallAt: 1500, tileMs: 45, dropMs: 240, flyMs: 240, flyGap: 60, holdMs: 1800 };
+  const WIN = TUNING.win;
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -256,7 +259,7 @@ export function createTable3D(container, { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 900, tileMs: 40, holdMs: 2200 };
+  const DRAW = TUNING.draw;
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -535,7 +538,7 @@ export function createTable3D(container, { onPick } = {}) {
         const pond = objects.get(it.fly.hide);
         if (pond) pond.obj.visible = false;
         it.mesh.visible = true;
-        const dist = ((e - it.fallAt) / 1000) * FAST;
+        const dist = ((e - it.fallAt) / 1000) * M.fast;
         poseAt(it.fly.path, dist, it.mesh);
         done = dist >= it.fly.path.total;
       } else {
@@ -645,7 +648,7 @@ export function createTable3D(container, { onPick } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9, speed: 7 };
+  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -722,7 +725,7 @@ export function createTable3D(container, { onPick } = {}) {
   world.onTick((dt) => {
     if (!drawer.visible) return;
     const z = drawer.position.z;
-    const step = DRAWER.speed * dt;
+    const step = TUNING.drawer.speed * dt;
     drawer.position.z = Math.abs(drawerState.goal - z) <= step ? drawerState.goal : z + Math.sign(drawerState.goal - z) * step;
     if (drawer.position.z === drawerState.goal) {
       if (drawerState.open && drawerState.shown) {
@@ -779,7 +782,7 @@ export function createTable3D(container, { onPick } = {}) {
       }
       st.mesh.visible = true;
       if (!st.path) continue;
-      st.dist += SPEED * 0.6 * dt;
+      st.dist += M.speed * M.stick * dt;
       poseAt(st.path, st.dist, st.mesh);
       if (st.dist >= st.path.total) st.path = null;
     }
@@ -968,7 +971,7 @@ export function createTable3D(container, { onPick } = {}) {
   const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.48], push: [0.48, 0.55], dice: [0.55, 0.77], deal: [0.77, 0.97], flip: [0.95, 1] };
   // within the dice phase: the throw, a moment lying where they fell, then
   // they are picked up and set together at the dealer's right
-  const DICE = { landed: 0.6, pickUp: 0.7 };
+  const DICE = TUNING.dice;
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   // The tiles spin in a disc over the whole middle of the table first, then
@@ -1202,7 +1205,7 @@ export function createTable3D(container, { onPick } = {}) {
         // picked up and set in place at the usual steady speed
         const at = PHASES.dice[0] + DICE.pickUp * (PHASES.dice[1] - PHASES.dice[0]);
         const secs = Math.max(0, p - at) * intro.total / 1000;
-        poseAt(d.gather, secs * SPEED, d.m);
+        poseAt(d.gather, secs * M.speed, d.m);
       }
     }
     if (myTiles !== intro.myDealt) {
@@ -1233,8 +1236,8 @@ export function createTable3D(container, { onPick } = {}) {
     // carrying a tile up to discard it does not move the camera
     if (!hand.dragging()) world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
   };
-  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
-  window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
+  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); }, { signal });
+  window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); }, { signal });
 
   return {
     update(v, ui) {
@@ -1282,5 +1285,10 @@ export function createTable3D(container, { onPick } = {}) {
       return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
     },
     resize: world.fit,
+    // animation lab: a free camera ({ pos, target } of plain {x, y, z},
+    // null to give the camera back) and teardown
+    lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
+    showHand: world.showOverlays,
+    destroy: world.destroy,
   };
 }
