@@ -1027,8 +1027,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // the shuffle is a small collision simulation (shuffle.js), and every move
   // over other tiles lifts first, travels high enough to clear them and only
   // then comes down.
-  // fractions of the intro (8 s): 3.1 s of shuffling, the rest as before
-  const PHASES = { shuffle: [0, 0.3875], build: [0.3875, 0.545], push: [0.545, 0.6063], dice: [0.6063, 0.7988], deal: [0.7988, 0.9738], flip: [0.9563, 1] };
+  // fractions of the intro (8 s): 3.1 s of shuffling; then every player lays
+  // out two flat rows (build), pushes them in (push) and lifts the near row
+  // onto the far one (stack)
+  const PHASES = { shuffle: [0, 0.3875], build: [0.3875, 0.515], push: [0.515, 0.555], stack: [0.555, 0.6063], dice: [0.6063, 0.7988], deal: [0.7988, 0.9738], flip: [0.9563, 1] };
   // within the dice phase: the throw, a moment lying where they fell, then
   // they are picked up and set together at the dealer's right
   const DICE = TUNING.dice;
@@ -1038,9 +1040,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // start from; open: the table's edge they bounce off), then the pile is
   // pushed together (and squared up) inside the line where the walls get
   // built.
-  const PILE = { start: 10.5, open: 14.8, closed: 11.3, squeeze: [0.3, 0.3875] };
-  const PRE_OUT = 1.7; // walls are built this far outside their final place (still on the felt)
-  const buildStart = (t) => PHASES.build[0] + t.order * 0.131;
+  const PILE = { start: 10.5, open: 14.8, closed: 10.8, squeeze: [0.3, 0.3875] };
+  const PRE_OUT = 1.2; // the rows are laid out this far outside their final place (still on the felt)
+  const ROW_GAP = H + 0.1; // the near row lies this far nearer its player than the far one
+  const buildStart = (t) => PHASES.build[0] + t.order * 0.09;
   let intro = null;
   let introKey = '';
   let introListener = () => {};
@@ -1134,18 +1137,22 @@ export function createTable3D(container, { onPick, signal } = {}) {
       const final = slotPose(v, slot, rel);
       const stack = (v.wall.breakStack + (slot >> 1)) % (4 * STACKS);
       const ownerRel = rel((4 - Math.floor(stack / STACKS)) % 4);
-      const outward = new THREE.Vector3(0, 0, PRE_OUT).applyQuaternion(qSeat[ownerRel]);
+      const out = new THREE.Vector3(0, 0, 1).applyQuaternion(qSeat[ownerRel]);
       const top = (slot & 1) === 0;
+      // two flat rows: the bottom tiles of the wall in the far row, the top
+      // ones in the near row (towards the player), later lifted onto them
+      const row = final.p.clone().setY(D / 2).addScaledVector(out, top ? ROW_GAP : 0);
       tiles.push({
         obj,
         slot,
         isDora,
+        top,
         sim: pile.tiles[slot],
-        pre: { p: final.p.clone().add(outward), q: final.q },
+        pre: { p: row.clone().addScaledVector(out, PRE_OUT), q: final.q },
+        row: { p: row, q: final.q },
         final,
-        // build order: walls fill stack by stack from their left end, the
-        // bottom tile of a stack first so the top one lands on it
-        order: ((STACKS - 1 - (stack % STACKS)) + (top ? 0.5 : 0)) / STACKS,
+        // build order: the rows fill stack by stack from their left end
+        order: (STACKS - 1 - (stack % STACKS)) / STACKS,
       });
     }
     // deal schedule: blocks of 4 (two stacks) three times round, then singles, then the dealer's draw
@@ -1241,12 +1248,24 @@ export function createTable3D(container, { onPick, signal } = {}) {
         // building: out of the pile (over its other tiles) into a line a
         // little outside its final place
         t.build ||= makePath({ p: o.position.clone(), q: o.quaternion.clone() }, t.pre, { hy: Math.max(o.position.y, t.pre.p.y) + 0.8 });
-        poseAt(t.build, clamp01((p - buildStart(t)) / 0.044) * t.build.total, o);
+        poseAt(t.build, clamp01((p - buildStart(t)) / 0.035) * t.build.total, o);
         continue;
       }
-      // pushing the walls in, then (dora) turning face up
-      o.position.lerpVectors(t.pre.p, t.final.p, clamp01(span(p, PHASES.push)));
-      o.quaternion.copy(t.pre.q);
+      if (p < PHASES.stack[0]) {
+        // pushing the two rows in together
+        o.position.lerpVectors(t.pre.p, t.row.p, clamp01(span(p, PHASES.push)));
+        o.quaternion.copy(t.pre.q);
+        continue;
+      }
+      if (t.top && p < PHASES.stack[1]) {
+        // the near row is lifted, carried over and set on the far one
+        t.stack ||= makePath(t.row, t.final, { hy: D * 2 + 0.25 });
+        poseAt(t.stack, clamp01(span(p, PHASES.stack)) * t.stack.total, o);
+        continue;
+      }
+      // in place, then (dora) turning face up
+      o.position.copy(t.final.p);
+      o.quaternion.copy(t.final.q);
       if (t.isDora && p > PHASES.flip[0]) {
         t.flip ||= makePath(t.final, { p: t.final.p.clone().setY(D * 1.5), q: t.final.q.clone().multiply(tmpQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI)) });
         poseAt(t.flip, clamp01(span(p, PHASES.flip)) * t.flip.total, o);

@@ -259,10 +259,11 @@ las 136 fichas y la mesa vista entera:
    girar), y rebotan contra el borde de la mesa; una esquina puede montarse
    un momento sobre la vecina, como pasa de verdad, pero nunca se atraviesan.
    Al final se juntan y se enderezan para dejar lugar a los muros.
-2. **Armar los muros**: cada ficha sube de la pila, cruza por encima de las
-   demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
-   primero la de abajo y encima la de arriba, y las filas se empujan a su
-   lugar.
+2. **Armar los muros**, a la manera clásica: cada jugador saca las fichas
+   de la pila (pasando por encima de las demás) y arma frente a él dos filas
+   de 17 fichas boca abajo, una al lado de la otra, un poco hacia afuera;
+   empuja las dos filas a su lugar y después levanta la fila más cercana a
+   él y la pone sobre la más lejana, y queda el muro de dos pisos.
 3. **Tirar los dados**: el oya lanza los dos dados desde su lado hacia el
    centro de la mesa, cada mano en otra dirección; ruedan, rebotan y se
    detienen donde caen, en cualquier ángulo, mostrando la tirada real, que
