@@ -54,9 +54,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    robas entra por la derecha). Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **Descartar con un solo clic**, **Tsumogiri con doble clic** (doble clic
-     fuera de las fichas de tu mano) y **Tsumogiri con clic derecho**
-     (descartan la ficha robada). Vienen desactivados y quedan guardados en el
+   - **Descartar con un solo clic**, **Doble clic** (fuera de las fichas de tu
+     mano) y **Clic derecho**: estos dos descartan la ficha robada en tu turno
+     y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
+     decide con los botones). Vienen desactivados y quedan guardados en el
      navegador entre partidas.
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta

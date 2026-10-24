@@ -615,8 +615,10 @@ $('#partner-toggle').addEventListener('click', () => {
 
 // Discard style: click to pick a tile up and again to discard it (the
 // default), or a single click.
-// Tsumogiri shortcuts (off by default; kept in the browser): a double click
-// off my hand tiles, or a right click anywhere, discards the drawn tile.
+// Shortcuts (off by default; kept in the browser): a double click off my
+// hand tiles, or a right click anywhere, discards the drawn tile on my turn
+// and passes on a chi, pon or kan offer (never on a ron: that one stays a
+// button press, a pass there would also make me furiten).
 for (const [id, key, name] of [['#dbltsumo', 'dblTsumo', 'mj.dblTsumo'], ['#righttsumo', 'rightTsumo', 'mj.rightTsumo']]) {
   $(id).checked = state.ui[key];
   $(id).addEventListener('change', (e) => {
@@ -626,7 +628,10 @@ for (const [id, key, name] of [['#dbltsumo', 'dblTsumo', 'mj.dblTsumo'], ['#righ
 }
 function tsumogiri() {
   const v = state.view;
-  if (v && v.options && v.options.kind === 'turn' && v.drawn !== null) discard(v.drawn);
+  const o = v && v.options;
+  if (!o) return;
+  if (o.kind === 'turn' && v.drawn !== null) discard(v.drawn);
+  else if (o.kind === 'response' && !o.ron) send({ type: 'pass' });
 }
 $('#stage3d').addEventListener('dblclick', (e) => {
   if (!state.ui.dblTsumo || !table3d) return;
