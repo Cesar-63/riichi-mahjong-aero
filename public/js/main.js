@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -615,6 +615,31 @@ $('#partner-toggle').addEventListener('click', () => {
 
 // Discard style: click to pick a tile up and again to discard it (the
 // default), or a single click.
+// Tsumogiri shortcuts (off by default; kept in the browser): a double click
+// off my hand tiles, or a right click anywhere, discards the drawn tile.
+for (const [id, key, name] of [['#dbltsumo', 'dblTsumo', 'mj.dblTsumo'], ['#righttsumo', 'rightTsumo', 'mj.rightTsumo']]) {
+  $(id).checked = state.ui[key];
+  $(id).addEventListener('change', (e) => {
+    state.ui[key] = e.target.checked;
+    store.set(name, state.ui[key] ? '1' : '0');
+  });
+}
+function tsumogiri() {
+  const v = state.view;
+  if (v && v.options && v.options.kind === 'turn' && v.drawn !== null) discard(v.drawn);
+}
+$('#stage3d').addEventListener('dblclick', (e) => {
+  if (!state.ui.dblTsumo || !table3d) return;
+  table3d.then((t) => {
+    if (!t.overHandTile(e)) tsumogiri();
+  });
+});
+$('#stage3d').addEventListener('contextmenu', (e) => {
+  if (!state.ui.rightTsumo) return;
+  e.preventDefault();
+  tsumogiri();
+});
+
 $('#oneclick').checked = state.ui.oneClick;
 $('#oneclick').addEventListener('change', (e) => {
   state.ui.oneClick = e.target.checked;

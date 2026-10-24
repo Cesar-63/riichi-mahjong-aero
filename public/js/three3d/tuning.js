@@ -6,7 +6,7 @@ export const TUNING = {
   motion: { speed: 48, fast: 96, mine: 150, stick: 0.6, call: 96, callSlide: 18, callPause: 70 },
   hand: { drawSpeed: 156, moveSpeed: 78, selectLift: 0.38 },
   win: { callMs: 900, placeMs: 150, placeGap: 18, fallAt: 1500, tileMs: 45, dropMs: 240, flyMs: 240, flyGap: 60, holdMs: 1800 },
-  draw: { startMs: 900, tileMs: 40, holdMs: 2200 },
+  draw: { startMs: 900, tileMs: 40, holdMs: 3000 },
   dice: { landed: 0.6, pickUp: 0.7 },
   drawer: { speed: 7 },
   light: { exposure: 0.95, lamp: 820, hemi: 0.26, ambient: 0.08, environment: 0.35, handAmbient: 0.55, handKey: 1.7 },

@@ -1350,6 +1350,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     pointsOpen: () => drawerState.open,
     // discard with a single click (default: click to pick up, click again)
     setOneClick: hand.setOneClick,
+    overHandTile: hand.overTile,
     // keep the hand sorted (default) or as the player arranges it
     setAutoSort: hand.setAutoSort,
     // the camera view in use: 'player', 'overview', 'drawer' or 'free'

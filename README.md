@@ -54,7 +54,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    robas entra por la derecha). Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **Descartar con un solo clic** (queda guardado en el navegador).
+   - **Descartar con un solo clic**, **Tsumogiri con doble clic** (doble clic
+     fuera de las fichas de tu mano) y **Tsumogiri con clic derecho**
+     (descartan la ficha robada). Vienen desactivados y quedan guardados en el
+     navegador entre partidas.
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
@@ -237,8 +240,10 @@ primera partida.
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
   rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
   baja detrás del ganador a su mano y se abre la hoja de resultado.
-- **Empate por agotamiento**: todas las manos quedan paradas sobre la mesa y
-  luego se tumban a la vez, ficha por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
+- **Empate por agotamiento**: la cámara pasa a la mesa entera (la franja de
+  arriba se pliega), todas las manos quedan paradas sobre la mesa y luego se
+  tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
+  resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
   estaban, así no chocan en las esquinas con la mano del vecino. Después se
   abre la pantalla de resultado. Los empates abortivos van directo al

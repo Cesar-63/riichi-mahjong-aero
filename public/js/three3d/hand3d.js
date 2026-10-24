@@ -319,6 +319,8 @@ export function createHand3D({ world, kit, onPick }) {
       if (last) layout(...last);
     },
     dragging: () => !!(drag && drag.moved),
+    // whether a pointer event is over one of my hand tiles
+    overTile: (ev) => pick(ev) !== null,
     // test hook: screen point (top-left origin) of a hand tile
     tileOnScreen(id) {
       const t = tiles.get(id);
