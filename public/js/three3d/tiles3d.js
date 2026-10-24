@@ -76,15 +76,20 @@ export function createTileKit(renderer) {
   }
   // thin dark line along every edge, so neighbouring tiles always read as
   // separate pieces (on every face, so it also shows on the sides)
+  // a soft line round a face: blurred a little, so neighbouring tiles stay
+  // apart without a hard drawn edge
   function outline(g, w, h, color, lw) {
+    g.save();
+    g.filter = `blur(${lw * 0.35}px)`;
     g.lineWidth = lw;
     g.strokeStyle = color;
     g.strokeRect(lw / 2, lw / 2, w - lw, h - lw);
+    g.restore();
   }
   const edges = canvasTex(64, 64);
   edges.g.fillStyle = '#fff';
   edges.g.fillRect(0, 0, 64, 64);
-  outline(edges.g, 64, 64, 'rgba(60, 46, 26, .7)', 4);
+  outline(edges.g, 64, 64, 'rgba(60, 46, 26, .38)', 3);
 
   const back = canvasTex(192, 256);
   function paintBack() {
@@ -97,7 +102,7 @@ export function createTileKit(renderer) {
     g.fillStyle = grad;
     g.fillRect(0, 0, 192, 256);
     bevel(g, 192, 256, 'rgba(255,255,255,.22)', 'rgba(0,0,0,.16)', 8);
-    outline(g, 192, 256, 'rgba(0,0,0,.5)', 4);
+    outline(g, 192, 256, 'rgba(0,0,0,.28)', 3);
     back.t.needsUpdate = true;
   }
 
@@ -142,7 +147,7 @@ export function createTileKit(renderer) {
       }
     }
     bevel(g, 240, 320, 'rgba(255,255,255,.95)', 'rgba(120,100,60,.38)', 12);
-    outline(g, 240, 320, 'rgba(70,55,30,.6)', 5);
+    outline(g, 240, 320, 'rgba(70,55,30,.32)', 4);
     f.t.needsUpdate = true;
   }
 
