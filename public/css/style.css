@@ -503,7 +503,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 .tf.txt.aka { background: linear-gradient(#fff4f2, #fbe4df); }
 /* face-down tile: the yellow back of a parlour set */
 .tf.back {
-  background: linear-gradient(180deg, #f3d683 0%, #ddb45c 50%, #c89a3f 100%);
+  background: linear-gradient(180deg, #cda65b, #c09a4f); /* nearly flat, like a real tile */
   box-shadow:
     inset calc(var(--sx) * var(--w) * .045) calc(var(--sy) * var(--w) * .045) calc(var(--w) * .04) rgba(255, 255, 255, .7),
     inset calc(var(--sx) * var(--w) * -.05) calc(var(--sy) * var(--w) * -.06) calc(var(--w) * .07) rgba(90, 60, 10, .35),

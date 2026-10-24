@@ -4,10 +4,11 @@
 // draws, discards and calls animate by themselves. The player's own hand is
 // not lying on the table: like Tenhou's 3D view it faces the screen, as 3D
 // tiles in an overlay scene (hand3d.js).
-import { createWorld } from './world.js';
+import { createWorld, TABLE } from './world.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
+import { TUNING } from './tuning.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -25,8 +26,10 @@ const PITCH = W + GAP; // distance between neighbouring tiles in a row
 const rowX = (x0, i) => fx(x0) + i * PITCH + W / 2;
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
-export function createTable3D(container, { onPick } = {}) {
-  const world = createWorld(container);
+// signal (optional AbortSignal): aborting it removes the window listeners;
+// the lab also calls destroy() to free the renderer
+export function createTable3D(container, { onPick, signal } = {}) {
+  const world = createWorld(container, { signal });
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -57,11 +60,11 @@ export function createTable3D(container, { onPick } = {}) {
   // comes straight down. It turns while it rises when it ends lying (so a
   // discard is already flat before it reaches the pond) and while it comes
   // down when it ends standing (a draw only stands up at the hand).
-  const SPEED = 48; // world units per second
-  const FAST = 96; // draws and discards: they have to feel immediate
-  const MINE = 150; // my own discard answers my click
+  // speeds in world units per second (tuning.js): draws and discards are
+  // fast, they have to feel immediate; my own discard answers my click
+  const M = TUNING.motion;
   const FAST_LANES = new Set(['discard', 'draw']);
-  const laneSpeed = (lane) => (lane === 'mine' ? MINE : FAST_LANES.has(lane) ? FAST : SPEED);
+  const laneSpeed = (lane) => (lane === 'mine' ? M.mine : lane === 'meld' ? M.call : FAST_LANES.has(lane) ? M.fast : M.speed);
   const CLEAR = 1.95; // centre height of a lying tile that clears a wall
   const TURN_LEN = 1.1; // shortest stretch of the path used for turning
   const FACE = new THREE.Vector3(0, 0, 1);
@@ -113,7 +116,7 @@ export function createTable3D(container, { onPick } = {}) {
   // wait until the previous play's moves have landed, even when a single
   // update brings several plays at once. Moves without a lane (a hand or
   // pond closing a gap) start right away.
-  const LANES = ['discard', 'call', 'draw'];
+  const LANES = ['discard', 'meld', 'call', 'draw']; // a kan's new dora turns after the kan
   let laneEnd = 0; // performance.now() when the last queued play lands
   function queuePlays(moves) {
     const now = performance.now();
@@ -145,27 +148,71 @@ export function createTable3D(container, { onPick } = {}) {
   // how long a new play has to wait for the ones already moving
   const laneWait = () => Math.max(0, laneEnd - performance.now());
 
-  function sync(desired, spawns) {
+  // A call's path: to where its tiles gather (via.gather), pushed out
+  // against the edge (via.edge), a short pause there, then a slow slide
+  // along the edge into place. The push, the pause and the slide take their
+  // own time: their stretches of the path count longer than they are.
+  function callPath(from, via, to) {
+    const { gather, edge } = via;
+    const path = makePath(from, gather);
+    const stretch = (pt, len) => {
+      path.pts.push(pt.clone());
+      path.total += len;
+      path.lens.push(path.total);
+    };
+    path.viaIdx = path.pts.length - 1; // where the tiles gather
+    stretch(edge.p, gather.p.distanceTo(edge.p) * (M.call / M.callSlide));
+    stretch(edge.p, (M.callPause / 1000) * M.call);
+    stretch(to.p, edge.p.distanceTo(to.p) * (M.call / M.callSlide));
+    path.q1 = to.q.clone();
+    return path;
+  }
+
+  // The tiles of one new call move together: those already gathered (from
+  // the hand) wait there for the one coming from the pond. Only paths made
+  // in this update (fresh) are lined up, once.
+  function syncCall(keys, fresh) {
+    const paths = keys.map((k) => objects.get(k)).filter((o) => o && fresh.has(o) && o.path.viaIdx !== undefined).map((o) => o.path);
+    const reach = (p) => p.lens[p.viaIdx];
+    const last = Math.max(0, ...paths.map(reach));
+    for (const p of paths) {
+      const extra = last - reach(p);
+      if (extra <= 1e-6) continue;
+      p.pts.splice(p.viaIdx + 1, 0, p.pts[p.viaIdx].clone());
+      p.lens.splice(p.viaIdx + 1, 0, p.lens[p.viaIdx] + extra);
+      for (let i = p.viaIdx + 2; i < p.lens.length; i++) p.lens[i] += extra;
+      p.total += extra;
+      p.viaIdx += 1;
+    }
+  }
+
+  function sync(desired, spawns, calls = []) {
     const moves = [];
+    const fresh = new Set(); // objects given a new path now
     for (const [key, d] of desired) {
       let o = objects.get(key);
+      // only a tile that is not part of a call yet goes by the edge
+      const via = d.via && !(o && o.meld) ? d.via : null;
       if (!o) {
         const obj = makeTile(d.id);
-        const from = spawns.get(key) || d.target;
+        const from = spawns.get(key) || (via && via.gather) || d.target;
         obj.position.copy(from.p);
         obj.quaternion.copy(from.q);
         scene.add(obj);
         o = { obj };
         objects.set(key, o);
         if (!samePose(from, d.target)) {
-          o.path = makePath(from, d.target, from);
+          o.path = via ? callPath(from, via, d.target) : makePath(from, d.target);
+          fresh.add(o);
           o.path.speed = laneSpeed(d.lane);
           o.dist = 0;
           o.wait = 0;
           if (d.lane) moves.push({ o, lane: d.lane });
         }
       } else if (!samePose(o.target, d.target)) {
-        o.path = makePath({ p: o.obj.position, q: o.obj.quaternion }, d.target);
+        const here = { p: o.obj.position.clone(), q: o.obj.quaternion.clone() };
+        o.path = via ? callPath(here, via, d.target) : makePath(here, d.target);
+        fresh.add(o);
         o.path.speed = laneSpeed(d.lane);
         o.dist = 0;
         o.wait = 0;
@@ -173,6 +220,7 @@ export function createTable3D(container, { onPick } = {}) {
       }
       o.target = d.target;
       o.flags = d.flags || {};
+      o.meld = !!d.via;
     }
     for (const [key, o] of objects) {
       if (!desired.has(key)) {
@@ -185,6 +233,7 @@ export function createTable3D(container, { onPick } = {}) {
         objects.delete(key);
       }
     }
+    for (const keys of calls) syncCall(keys, fresh);
     queuePlays(moves);
   }
 
@@ -248,7 +297,7 @@ export function createTable3D(container, { onPick } = {}) {
   // ends with 'done'.
   // placeMs/placeGap: my hand set down standing; fallAt: the first tile
   // starts to fall; tileMs between tiles falling; dropMs: one fall
-  const WIN = { callMs: 900, placeMs: 150, placeGap: 18, fallAt: 1500, tileMs: 45, dropMs: 240, flyMs: 240, flyGap: 60, holdMs: 1800 };
+  const WIN = TUNING.win;
   const DORA_GLOW = 0xffc83a;
   const URA_GLOW = 0xff5fc8;
   let win = null;
@@ -256,7 +305,7 @@ export function createTable3D(container, { onPick } = {}) {
   const resultKey = (v) => `${v.round}-${v.kyokuNum}-${v.honba}`;
   const isAgari = (v) => v.phase === 'result' && v.result && v.result.type === 'agari';
   const isRyuukyoku = (v) => v.phase === 'result' && v.result && v.result.type === 'draw' && !v.result.abortive;
-  const DRAW = { startMs: 900, tileMs: 40, holdMs: 2200 };
+  const DRAW = TUNING.draw;
 
   // flat label lying on the table, readable from the winner's seat
   const labelTex = new Map();
@@ -372,9 +421,14 @@ export function createTable3D(container, { onPick } = {}) {
     return { pos: pos.applyQuaternion(qSeat[r]), target: target.applyQuaternion(qSeat[r]) };
   }
 
-  // Calls lie a little nearer their owner than the hand's line, clear of
-  // the end of the next player's wall, which reaches into that corner.
-  const MELD_Z = fzo(97);
+  // Calls lie against the table's edge in front of their owner, pushed into
+  // the right-hand corner (Tetsuya style). The tiles of a new call first
+  // come together a little in from the edge and towards the middle, are
+  // pushed together against the edge and then slide along it into place.
+  const EDGE = TABLE / 2 - 0.04; // seat-local x and z of the felt's edges, less a hair
+  const MELD_Z = EDGE - H / 2;
+  const MELD_SLIDE = 3.2; // how far from its place along the edge a new call is gathered
+  const MELD_IN = 1.3; // and how far in from the edge
   // Seat-local z of the line a winner's calls slide into: the revealed
   // hand's, but stopping short of whatever still stands in that corner: the
   // end of the next player's wall (wall: the wall tiles about to be placed)
@@ -535,7 +589,7 @@ export function createTable3D(container, { onPick } = {}) {
         const pond = objects.get(it.fly.hide);
         if (pond) pond.obj.visible = false;
         it.mesh.visible = true;
-        const dist = ((e - it.fallAt) / 1000) * FAST;
+        const dist = ((e - it.fallAt) / 1000) * M.fast;
         poseAt(it.fly.path, dist, it.mesh);
         done = dist >= it.fly.path.total;
       } else {
@@ -645,7 +699,7 @@ export function createTable3D(container, { onPick } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9, speed: 7 };
+  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -722,7 +776,7 @@ export function createTable3D(container, { onPick } = {}) {
   world.onTick((dt) => {
     if (!drawer.visible) return;
     const z = drawer.position.z;
-    const step = DRAWER.speed * dt;
+    const step = TUNING.drawer.speed * dt;
     drawer.position.z = Math.abs(drawerState.goal - z) <= step ? drawerState.goal : z + Math.sign(drawerState.goal - z) * step;
     if (drawer.position.z === drawerState.goal) {
       if (drawerState.open && drawerState.shown) {
@@ -779,7 +833,7 @@ export function createTable3D(container, { onPick } = {}) {
       }
       st.mesh.visible = true;
       if (!st.path) continue;
-      st.dist += SPEED * 0.6 * dt;
+      st.dist += M.speed * M.stick * dt;
       poseAt(st.path, st.dist, st.mesh);
       if (st.dist >= st.path.total) st.path = null;
     }
@@ -802,7 +856,9 @@ export function createTable3D(container, { onPick } = {}) {
     const rel = (abs) => (abs - me + 4) % 4;
     const desired = new Map();
     const spawns = new Map();
-    const put = (key, id, target, flags, lane) => desired.set(key, { id, target, flags, lane });
+    // via: a pose it passes first (a new call, set against the edge before
+    // it slides into the corner)
+    const put = (key, id, target, flags, lane, via) => desired.set(key, { id, target, flags, lane, via });
     const prevPos = (key) => {
       const o = objects.get(key);
       return o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : null;
@@ -830,6 +886,7 @@ export function createTable3D(container, { onPick } = {}) {
     if (w && w.lastDraw) ui.lastDraw3d = w.lastDraw.n;
 
     const laid = laidDown(v);
+    const calls = []; // the tile keys of every call, to slide each one as a whole
     // where each winner's calls go (only the wall is placed so far)
     meldLines = new Map();
     if (isAgari(v)) {
@@ -891,7 +948,7 @@ export function createTable3D(container, { onPick } = {}) {
       // winner's slide towards the line of the laid-down hand (the dora row
       // goes in front of both). Not in a draw: with every hand laid down, they
       // would run into the next player's hand at the corner.
-      let mx = fx(r === 0 ? 98 : 97);
+      let mx = EDGE;
       const meldZ = meldLines.has(abs) ? meldLines.get(abs) : MELD_Z;
       p.melds.forEach((m) => {
         const relFrom = (m.from - abs + 4) % 4;
@@ -903,20 +960,25 @@ export function createTable3D(container, { onPick } = {}) {
           others.splice(pos, 0, { id: m.called, pose: 'side', added: m.added });
           parts = others;
         }
+        calls.push(parts.map((t) => `t${t.id}`));
         for (let i = parts.length - 1; i >= 0; i--) {
           const t = parts[i];
           const width = t.pose === 'side' ? H : W;
           mx -= width;
           const z = meldZ + (t.pose === 'side' ? H / 2 - W / 2 : 0);
-          put(`t${t.id}`, t.id, place(r, mx + width / 2, D / 2, z, t.pose), null, 'call');
-          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'call');
+          const cx = mx + width / 2;
+          put(`t${t.id}`, t.id, place(r, cx, D / 2, z, t.pose), null, 'meld', {
+            gather: place(r, cx - MELD_SLIDE, D / 2, z - MELD_IN, t.pose),
+            edge: place(r, cx - MELD_SLIDE, D / 2, z, t.pose),
+          });
+          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'meld');
           mx -= GAP + 0.02;
         }
         mx -= 0.35;
       });
     });
 
-    sync(desired, spawns);
+    sync(desired, spawns, calls);
     syncSticks(v, rel);
     syncRestDice(v);
     syncWin(v, ui, rel);
@@ -965,18 +1027,23 @@ export function createTable3D(container, { onPick } = {}) {
   // the shuffle is a small collision simulation (shuffle.js), and every move
   // over other tiles lifts first, travels high enough to clear them and only
   // then comes down.
-  const PHASES = { shuffle: [0, 0.3], build: [0.3, 0.48], push: [0.48, 0.55], dice: [0.55, 0.77], deal: [0.77, 0.97], flip: [0.95, 1] };
+  // fractions of the intro (8 s): 3.1 s of shuffling; then every player lays
+  // out two flat rows (build), pushes them in (push) and lifts the near row
+  // onto the far one (stack)
+  const PHASES = { shuffle: [0, 0.3875], build: [0.3875, 0.515], push: [0.515, 0.555], stack: [0.555, 0.6063], dice: [0.6063, 0.7988], deal: [0.7988, 0.9738], flip: [0.9563, 1] };
   // within the dice phase: the throw, a moment lying where they fell, then
   // they are picked up and set together at the dealer's right
-  const DICE = { landed: 0.6, pickUp: 0.7 };
+  const DICE = TUNING.dice;
   const span = (p, [a, b]) => (p - a) / (b - a);
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  // The tiles spin in a disc over the whole middle of the table first, then
-  // the pile is pushed together (and squared up) inside the line where the
-  // walls get built.
-  const PILE = { radius: 12.4, open: 15, closed: 11.3, squeeze: [0.2, 0.3] };
-  const PRE_OUT = 1.7; // walls are built this far outside their final place (still on the felt)
-  const buildStart = (t) => PHASES.build[0] + t.order * 0.15;
+  // The tiles are stirred all over the table first (start: the heap they
+  // start from; open: the table's edge they bounce off), then the pile is
+  // pushed together (and squared up) inside the line where the walls get
+  // built.
+  const PILE = { start: 10.5, open: 14.8, closed: 10.8, squeeze: [0.3, 0.3875] };
+  const PRE_OUT = 1.2; // the rows are laid out this far outside their final place (still on the felt)
+  const ROW_GAP = H + 0.1; // the near row lies this far nearer its player than the far one
+  const buildStart = (t) => PHASES.build[0] + t.order * 0.09;
   let intro = null;
   let introKey = '';
   let introListener = () => {};
@@ -1056,7 +1123,7 @@ export function createTable3D(container, { onPick } = {}) {
     }
     if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
     const rnd = (a, b) => a + Math.random() * (b - a);
-    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, PILE.radius], square: PILE.open, panel: 0 });
+    const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, 40], start: PILE.start, square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
     introFlipped = v.dora[0];
     // the previous hand's riichi sticks were paid out
@@ -1070,18 +1137,22 @@ export function createTable3D(container, { onPick } = {}) {
       const final = slotPose(v, slot, rel);
       const stack = (v.wall.breakStack + (slot >> 1)) % (4 * STACKS);
       const ownerRel = rel((4 - Math.floor(stack / STACKS)) % 4);
-      const outward = new THREE.Vector3(0, 0, PRE_OUT).applyQuaternion(qSeat[ownerRel]);
+      const out = new THREE.Vector3(0, 0, 1).applyQuaternion(qSeat[ownerRel]);
       const top = (slot & 1) === 0;
+      // two flat rows: the bottom tiles of the wall in the far row, the top
+      // ones in the near row (towards the player), later lifted onto them
+      const row = final.p.clone().setY(D / 2).addScaledVector(out, top ? ROW_GAP : 0);
       tiles.push({
         obj,
         slot,
         isDora,
+        top,
         sim: pile.tiles[slot],
-        pre: { p: final.p.clone().add(outward), q: final.q },
+        pre: { p: row.clone().addScaledVector(out, PRE_OUT), q: final.q },
+        row: { p: row, q: final.q },
         final,
-        // build order: walls fill stack by stack from their left end, the
-        // bottom tile of a stack first so the top one lands on it
-        order: ((STACKS - 1 - (stack % STACKS)) + (top ? 0.5 : 0)) / STACKS,
+        // build order: the rows fill stack by stack from their left end
+        order: (STACKS - 1 - (stack % STACKS)) / STACKS,
       });
     }
     // deal schedule: blocks of 4 (two stacks) three times round, then singles, then the dealer's draw
@@ -1151,7 +1222,7 @@ export function createTable3D(container, { onPick } = {}) {
     let myTiles = 0;
     if (p < PHASES.push[0]) {
       const q = clamp01(span(p, PILE.squeeze));
-      intro.pile.setArea({ ring: [0, PILE.radius + q * 5], square: PILE.open - q * (PILE.open - PILE.closed) });
+      intro.pile.setArea({ square: PILE.open - q * (PILE.open - PILE.closed) });
       for (const t of intro.tiles) t.sim.active = p < buildStart(t);
       // the swirl slows down and squares the pile up before the walls are built
       intro.pile.step(dt || 1 / 60, 1 - q * 0.75, q);
@@ -1177,12 +1248,24 @@ export function createTable3D(container, { onPick } = {}) {
         // building: out of the pile (over its other tiles) into a line a
         // little outside its final place
         t.build ||= makePath({ p: o.position.clone(), q: o.quaternion.clone() }, t.pre, { hy: Math.max(o.position.y, t.pre.p.y) + 0.8 });
-        poseAt(t.build, clamp01((p - buildStart(t)) / 0.05) * t.build.total, o);
+        poseAt(t.build, clamp01((p - buildStart(t)) / 0.035) * t.build.total, o);
         continue;
       }
-      // pushing the walls in, then (dora) turning face up
-      o.position.lerpVectors(t.pre.p, t.final.p, clamp01(span(p, PHASES.push)));
-      o.quaternion.copy(t.pre.q);
+      if (p < PHASES.stack[0]) {
+        // pushing the two rows in together
+        o.position.lerpVectors(t.pre.p, t.row.p, clamp01(span(p, PHASES.push)));
+        o.quaternion.copy(t.pre.q);
+        continue;
+      }
+      if (t.top && p < PHASES.stack[1]) {
+        // the near row is lifted, carried over and set on the far one
+        t.stack ||= makePath(t.row, t.final, { hy: D * 2 + 0.25 });
+        poseAt(t.stack, clamp01(span(p, PHASES.stack)) * t.stack.total, o);
+        continue;
+      }
+      // in place, then (dora) turning face up
+      o.position.copy(t.final.p);
+      o.quaternion.copy(t.final.q);
       if (t.isDora && p > PHASES.flip[0]) {
         t.flip ||= makePath(t.final, { p: t.final.p.clone().setY(D * 1.5), q: t.final.q.clone().multiply(tmpQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI)) });
         poseAt(t.flip, clamp01(span(p, PHASES.flip)) * t.flip.total, o);
@@ -1202,7 +1285,7 @@ export function createTable3D(container, { onPick } = {}) {
         // picked up and set in place at the usual steady speed
         const at = PHASES.dice[0] + DICE.pickUp * (PHASES.dice[1] - PHASES.dice[0]);
         const secs = Math.max(0, p - at) * intro.total / 1000;
-        poseAt(d.gather, secs * SPEED, d.m);
+        poseAt(d.gather, secs * M.speed, d.m);
       }
     }
     if (myTiles !== intro.myDealt) {
@@ -1233,8 +1316,8 @@ export function createTable3D(container, { onPick } = {}) {
     // carrying a tile up to discard it does not move the camera
     if (!hand.dragging()) world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
   };
-  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); });
-  window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); });
+  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); }, { signal });
+  window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); }, { signal });
 
   return {
     update(v, ui) {
@@ -1267,6 +1350,7 @@ export function createTable3D(container, { onPick } = {}) {
     pointsOpen: () => drawerState.open,
     // discard with a single click (default: click to pick up, click again)
     setOneClick: hand.setOneClick,
+    overHandTile: hand.overTile,
     // keep the hand sorted (default) or as the player arranges it
     setAutoSort: hand.setAutoSort,
     // the camera view in use: 'player', 'overview', 'drawer' or 'free'
@@ -1282,5 +1366,10 @@ export function createTable3D(container, { onPick } = {}) {
       return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
     },
     resize: world.fit,
+    // animation lab: a free camera ({ pos, target } of plain {x, y, z},
+    // null to give the camera back) and teardown
+    lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
+    showHand: world.showOverlays,
+    destroy: world.destroy,
   };
 }

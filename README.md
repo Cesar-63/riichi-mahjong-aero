@@ -54,7 +54,11 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    robas entra por la derecha). Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **Descartar con un solo clic** (queda guardado en el navegador).
+   - **Descartar con un solo clic**, **Doble clic** (fuera de las fichas de tu
+     mano) y **Clic derecho**: estos dos descartan la ficha robada en tu turno
+     y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
+     decide con los botones). Vienen desactivados y quedan guardados en el
+     navegador entre partidas.
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
@@ -91,9 +95,8 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 Inspirada en los juegos de *Tetsuya*: habitación oscura, mesa amplia (30
 fichas de lado, con bastante paño libre entre los descartes y los muros, como
-en esos juegos) de madera sin
-barnizar (mate, con vetas y el marco cortado en diagonal en las esquinas,
-como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
+en esos juegos) con marco de madera sin barnizar, gastada y grisácea (mate,
+con vetas y cortado en diagonal en las esquinas, como un marco de cuadro) y tapete verde gastado bajo una sola lámpara cálida
 y débil cuya luz se apaga hacia los bordes, con sillas en penumbra, y fichas
 de reverso amarillo envejecido. Colores y brillos van más bien apagados,
 también el papel de la interfaz. La mesa no tiene placa central: los dados quedan
@@ -164,7 +167,14 @@ primera partida.
   línea oscura fina en el borde y entre fichas vecinas queda siempre un poco
   de aire (muros, manos, descartes, llamadas y tu mano), así nunca se ven
   fundidas en un solo bloque.
-- Muros en molinete, descartes, llamadas y dora en el muro muerto. Cada ficha
+- **Llamadas**, como en Tetsuya: quedan apoyadas contra el borde de la mesa,
+  frente a su dueño, corridas hasta la esquina derecha. Las fichas de una
+  llamada nueva se juntan un poco hacia dentro y hacia el centro, se empujan
+  juntas contra el borde y se deslizan por él hasta la esquina, junto a las
+  llamadas anteriores. Como el borde propio no se ve desde la cámara del
+  jugador, esa cámara mira un poco más cerca para que tu esquina derecha
+  (con tus llamadas) quede a la vista junto a tu mano.
+- Muros en molinete, descartes y dora en el muro muerto. Cada ficha
   viaja a su lugar, así robos, descartes y llamadas se animan solos.
 - **Movimientos firmes**: las fichas se mueven a velocidad constante por
   tramos rectos, sin aceleraciones. Una ficha que cambia de lugar o se da
@@ -231,8 +241,10 @@ primera partida.
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
   rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
   baja detrás del ganador a su mano y se abre la hoja de resultado.
-- **Empate por agotamiento**: todas las manos quedan paradas sobre la mesa y
-  luego se tumban a la vez, ficha por ficha: las que están en tenpai boca arriba con el cartel **Tenpai**, y
+- **Empate por agotamiento**: la cámara pasa a la mesa entera (la franja de
+  arriba se pliega), todas las manos quedan paradas sobre la mesa y luego se
+  tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
+  resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
   estaban, así no chocan en las esquinas con la mano del vecino. Después se
   abre la pantalla de resultado. Los empates abortivos van directo al
@@ -241,21 +253,23 @@ primera partida.
 ### Animación de inicio de cada mano
 
 Al empezar cada mano el servidor pausa los relojes y los bots durante
-`INTRO_SECONDS` (7 s por defecto; 0 la desactiva) y la mesa reproduce, con
+`INTRO_SECONDS` (8 s por defecto; 0 la desactiva) y la mesa reproduce, con
 las 136 fichas y la mesa vista entera:
 
-1. **Revolver**: las fichas boca abajo forman un círculo que gira sobre todo
-   el centro de la mesa, cada una a su ritmo,
-   acercándose y alejándose y dándose vuelta, mientras dos "manos" las
-   arremolinan. Es una pequeña simulación con colisiones (`public/js/three3d/shuffle.js`): las
-   fichas se empujan y se deslizan unas contra otras (una esquina puede
-   montarse un momento sobre la vecina, como pasa de verdad, pero nunca se
-   atraviesan); al final se juntan y se enderezan para dejar lugar a los
-   muros.
-2. **Armar los muros**: cada ficha sube de la pila, cruza por encima de las
-   demás y baja a las cuatro filas de pilas de dos, un poco hacia afuera,
-   primero la de abajo y encima la de arriba, y las filas se empujan a su
-   lugar.
+1. **Revolver**: las fichas boca abajo caen amontonadas al centro y dos
+   "manos" las revuelven por toda la mesa siguiendo recorridos irregulares,
+   arrastrándolas y empujándolas, con un remolino suelto cuyo centro también
+   se mueve: nunca giran como un disco ordenado. Es una pequeña simulación
+   física (`public/js/three3d/shuffle.js`): cada ficha conserva su impulso y
+   frena con el roce del paño, chocan entre sí y rebotan (y se ponen a
+   girar), y rebotan contra el borde de la mesa; una esquina puede montarse
+   un momento sobre la vecina, como pasa de verdad, pero nunca se atraviesan.
+   Al final se juntan y se enderezan para dejar lugar a los muros.
+2. **Armar los muros**, a la manera clásica: cada jugador saca las fichas
+   de la pila (pasando por encima de las demás) y arma frente a él dos filas
+   de 17 fichas boca abajo, una al lado de la otra, un poco hacia afuera;
+   empuja las dos filas a su lugar y después levanta la fila más cercana a
+   él y la pone sobre la más lejana, y queda el muro de dos pisos.
 3. **Tirar los dados**: el oya lanza los dos dados desde su lado hacia el
    centro de la mesa, cada mano en otra dirección; ruedan, rebotan y se
    detienen donde caen, en cualquier ángulo, mostrando la tirada real, que
@@ -348,6 +362,31 @@ npm test         # tests del motor, puntuación y salas
 Para probar solo, abre 4 ventanas (o una normal y tres de incógnito, porque la
 sesión vive en `localStorage`) y únete a la misma sala.
 
+## Laboratorio de animaciones
+
+`/lab.html` (en local `http://localhost:3000/lab.html`, y también en el sitio
+publicado; no está enlazado desde el juego) reproduce escenas fijas sobre la
+mesa 3D real para mirar las animaciones de cerca y afinarlas:
+
+- **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
+  descartes, pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
+  tsumo, tu tsumo con tres kan y empate. Salen de
+  `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
+  del juego (manos y muros preparados, siempre iguales).
+- **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
+  0,05×, comienzo (R) y una barra para saltar a cualquier momento (con una
+  marca por cada jugada). Toda la mesa usa un reloj propio de la página, así
+  que también se detienen y frenan los avisos de llamada.
+- **Cámara**: vistas preparadas (la del juego, mesa completa, desde arriba,
+  tu mano, el centro, cada rival, la esquina de tus llamadas) y cámara libre:
+  botón derecho para girar, Mayús + arrastre para mover, rueda para acercar.
+  Se puede ocultar tu mano de frente.
+- **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
+  fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
+  cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
+  con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
+  de una animación ya empezada) se ven al volver al comienzo.
+
 ## Fichas
 
 Las imágenes vienen del set `Regular` de
@@ -367,6 +406,9 @@ server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
 public/js/shared/        Modelo de fichas compartido con el servidor
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
+public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
+scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 dev-server.js            Servidor local
 test/                    node:test
 ```

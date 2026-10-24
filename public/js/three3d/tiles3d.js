@@ -37,7 +37,7 @@ export function createTileKit(renderer) {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   function paintSides() {
     // sides get less light than the back face, so the band is a bit brighter
-    const back = new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.35).convertSRGBToLinear();
+    const back = new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.15).convertSRGBToLinear();
     const ivory = new THREE.Color(look.ivory).convertSRGBToLinear();
     const shade = new THREE.Color(look.ivoryLo).convertSRGBToLinear();
     for (let i = 0; i < pos.count; i++) {
@@ -76,27 +76,33 @@ export function createTileKit(renderer) {
   }
   // thin dark line along every edge, so neighbouring tiles always read as
   // separate pieces (on every face, so it also shows on the sides)
+  // a soft line round a face: blurred a little, so neighbouring tiles stay
+  // apart without a hard drawn edge
   function outline(g, w, h, color, lw) {
+    g.save();
+    g.filter = `blur(${lw * 0.35}px)`;
     g.lineWidth = lw;
     g.strokeStyle = color;
     g.strokeRect(lw / 2, lw / 2, w - lw, h - lw);
+    g.restore();
   }
   const edges = canvasTex(64, 64);
   edges.g.fillStyle = '#fff';
   edges.g.fillRect(0, 0, 64, 64);
-  outline(edges.g, 64, 64, 'rgba(60, 46, 26, .7)', 4);
+  outline(edges.g, 64, 64, 'rgba(60, 46, 26, .38)', 3);
 
   const back = canvasTex(192, 256);
   function paintBack() {
     const { g } = back;
+    // a nearly flat colour (real tile backs are one plastic colour), only
+    // the faintest shading and a soft bevel at the rim
     const grad = g.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, look.backHi);
-    grad.addColorStop(0.45, look.back);
-    grad.addColorStop(1, look.backLo);
+    grad.addColorStop(0, new THREE.Color(look.back).lerp(new THREE.Color(look.backHi), 0.12).getStyle());
+    grad.addColorStop(1, new THREE.Color(look.back).lerp(new THREE.Color(look.backLo), 0.1).getStyle());
     g.fillStyle = grad;
     g.fillRect(0, 0, 192, 256);
-    bevel(g, 192, 256, 'rgba(255,255,255,.45)', 'rgba(0,0,0,.25)', 10);
-    outline(g, 192, 256, 'rgba(0,0,0,.5)', 4);
+    bevel(g, 192, 256, 'rgba(255,255,255,.22)', 'rgba(0,0,0,.16)', 8);
+    outline(g, 192, 256, 'rgba(0,0,0,.28)', 3);
     back.t.needsUpdate = true;
   }
 
@@ -141,7 +147,7 @@ export function createTileKit(renderer) {
       }
     }
     bevel(g, 240, 320, 'rgba(255,255,255,.95)', 'rgba(120,100,60,.38)', 12);
-    outline(g, 240, 320, 'rgba(70,55,30,.6)', 5);
+    outline(g, 240, 320, 'rgba(70,55,30,.32)', 4);
     f.t.needsUpdate = true;
   }
 

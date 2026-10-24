@@ -4,6 +4,7 @@
 // fit any screen. Tiles stand slightly tilted back so their top edge shows.
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { H, GAP } from './tiles3d.js';
+import { TUNING } from './tuning.js';
 
 const TILT = 0.32; // top edge leans towards the player, so it shows
 
@@ -13,8 +14,8 @@ export function createHand3D({ world, kit, onPick }) {
   const camera = new THREE.OrthographicCamera(0, 1, 1, 0, -2000, 2000);
   camera.position.z = 1000;
   // the same warm, low lamp light as the table
-  const ambient = new THREE.AmbientLight(0xffecd4, 0.55);
-  const key = new THREE.DirectionalLight(0xffdcb0, 1.7);
+  const ambient = new THREE.AmbientLight(0xffecd4, TUNING.light.handAmbient);
+  const key = new THREE.DirectionalLight(0xffdcb0, TUNING.light.handKey);
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 
@@ -68,17 +69,22 @@ export function createHand3D({ world, kit, onPick }) {
   let settle = null; // timer that sorts a dropped tile back
   let drag = null; // { id, sx, sy, moved, x, y } while a tile is held
 
+  // tile size (px per tile width) for a row this many tile widths long
+  function sizeFor(units) {
+    return Math.max(18, Math.min(64, (camera.right * 0.92) / Math.max(15.8, units), (camera.top * 0.125) / H));
+  }
   function fit() {
     const w = renderer.domElement.clientWidth || window.innerWidth;
     const h = renderer.domElement.clientHeight || window.innerHeight;
     camera.right = w;
     camera.top = h;
     camera.updateProjectionMatrix();
-    size = Math.max(18, Math.min(64, (w * 0.92) / 15.8, (h * 0.125) / H));
+    size = sizeFor(15.8);
     document.documentElement.style.setProperty('--hand3d-h', `${Math.round(size * H + 30)}px`);
     if (last) layout(...last);
   }
-  window.addEventListener('resize', fit);
+
+  window.addEventListener('resize', fit, { signal: world.signal });
 
   // The row of the hand, left to right, and the drawn tile when it sits
   // apart in its own slot. Tiles placed by the player keep their place; any
@@ -171,6 +177,8 @@ export function createHand3D({ world, kit, onPick }) {
   // tiles move at a steady speed (no easing), growing to full size as they arrive
   const goal = new THREE.Vector3();
   world.onTick((dt) => {
+    ambient.intensity = TUNING.light.handAmbient;
+    key.intensity = TUNING.light.handKey;
     for (const [id, t] of tiles) {
       if (drag && drag.moved && drag.id === id) {
         // held: it follows the pointer, a little larger, above the others
@@ -183,8 +191,8 @@ export function createHand3D({ world, kit, onPick }) {
         continue;
       }
       // a fresh draw flies twice as fast as the hand rearranging
-      const step = size * (t.fast ? 156 : 78) * dt;
-      const lift = selected === id ? size * 0.38 : hover === id && !drag && legal.has(id) ? size * (oneClick ? 0.22 : 0.1) : 0;
+      const step = size * (t.fast ? TUNING.hand.drawSpeed : TUNING.hand.moveSpeed) * dt;
+      const lift = selected === id ? size * TUNING.hand.selectLift : hover === id && !drag && legal.has(id) ? size * (oneClick ? 0.22 : 0.1) : 0;
       goal.set(t.target.x, t.target.y + lift, 0);
       if (t.hop) {
         // up, across above the hand, then straight down
@@ -311,6 +319,8 @@ export function createHand3D({ world, kit, onPick }) {
       if (last) layout(...last);
     },
     dragging: () => !!(drag && drag.moved),
+    // whether a pointer event is over one of my hand tiles
+    overTile: (ev) => pick(ev) !== null,
     // test hook: screen point (top-left origin) of a hand tile
     tileOnScreen(id) {
       const t = tiles.get(id);
