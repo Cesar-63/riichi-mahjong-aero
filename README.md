@@ -168,9 +168,8 @@ primera partida.
   llamada nueva se juntan un poco hacia dentro y hacia el centro, se empujan
   juntas contra el borde y se deslizan por él hasta la esquina, junto a las
   llamadas anteriores. Como el borde propio no se ve desde la cámara del
-  jugador, tus llamadas se muestran también a la derecha de tu mano (la ficha
-  llamada de lado, las puntas de un kan cerrado boca abajo); en la mesa
-  aparecen cuando tu mano se tumba al final.
+  jugador, esa cámara mira un poco más cerca para que tu esquina derecha
+  (con tus llamadas) quede a la vista junto a tu mano.
 - Muros en molinete, descartes y dora en el muro muerto. Cada ficha
   viaja a su lugar, así robos, descartes y llamadas se animan solos.
 - **Movimientos firmes**: las fichas se mueven a velocidad constante por
@@ -248,7 +247,7 @@ primera partida.
 ### Animación de inicio de cada mano
 
 Al empezar cada mano el servidor pausa los relojes y los bots durante
-`INTRO_SECONDS` (7 s por defecto; 0 la desactiva) y la mesa reproduce, con
+`INTRO_SECONDS` (8 s por defecto; 0 la desactiva) y la mesa reproduce, con
 las 136 fichas y la mesa vista entera:
 
 1. **Revolver**: las fichas boca abajo caen amontonadas al centro y dos

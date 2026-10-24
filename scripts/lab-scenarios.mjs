@@ -78,8 +78,8 @@ const scenes = [];
 {
   const g = Game.create(NAMES, {}, seeded(7));
   const v = view(g);
-  v.intro = { left: 7000, total: 7000 };
-  scenes.push({ id: 'intro', name: 'Inicio de mano', note: 'Revolver, armar y empujar los muros, dados y reparto (7 s).', steps: [{ at: 0, view: v }], length: 8000 });
+  v.intro = { left: 8000, total: 8000 };
+  scenes.push({ id: 'intro', name: 'Inicio de mano', note: 'Revolver, armar y empujar los muros, dados y reparto (8 s).', steps: [{ at: 0, view: v }], length: 9000 });
 }
 
 // ------------------------------------------------------- discards, draws

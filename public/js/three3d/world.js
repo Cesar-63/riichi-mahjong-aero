@@ -84,11 +84,12 @@ export function createWorld(container, { signal } = {}) {
       pos: new THREE.Vector3(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72)),
       target: new THREE.Vector3(0, -2.2 * k, (portrait ? 1.2 : 1.6) * k),
     };
-    // aimed a little nearer than the scaled view, so the player's own wall
-    // (further out on the larger table) still shows above the hand
+    // aimed nearer than the scaled view, so the player's own wall (further
+    // out on the larger table) shows above the hand and the calls against
+    // the player's edge show in the right-hand corner
     views.player = portrait ? views.overview : {
-      pos: new THREE.Vector3(0, 14.5 * k, 24 * k),
-      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 1.8),
+      pos: new THREE.Vector3(0, 14.5 * k + 3.5, 24 * k + 4),
+      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 6.5),
     };
     // the drawer comes out of the player's edge of the table
     views.drawer = {

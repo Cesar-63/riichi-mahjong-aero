@@ -3,7 +3,7 @@
 // game reads them where they are used, so a change shows at once; the values
 // here are the ones the game ships with.
 export const TUNING = {
-  motion: { speed: 48, fast: 96, mine: 150, stick: 0.6, callSlide: 9, callPause: 140 },
+  motion: { speed: 48, fast: 96, mine: 150, stick: 0.6, call: 96, callSlide: 18, callPause: 70 },
   hand: { drawSpeed: 156, moveSpeed: 78, selectLift: 0.38 },
   win: { callMs: 900, placeMs: 150, placeGap: 18, fallAt: 1500, tileMs: 45, dropMs: 240, flyMs: 240, flyGap: 60, holdMs: 1800 },
   draw: { startMs: 900, tileMs: 40, holdMs: 2200 },
@@ -20,6 +20,7 @@ export const TUNING_INFO = {
     fast: ['Robos y descartes de rivales', 5, 300, 1],
     mine: ['Tu descarte', 5, 400, 1],
     stick: ['Palito de riichi (× velocidad normal)', 0.1, 3, 0.05],
+    call: ['Llamadas: fichas yendo a juntarse', 5, 300, 1],
     callSlide: ['Llamada deslizándose por el borde hasta la esquina', 1, 60, 0.5],
     callPause: ['Pausa de la llamada en el borde antes de deslizarse (ms)', 0, 1000, 10],
   },
