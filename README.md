@@ -33,6 +33,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    elegir ese mismo modo.
    - **Clásico** (ranked individual, el modo original): la partida empieza
      sola al llegar a 4 jugadores, con asientos al azar.
+   - En la sala de espera, el anfitrión (el primero que entró) también puede
+     pulsar **Empezar y rellenar con bots**: la partida empieza ya y bots
+     ocupan los asientos libres (por equipos, quien no eligió equipo entra al
+     que tenga lugar). Los bots juegan como en la práctica.
    - **Por equipos** (2 contra 2): en la sala de espera (máximo 4) eliges
      **Norte** o **Sur** (2 por equipo), marcas **Estoy listo** (cambiar de
      equipo lo quita) y el **anfitrión** (el primero que entró; si se va, el
@@ -59,6 +63,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
      decide con los botones). Vienen desactivados y quedan guardados en el
      navegador entre partidas.
+   - **Cambiar la vista con una tecla**: el mouse deja de cambiar entre la
+     vista del jugador y la mesa entera, y lo hace la tecla elegida en
+     **Tecla de vista** (clic y luego la tecla; V por defecto). También queda
+     guardado.
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote

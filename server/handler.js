@@ -71,7 +71,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'request'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -192,6 +192,27 @@ function apply(room, op, token, body, now, seen) {
     const n = room.queue.filter((q) => q.team === 'N').length;
     if (room.queue.length !== 4 || n !== 2) throw new Error('Hacen falta 2 jugadores en cada equipo');
     if (!room.queue.every((q) => q.ready)) throw new Error('Todos tienen que estar listos');
+    startGame(room, now, seen);
+    return true;
+  }
+  if (op === 'fill') {
+    // The host starts now and bots take the empty seats. By teams, anyone
+    // without a team joins the one with room; the bots fill what is left.
+    if (room.status !== 'lobby') return false;
+    if (room.queue[0] && room.queue[0].token !== token) throw new Error('Solo el anfitrión puede empezar la partida');
+    if (!room.queue.length) throw new Error('No estás en esta sala');
+    const bots = [];
+    for (let n = 1; room.queue.length + bots.length < 4; n++) {
+      if (!room.queue.some((q) => q.name === `Bot ${n}`)) bots.push({ token: `bot-${n}`, name: `Bot ${n}`, bot: true });
+    }
+    room.queue.push(...bots);
+    if (room.mode === 'teams') {
+      const count = (t) => room.queue.filter((q) => q.team === t).length;
+      // the humans first, then the bots
+      for (const q of [...room.queue.filter((x) => !x.bot), ...bots]) {
+        if (!q.team) q.team = count('N') <= count('S') ? 'N' : 'S';
+      }
+    }
     startGame(room, now, seen);
     return true;
   }

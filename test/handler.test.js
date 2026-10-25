@@ -269,3 +269,31 @@ test('deal animation pause: no clocks or bots run until it ends', async () => {
   assert.equal(after.intro, null);
   assert.ok(after.events.length > startEvents || after.wallLeft < first.wallLeft, 'play resumes');
 });
+
+test('fill with bots: the host starts now and bots take the empty seats', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 40_000_000;
+  // classic: two humans, two bots
+  const call = async (room, body) => (await handle({ room, ...body }, store, now)).body;
+  await call('f1', { op: 'join', token: tokens[0], name: 'Ana', mode: 'classic' });
+  await call('f1', { op: 'join', token: tokens[1], name: 'Beto', mode: 'classic' });
+  assert.ok((await call('f1', { op: 'fill', token: tokens[1] })).error, 'only the host fills');
+  const started = await call('f1', { op: 'fill', token: tokens[0] });
+  assert.equal(started.status, 'playing');
+  const names = started.game.players.map((p) => p.name).sort();
+  assert.deepEqual(names, ['Ana', 'Beto', 'Bot 1', 'Bot 2']);
+  assert.equal(started.game.players.filter((p) => p.bot).length, 2);
+
+  // teams: a host alone, no team picked yet, gets a bot partner and two bot rivals
+  await call('f2', { op: 'join', token: tokens[2], name: 'Cata', mode: 'teams' });
+  const t = await call('f2', { op: 'fill', token: tokens[2] });
+  assert.equal(t.status, 'playing');
+  const me = t.game.players[t.game.seat];
+  const teams = t.game.players.map((p) => p.team);
+  assert.equal(teams.filter((x) => x === 'N').length, 2);
+  assert.equal(teams.filter((x) => x === 'S').length, 2);
+  assert.ok(t.game.partner, 'a bot partner');
+  assert.ok(t.game.players[t.game.partner.seat].bot);
+  assert.equal(t.game.players[t.game.partner.seat].team, me.team);
+});
