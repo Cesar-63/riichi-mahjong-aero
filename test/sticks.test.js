@@ -1,15 +1,23 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stickCounts, pileLayout, VALUES, COMPARTMENTS, STICK, MIN_SHOWN } from '../public/js/three3d/sticks.js';
+import { stickCounts, trayScore, pileLayout, VALUES, COMPARTMENTS, STICK, MIN_SHOWN } from '../public/js/three3d/sticks.js';
 
 test('the sticks in the drawer add up to the score', () => {
   assert.deepEqual(stickCounts(25000), [1, 2, 4, 10]); // ten 100s, not five
+  assert.deepEqual(stickCounts(24700), [1, 2, 4, 7]); // a dealer with 3 honba sticks out
+  assert.deepEqual(stickCounts(33000), [2, 2, 2, 10]);
   for (let score = -5000; score <= 150000; score += 100) {
     const counts = stickCounts(score);
     const sum = counts.reduce((s, n, i) => s + n * VALUES[i], 0);
     assert.equal(sum, Math.max(0, score), `score ${score}`);
     assert.ok(counts.every((n) => Number.isInteger(n) && n >= 0));
   }
+});
+
+test('the honba sticks on the table come out of the tray', () => {
+  assert.equal(trayScore(25000, 3), 24700);
+  assert.equal(trayScore(25000, 0), 25000);
+  assert.equal(trayScore(200, 5), 0);
 });
 
 test('every stick lies inside its compartment and shows a strip', () => {
