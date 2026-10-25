@@ -73,8 +73,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
      todos los humanos abandonan, la sala se libera.
 4. **Barra lateral** (al centro del borde izquierdo, como en Mahjong Soul):
-   cerrada muestra solo letras, que ya funcionan con un clic (en rojo cuando
-   están activas); la flecha de su borde derecho la despliega con los
+   cerrada muestra solo letras, papelitos sobre una tabla oscura que ya
+   funcionan con un clic (apagadas quedan en penumbra; activas, a la luz y
+   con la letra sellada en rojo); la flecha de su borde derecho la despliega con los
    nombres.
    - **A · Auto ordenar** (arriba, encendida por defecto y recordada en el
      navegador): ver arriba.
@@ -84,7 +85,8 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      ofreciendo.
    - **D · Auto descarte**: descarta cada ficha que robas (sin R, un tsumo
      posible se deja para que decidas).
-   R, C y D duran la partida; los tres juntos juegan como en riichi.
+   R, C y D se apagan solos al empezar cada mano (así un D olvidado no tira
+   la primera ficha de la siguiente); los tres juntos juegan como en riichi.
 5. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
@@ -162,7 +164,10 @@ Pantallas:
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =
   kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
   tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
-  no hay retratos: cada marco muestra una silueta. Con la cámara en la mesa
+  no hay retratos: cada marco (de madera abollada, con clavos) muestra al
+  rival como una silueta en penumbra contra papel tapiz sucio, con la luz de
+  la lámpara apenas en el borde de la cabeza, y un papelito "bot" pegado si
+  es un bot. Con la cámara en la mesa
   entera (cursor en la mitad superior) la franja se pliega hacia arriba y
   quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
   ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
@@ -239,7 +244,8 @@ primera partida.
   su lugar mientras las otras le hacen espacio, como en Tetsuya; durante el reparto la mano se llena a medida
   que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
-  cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
+  cerca de tu lado (estilo Tetsuya), lo bastante cerca para que el paño siga
+  detrás de tu mano (nunca queda flotando sobre el piso). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
 - **Cajón de puntos**: el botón **Puntos** (siempre a la izquierda, justo
