@@ -113,8 +113,11 @@ document.addEventListener('keydown', (e) => {
 
 $('#lab-drawer').addEventListener('click', () => {
   if (!table || !lastView) return;
-  if (table.pointsOpen()) table.closePoints();
-  else table.openPoints(lastView);
+  if (table.pointsOpen()) return table.closePoints();
+  // optionally another score for my seat, to check how the sticks lie
+  const score = $('#lab-score').value;
+  const v = score === '' ? lastView : { ...lastView, players: lastView.players.map((p, i) => (i === lastView.seat ? { ...p, score: Number(score) } : p)) };
+  table.openPoints(v);
 });
 
 // --------------------------------------------------------------- camera

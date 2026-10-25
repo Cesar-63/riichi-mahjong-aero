@@ -244,7 +244,11 @@ primera partida.
   cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
   10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
-  1 + 2 + 4 + 10). Los palitos son los de un juego japonés tradicional,
+  1 + 2 + 4 + 10). Están todos y siempre suman tu puntaje: cada
+  compartimento tiene uno a tres montoncitos donde los palitos se apoyan
+  unos sobre otros, un poco desordenados pero con una franja de cada uno a
+  la vista para poder contarlos (el de 100, el más lleno, es el más ancho).
+  Un mismo puntaje queda siempre igual (`public/js/three3d/sticks.js`). Los palitos son los de un juego japonés tradicional,
   blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
   un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
   chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
@@ -415,6 +419,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   tu mano, el centro, cada rival, la esquina de tus llamadas) y cámara libre:
   botón derecho para girar, Mayús + arrastre para mover, rueda para acercar.
   Se puede ocultar tu mano de frente.
+- **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
+  palitos.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
