@@ -9,7 +9,7 @@ import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { TUNING } from './tuning.js';
-import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout } from './sticks.js';
+import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -753,7 +753,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // onShown: called once the drawer is out and the camera is on it
   function openPoints(v, onShown) {
     if (intro || win || !v) return false;
-    fillDrawer(v.players[v.seat].score);
+    // as dealer, the honba sticks on the table came out of this tray
+    fillDrawer(trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0));
     drawer.visible = true;
     drawerState = { open: true, goal: DRAWER.openZ, shown: onShown };
     world.forceView('drawer');
@@ -1084,6 +1085,18 @@ export function createTable3D(container, { onPick, signal } = {}) {
       .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));
     return { p: local.applyQuaternion(qSeat[dealerRel]), q };
   }
+  // Honba counters: one 100 stick per honba, which the dealer takes from
+  // their tray and lays on the felt at their right, just past the dice,
+  // side by side and pointing to the centre. They stay out while the hand's
+  // dice do (the same key).
+  const honbaOnTable = (v) => (v.wall && v.phase !== 'end' ? v.honba : 0);
+  function honbaRest(v, k) {
+    const dealerRel = (v.dealer - v.seat + 4) % 4;
+    const row = Math.floor(k / 5); // five to a row, a second row on top
+    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 4.6);
+    const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
+    return { p: local.applyQuaternion(qSeat[dealerRel]), q };
+  }
   let restDice = { key: '', meshes: [] };
   let introFlipped = null; // dora indicator the intro turned face up
   function syncRestDice(v) {
@@ -1092,7 +1105,16 @@ export function createTable3D(container, { onPick, signal } = {}) {
     for (const m of restDice.meshes) scene.remove(m);
     restDice = { key, meshes: [] };
     if (!key) return;
-    restDice.meshes = v.wall.dice.map((_, i) => {
+    for (let k = 0; k < honbaOnTable(v); k++) {
+      const m = new THREE.Mesh(stickGeo, stickMats[100]);
+      m.castShadow = true;
+      const rest = honbaRest(v, k);
+      m.position.copy(rest.p);
+      m.quaternion.copy(rest.q);
+      scene.add(m);
+      restDice.meshes.push(m);
+    }
+    restDice.meshes.push(...v.wall.dice.map((_, i) => {
       const m = new THREE.Mesh(dieGeo, dieMats);
       m.castShadow = true;
       const rest = diceRest(v, i);
@@ -1100,7 +1122,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       m.quaternion.copy(rest.q);
       scene.add(m);
       return m;
-    });
+    }));
   }
 
   function startIntro(v, ui) {
