@@ -9,6 +9,7 @@ import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { TUNING } from './tuning.js';
+import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore, carriedDeposits } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -699,7 +700,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: 8, d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
+  const DRAWER = { w: COMPARTMENTS.reduce((a, b) => a + b), d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -715,42 +716,36 @@ export function createTable3D(container, { onPick, signal } = {}) {
     box(wall, h, d, w / 2 - wall / 2, 0, 0);
     box(w, h, wall, 0, 0, -d / 2 + wall / 2);
     box(w, h * 1.15, wall * 1.6, 0, 0.04, d / 2 - wall * 0.8); // front, a little taller
-    for (const x of [-w / 4, 0, w / 4]) box(0.06, h * 0.7, d - 2 * wall, x, -0.08, 0); // compartments
+    // compartments
+    let x = -w / 2;
+    for (const cw of COMPARTMENTS.slice(0, -1)) box(0.06, h * 0.7, d - 2 * wall, (x += cw), -0.08, 0);
   }
   drawer.position.set(0, DRAWER.y, DRAWER.closedZ);
   drawer.visible = false;
   scene.add(drawer);
   const drawerSticks = new THREE.Group();
   drawer.add(drawerSticks);
-  const drawerStickGeo = new THREE.BoxGeometry(2.55, 0.08, 0.32);
+  const drawerStickGeo = new THREE.BoxGeometry(STICK.len, STICK.thick, STICK.wide);
   let drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
   let pointsListener = () => {};
 
-  // Sticks like a real tray: 25000 is 1 x 10000, 2 x 5000, 4 x 1000 and
-  // 10 x 100; more points go to 10000s, small change stays in 1000s/100s.
-  function stickCounts(score) {
-    let r = Math.max(0, Math.round(score / 100) * 100);
-    const n10k = Math.max(0, Math.floor((r - 15000) / 10000));
-    r -= n10k * 10000;
-    const n5k = Math.min(2, Math.floor(r / 5000));
-    r -= n5k * 5000;
-    const n1k = r >= 1000 ? Math.floor((r - 1000) / 1000) : 0;
-    r -= n1k * 1000;
-    return [n10k, n5k, n1k, r / 100];
-  }
+  // every stick of the score, in small heaps that lean on each other so
+  // each one shows (sticks.js); the same score always lies the same way
   function fillDrawer(score) {
     drawerSticks.clear();
     const counts = stickCounts(score);
-    [10000, 5000, 1000, 100].forEach((value, c) => {
-      const n = counts[c];
-      const cx = (c - 1.5) * (DRAWER.w / 4);
-      for (let j = 0; j < Math.min(n, 30); j++) {
+    const floor = -DRAWER.h / 2 + DRAWER.wall;
+    let left = -DRAWER.w / 2;
+    VALUES.forEach((value, c) => {
+      const cw = COMPARTMENTS[c];
+      const cx = left + cw / 2;
+      left += cw;
+      for (const s of pileLayout(counts[c], cw - DRAWER.wall, Math.round(score / 100) * 4 + c)) {
         const m = new THREE.Mesh(drawerStickGeo, stickMats[value]);
-        m.rotation.y = Math.PI / 2;
-        // side by side, centred in the compartment, five to a layer
-        const cols = Math.min(n, 5);
-        m.position.set(cx + ((j % 5) - (cols - 1) / 2) * 0.36, -DRAWER.h / 2 + DRAWER.wall + 0.04 + Math.floor(j / 5) * 0.085, 0);
-        m.castShadow = true;
+        m.rotation.order = 'YXZ';
+        m.rotation.set(s.roll, Math.PI / 2 + s.yaw, 0);
+        m.position.set(cx + s.x, floor + s.y, s.z);
+        m.castShadow = m.receiveShadow = true;
         drawerSticks.add(m);
       }
     });
@@ -758,7 +753,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // onShown: called once the drawer is out and the camera is on it
   function openPoints(v, onShown) {
     if (intro || win || !v) return false;
-    fillDrawer(v.players[v.seat].score);
+    // as dealer, the honba sticks on the table came out of this tray
+    fillDrawer(trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0));
     drawer.visible = true;
     drawerState = { open: true, goal: DRAWER.openZ, shown: onShown };
     world.forceView('drawer');
@@ -983,6 +979,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     sync(desired, spawns, calls);
     syncSticks(v, rel);
     syncRestDice(v);
+    syncDeposits(v);
     syncWin(v, ui, rel);
 
     // highlights: tsumogiri tiles dimmer, the latest discard glowing
@@ -1089,6 +1086,41 @@ export function createTable3D(container, { onPick, signal } = {}) {
       .multiply(new THREE.Quaternion().setFromUnitVectors(up, Y_AXIS));
     return { p: local.applyQuaternion(qSeat[dealerRel]), q };
   }
+  // Honba counters: one 100 stick per honba, which the dealer takes from
+  // their tray and lays on the felt at their right, just past the dice,
+  // side by side and pointing to the centre. They stay out while the hand's
+  // dice do (the same key).
+  const honbaOnTable = (v) => (v.wall && v.phase !== 'end' ? v.honba : 0);
+  function honbaRest(v, k) {
+    const dealerRel = (v.dealer - v.seat + 4) % 4;
+    const row = Math.floor(k / 5); // five to a row, a second row on top
+    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 4.6);
+    const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
+    return { p: local.applyQuaternion(qSeat[dealerRel]), q };
+  }
+  // Riichi deposits left from earlier hands (kyoutaku that nobody has won
+  // yet): their 1000 sticks wait in the middle of the table, side by side
+  // and squared with my edge, three to a row and further rows on top, until
+  // the next win takes them. This hand's riichi sticks stay in front of
+  // their players and are not counted here.
+  let deposits = { key: '', meshes: [] };
+  function syncDeposits(v) {
+    const n = carriedDeposits(v);
+    const key = n ? `${resultKey(v)}:${n}:${v.seat}` : '';
+    if (key === deposits.key) return;
+    for (const m of deposits.meshes) scene.remove(m);
+    deposits = { key, meshes: [] };
+    for (let k = 0; k < n; k++) {
+      const row = Math.floor(k / 3);
+      const m = new THREE.Mesh(stickGeo, stickMats[1000]);
+      m.castShadow = true;
+      // a slightly untidy pile: each row a little turned and shifted
+      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0));
+      m.rotation.y = (row % 2 ? -0.05 : 0.04) * (row ? 1 : 0.5);
+      scene.add(m);
+      deposits.meshes.push(m);
+    }
+  }
   let restDice = { key: '', meshes: [] };
   let introFlipped = null; // dora indicator the intro turned face up
   function syncRestDice(v) {
@@ -1097,7 +1129,16 @@ export function createTable3D(container, { onPick, signal } = {}) {
     for (const m of restDice.meshes) scene.remove(m);
     restDice = { key, meshes: [] };
     if (!key) return;
-    restDice.meshes = v.wall.dice.map((_, i) => {
+    for (let k = 0; k < honbaOnTable(v); k++) {
+      const m = new THREE.Mesh(stickGeo, stickMats[100]);
+      m.castShadow = true;
+      const rest = honbaRest(v, k);
+      m.position.copy(rest.p);
+      m.quaternion.copy(rest.q);
+      scene.add(m);
+      restDice.meshes.push(m);
+    }
+    restDice.meshes.push(...v.wall.dice.map((_, i) => {
       const m = new THREE.Mesh(dieGeo, dieMats);
       m.castShadow = true;
       const rest = diceRest(v, i);
@@ -1105,7 +1146,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       m.quaternion.copy(rest.q);
       scene.add(m);
       return m;
-    });
+    }));
   }
 
   function startIntro(v, ui) {
@@ -1127,6 +1168,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const rnd = (a, b) => a + Math.random() * (b - a);
     const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, 40], start: PILE.start, square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
+    syncDeposits({ ...v, phase: 'end' });
     introFlipped = v.dora[0];
     // the previous hand's riichi sticks were paid out
     for (const st of sticks.values()) scene.remove(st.mesh);

@@ -109,7 +109,13 @@ y débil cuya luz se apaga hacia los bordes, con sillas en penumbra, y fichas
 de reverso amarillo envejecido. Colores y brillos van más bien apagados,
 también el papel de la interfaz. La mesa no tiene placa central: los dados quedan
 toda la mano sobre el tapete a la derecha del oya (quien los tiene de su lado
-reparte).
+reparte). Junto a ellos, el oya deja un palito de 100 por cada honba
+(apuntando al centro, de a cinco por fila). Esos palitos salen de su cajón
+sin descontarse de su puntaje: su cajón muestra su puntaje menos los honba
+que hay en la mesa, así cada palito está en un solo lugar. Los depósitos de
+riichi que nadie ganó en manos anteriores esperan en el centro de la mesa
+(palitos de 1000, de a tres por fila) hasta que alguien gane; los riichi de
+la mano actual siguen frente a quien los declaró.
 
 La interfaz se diseñó en Claude Design y se pasó al juego con estos
 materiales:
@@ -244,7 +250,12 @@ primera partida.
   cámara mire hacia
   tu borde de la mesa, de donde sale un cajón con tus palitos de puntos (de
   10000, 5000, 1000 y 100, repartidos como en una bandeja real: 25000 son
-  1 + 2 + 4 + 10). Los palitos son los de un juego japonés tradicional,
+  1 + 2 + 4 + 10, y los cambios se pagan y se reciben en 100 y 1000: 24700
+  son 1 + 2 + 4 + 7). Están todos y siempre suman tu puntaje: cada
+  compartimento tiene uno a tres montoncitos donde los palitos se apoyan
+  unos sobre otros, un poco desordenados pero con una franja de cada uno a
+  la vista para poder contarlos (el de 100, el más lleno, es el más ancho).
+  Un mismo puntaje queda siempre igual (`public/js/three3d/sticks.js`). Los palitos son los de un juego japonés tradicional,
   blancos con puntos pintados: 100 = ocho puntos negros en dos filas; 1000 =
   un punto rojo (el palito de riichi); 5000 = un punto rojo grande con cuatro
   chicos en cuadro; 10000 = lo mismo, más un punto rojo chico a cada lado y
@@ -403,7 +414,7 @@ publicado; no está enlazado desde el juego) reproduce escenas fijas sobre la
 mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
-  descartes, pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
+  descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
   tsumo, tu tsumo con tres kan y empate. Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
@@ -415,6 +426,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   tu mano, el centro, cada rival, la esquina de tus llamadas) y cámara libre:
   botón derecho para girar, Mayús + arrastre para mover, rueda para acercar.
   Se puede ocultar tu mano de frente.
+- **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
+  palitos.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto

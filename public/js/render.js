@@ -287,10 +287,12 @@ export function renderPartner(v, ui) {
   setHTML(document.getElementById('partner-toggle'), `<span class="es">Mano de tu compañero</span><span class="jp">相方手牌</span><b>${esc(name)}</b>`);
   document.getElementById('partner-toggle').setAttribute('aria-expanded', String(open));
   const items = p.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
-  if (p.drawn !== null) {
-    items.push({ key: 'gap', html: '<span class="gap"></span>' });
-    items.push({ key: String(p.drawn), html: tile(p.drawn, { attrs: `data-id="${p.drawn}"` }) });
-  }
+  // the slot for the drawn tile is always kept, so the row (centred on the
+  // screen) does not shift each time the teammate draws
+  items.push({ key: 'gap', html: '<span class="gap"></span>' });
+  items.push(p.drawn !== null
+    ? { key: String(p.drawn), html: tile(p.drawn, { attrs: `data-id="${p.drawn}"` }) }
+    : { key: 'slot', html: '<span class="tile slot" aria-hidden="true"></span>' });
   const hand = document.getElementById('partner-hand');
   reconcile(hand, items);
   for (const el of hand.querySelectorAll('.tile')) el.classList.toggle('asked', Number(el.dataset.id) === p.myRequest);
