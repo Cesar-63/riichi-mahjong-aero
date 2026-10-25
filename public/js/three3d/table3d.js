@@ -971,7 +971,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
             gather: place(r, cx - MELD_SLIDE, D / 2, z - MELD_IN, t.pose),
             edge: place(r, cx - MELD_SLIDE, D / 2, z, t.pose),
           });
-          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D * 1.5, z, 'side'), null, 'meld');
+          // a kakan's added tile lies sideways too, beside the called one
+          // (towards the middle of the table), flat on the felt
+          if (t.added !== undefined) put(`t${t.added}`, t.added, place(r, mx + width / 2, D / 2, z - W - GAP - 0.02, 'side'), null, 'meld');
           mx -= GAP + 0.02;
         }
         mx -= 0.35;
