@@ -49,7 +49,7 @@
         <label class="mate-field check"><input type="checkbox" id="practice-mate"><span class="chalk">Con Bot 1 de compañero (por equipos)</span></label>
       </div>
       <div class="board-foot">
-        <a href="#reglas" id="rules-link">Reglas del salón</a>
+        <span class="foot-links"><a href="#reglas" id="rules-link">Reglas del salón</a><a href="#opciones" id="options-link">Opciones de juego</a></span>
         <button id="join" class="paper seal" type="button"><span class="es">Entrar a la sala</span><span class="jp">入場</span></button>
       </div>
     </section>
@@ -158,11 +158,7 @@
       </button>
       <div id="menu-panel" class="hidden sheet crumpled">
         <h2>Menú <span class="jp">品書き</span></h2>
-        <label class="check"><input type="checkbox" id="oneclick"> Descartar con un solo clic</label>
-        <label class="check"><input type="checkbox" id="dbltsumo"> Doble clic (fuera de la mano): tsumogiri y saltar llamadas</label>
-        <label class="check"><input type="checkbox" id="righttsumo"> Clic derecho: tsumogiri y saltar llamadas</label>
-        <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
-        <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
+        <button id="m-options" class="paper" type="button">Opciones de juego</button>
         <button id="m-rules" class="paper" type="button">Reglas del salón</button>
         <button id="m-full" class="paper" type="button">Pantalla completa</button>
         <button id="m-abandon" class="paper danger" type="button">Abandonar partida</button>
@@ -186,6 +182,28 @@
       <li>Tiempo: 5 s por jugada + 10 s de reserva por mano.</li>
     </ul>
     <form method="dialog"><button class="paper" type="submit">Cerrar</button></form>
+  </dialog>
+  <!-- every gameplay option, from the lobby and from the in-game menu
+       (the automatic play letters A R C D stay on the table's left edge) -->
+  <dialog id="options-dialog" class="sheet crumpled" aria-labelledby="options-title">
+    <h2 id="options-title">Opciones de juego <span class="jp">設定</span></h2>
+    <p class="note">Se guardan en este navegador y valen para todas las partidas.</p>
+    <fieldset>
+      <legend>Descartar</legend>
+      <label class="check"><input type="checkbox" id="oneclick"> <span>Descartar con un solo clic <small>(si no: un clic levanta la ficha y otro la descarta)</small></span></label>
+      <label class="check"><input type="checkbox" id="dbltsumo"> Doble clic fuera de la mano: tsumogiri y saltar chi, pon y kan</label>
+      <label class="check"><input type="checkbox" id="righttsumo"> Clic derecho: tsumogiri y saltar chi, pon y kan</label>
+    </fieldset>
+    <fieldset>
+      <legend>Cámara</legend>
+      <label class="check"><input type="checkbox" id="viewkey"> Cambiar entre tu vista y la mesa completa con una tecla (no con el mouse)</label>
+      <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla: <b id="viewkey-name">V</b></button>
+    </fieldset>
+    <fieldset>
+      <legend>Por equipos</legend>
+      <label class="check"><input type="checkbox" id="partneropen"> Mostrar la mano de tu compañero sobre la tuya</label>
+    </fieldset>
+    <form method="dialog"><button class="paper" type="submit">Listo</button></form>
   </dialog>
   <div id="toast" role="status"></div>
   <script type="module" src="js/main.js"></script>

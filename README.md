@@ -48,7 +48,8 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      compañero** se juega por equipos. Ver [Práctica](#práctica-contra-bots).
 2. Para descartar, un clic levanta la ficha y otro clic sobre ella la
    descarta (un clic en otra ficha levanta esa; fuera de la mano, la baja).
-   En el menú, **Descartar con un solo clic** descarta al primer clic.
+   En las opciones de juego, **Descartar con un solo clic** descarta al
+   primer clic.
    **Arrastrar**: una ficha se puede tomar (clic sostenido) y llevar con el
    mouse (sin salir de la pantalla). Soltada dentro de la mano, se encaja
    donde la dejaste; soltada arriba, sobre la mesa, se descarta (si es tu
@@ -57,22 +58,28 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    su lugar en el orden; apagado, la mano queda como la acomodes (lo que
    robas entra por la derecha). Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
-3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **Descartar con un solo clic**, **Doble clic** (fuera de las fichas de tu
-     mano) y **Clic derecho**: estos dos descartan la ficha robada en tu turno
-     y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
-     decide con los botones). Vienen desactivados y quedan guardados en el
-     navegador entre partidas.
+3. **Opciones de juego**: todo lo del gameplay (salvo la barra A R C D) se
+   configura en una hoja que se abre desde el lobby (debajo de *Reglas del
+   salón*) o desde el menú de la partida. Queda guardado en el navegador
+   para todas las partidas:
+   - **Descartar con un solo clic** (si no, un clic levanta y otro descarta).
+   - **Doble clic** (fuera de las fichas de tu mano) y **Clic derecho**:
+     descartan la ficha robada en tu turno y pasan cuando te ofrecen chi,
+     pon o kan (no cuando hay ron: ese se decide con los botones). Vienen
+     desactivados.
    - **Cambiar la vista con una tecla**: el mouse deja de cambiar entre la
-     vista del jugador y la mesa entera, y lo hace la tecla elegida en
-     **Tecla de vista** (clic y luego la tecla; V por defecto). También queda
-     guardado.
+     vista del jugador y la mesa entera, y lo hace la **Tecla** elegida (clic
+     y luego la tecla; V por defecto).
+   - **Mostrar la mano de tu compañero** (por equipos; también se pliega con
+     un clic en su aviso).
+4. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
+   - **Opciones de juego** (la misma hoja de arriba).
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
      todos los humanos abandonan, la sala se libera.
-4. **Barra lateral** (al centro del borde izquierdo, como en Mahjong Soul):
+5. **Barra lateral** (al centro del borde izquierdo, como en Mahjong Soul):
    cerrada muestra solo letras, que ya funcionan con un clic (en rojo cuando
    están activas); la flecha de su borde derecho la despliega con los
    nombres.
@@ -85,7 +92,7 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    - **D · Auto descarte**: descarta cada ficha que robas (sin R, un tsumo
      posible se deja para que decidas).
    R, C y D duran la partida; los tres juntos juegan como en riichi.
-5. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
+6. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
 ## Muro y robos

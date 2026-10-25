@@ -219,7 +219,7 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
   mix-blend-mode: multiply;
   opacity: .5;
 }
-.tack, #menu-panel::before, #rules-dialog::before {
+.tack, #menu-panel::before, #rules-dialog::before, #options-dialog::before {
   position: absolute;
   z-index: 2;
   top: 6px;
@@ -229,7 +229,7 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
   translate: -50% 0;
   background: url(../img/tack.svg) center / contain no-repeat;
 }
-#menu-panel::before, #rules-dialog::before { content: ""; }
+#menu-panel::before, #rules-dialog::before, #options-dialog::before { content: ""; }
 .thumb { position: absolute; width: 30px; height: 38px; background: url(../img/thumb.svg) center / contain no-repeat; mix-blend-mode: multiply; }
 
 /* a sheet of paper lying on something (rules, menu) */
@@ -249,6 +249,16 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
   font-size: 26px;
 }
 .sheet h2 .jp { font-size: 13px; letter-spacing: 4px; color: var(--ink-soft); opacity: .8; }
+/* aged paper: stained corners and a tea ring at --ring-x / --ring-y. It is
+   declared on each sheet (not on :root) so the sheet's own ring position
+   applies; without it the sheets' backgrounds were invalid, i.e. see-through */
+.sheet, .house-rules, .f-sheet {
+  --paper-age:
+    radial-gradient(circle at var(--ring-x, 82%) var(--ring-y, 88%), transparent 0 25px, rgba(120, 78, 30, .2) 26px 28px, rgba(120, 78, 30, .08) 29px 31px, transparent 32px),
+    radial-gradient(ellipse 45% 40% at 0 0, rgba(110, 80, 35, .26), transparent),
+    radial-gradient(ellipse 50% 45% at 100% 100%, rgba(110, 80, 35, .24), transparent),
+    radial-gradient(ellipse 35% 30% at 100% 0, rgba(110, 80, 35, .14), transparent);
+}
 
 .plaque {
   display: flex;
@@ -459,6 +469,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #entry.practice .fields { grid-template-columns: minmax(0, 1fr); }
 .board-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; }
 .board-foot a { font-family: var(--f-hand); font-size: 19px; color: var(--chalk-yellow); }
+.foot-links { display: flex; flex-direction: column; gap: 2px; }
 
 /* the house rules, taped to the wall years ago */
 .house-rules {
@@ -845,6 +856,23 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #rules-dialog ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: var(--ink); }
 #rules-dialog li { margin: 6px 0; }
 #rules-dialog form { text-align: right; margin-top: 12px; }
+#options-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 22px 28px;
+  --ring-x: 30%;
+  --ring-y: 96%;
+  transform: rotate(.5deg);
+}
+#options-dialog::backdrop { background: radial-gradient(ellipse 70% 80% at 50% 35%, rgba(8, 7, 6, .55), rgba(8, 7, 6, .9)); }
+#options-dialog .note { margin: 2px 0 10px; font-size: 13px; color: var(--ink-soft); }
+#options-dialog fieldset { margin: 0 0 12px; padding: 0; border: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#options-dialog legend { padding: 0; margin-bottom: 4px; font-family: var(--f-title); font-size: 18px; color: var(--ink); }
+#options-dialog label { font-size: 15px; color: var(--ink); align-items: flex-start; }
+#options-dialog label input { margin-top: 2px; flex: none; }
+#options-dialog small { color: var(--ink-soft); }
+#options-dialog .paper { padding: 7px 14px; font-size: 15px; }
+#options-dialog form { text-align: right; margin-top: 6px; }
 #toast {
   position: fixed;
   left: 50%;
