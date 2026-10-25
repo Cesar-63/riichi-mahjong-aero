@@ -35,6 +35,14 @@ export function trayScore(score, honbaOnTable) {
   return Math.max(0, score - honbaOnTable * 100);
 }
 
+// Riichi deposits waiting for the next win that were made in earlier hands:
+// the pot (kyoutaku) less this hand's riichi sticks, which lie in front of
+// their players. They are already taken off the scores.
+export function carriedDeposits(v) {
+  if (v.phase === 'end') return 0;
+  return Math.max(0, (v.kyoutaku || 0) - v.players.filter((p) => p.riichi).length);
+}
+
 // small seeded random, so the same score always lies the same way
 function random(seed) {
   let a = seed >>> 0;

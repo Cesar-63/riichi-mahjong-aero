@@ -112,7 +112,10 @@ toda la mano sobre el tapete a la derecha del oya (quien los tiene de su lado
 reparte). Junto a ellos, el oya deja un palito de 100 por cada honba
 (apuntando al centro, de a cinco por fila). Esos palitos salen de su cajón
 sin descontarse de su puntaje: su cajón muestra su puntaje menos los honba
-que hay en la mesa, así cada palito está en un solo lugar.
+que hay en la mesa, así cada palito está en un solo lugar. Los depósitos de
+riichi que nadie ganó en manos anteriores esperan en el centro de la mesa
+(palitos de 1000, de a tres por fila) hasta que alguien gane; los riichi de
+la mano actual siguen frente a quien los declaró.
 
 La interfaz se diseñó en Claude Design y se pasó al juego con estos
 materiales:
@@ -411,7 +414,7 @@ publicado; no está enlazado desde el juego) reproduce escenas fijas sobre la
 mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
-  descartes (con 3 honba), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
+  descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
   tsumo, tu tsumo con tres kan y empate. Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).

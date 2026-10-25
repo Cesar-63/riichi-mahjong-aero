@@ -9,7 +9,7 @@ import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { TUNING } from './tuning.js';
-import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore } from './sticks.js';
+import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore, carriedDeposits } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -979,6 +979,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     sync(desired, spawns, calls);
     syncSticks(v, rel);
     syncRestDice(v);
+    syncDeposits(v);
     syncWin(v, ui, rel);
 
     // highlights: tsumogiri tiles dimmer, the latest discard glowing
@@ -1097,6 +1098,29 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
     return { p: local.applyQuaternion(qSeat[dealerRel]), q };
   }
+  // Riichi deposits left from earlier hands (kyoutaku that nobody has won
+  // yet): their 1000 sticks wait in the middle of the table, side by side
+  // and squared with my edge, three to a row and further rows on top, until
+  // the next win takes them. This hand's riichi sticks stay in front of
+  // their players and are not counted here.
+  let deposits = { key: '', meshes: [] };
+  function syncDeposits(v) {
+    const n = carriedDeposits(v);
+    const key = n ? `${resultKey(v)}:${n}:${v.seat}` : '';
+    if (key === deposits.key) return;
+    for (const m of deposits.meshes) scene.remove(m);
+    deposits = { key, meshes: [] };
+    for (let k = 0; k < n; k++) {
+      const row = Math.floor(k / 3);
+      const m = new THREE.Mesh(stickGeo, stickMats[1000]);
+      m.castShadow = true;
+      // a slightly untidy pile: each row a little turned and shifted
+      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0));
+      m.rotation.y = (row % 2 ? -0.05 : 0.04) * (row ? 1 : 0.5);
+      scene.add(m);
+      deposits.meshes.push(m);
+    }
+  }
   let restDice = { key: '', meshes: [] };
   let introFlipped = null; // dora indicator the intro turned face up
   function syncRestDice(v) {
@@ -1144,6 +1168,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const rnd = (a, b) => a + Math.random() * (b - a);
     const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, 40], start: PILE.start, square: PILE.open, panel: 0 });
     syncRestDice({ ...v, wall: null });
+    syncDeposits({ ...v, phase: 'end' });
     introFlipped = v.dora[0];
     // the previous hand's riichi sticks were paid out
     for (const st of sticks.values()) scene.remove(st.mesh);

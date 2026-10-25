@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stickCounts, trayScore, pileLayout, VALUES, COMPARTMENTS, STICK, MIN_SHOWN } from '../public/js/three3d/sticks.js';
+import { stickCounts, trayScore, carriedDeposits, pileLayout, VALUES, COMPARTMENTS, STICK, MIN_SHOWN } from '../public/js/three3d/sticks.js';
 
 test('the sticks in the drawer add up to the score', () => {
   assert.deepEqual(stickCounts(25000), [1, 2, 4, 10]); // ten 100s, not five
@@ -18,6 +18,16 @@ test('the honba sticks on the table come out of the tray', () => {
   assert.equal(trayScore(25000, 3), 24700);
   assert.equal(trayScore(25000, 0), 25000);
   assert.equal(trayScore(200, 5), 0);
+});
+
+test('riichi deposits from earlier hands wait in the middle', () => {
+  const players = (riichi) => [0, 1, 2, 3].map((i) => ({ riichi: riichi.includes(i) }));
+  assert.equal(carriedDeposits({ phase: 'turn', kyoutaku: 2, players: players([]) }), 2);
+  // this hand's riichi sticks are in front of their players, not in the pile
+  assert.equal(carriedDeposits({ phase: 'turn', kyoutaku: 3, players: players([1]) }), 2);
+  // a win took the pot
+  assert.equal(carriedDeposits({ phase: 'result', kyoutaku: 0, players: players([1, 2]) }), 0);
+  assert.equal(carriedDeposits({ phase: 'end', kyoutaku: 2, players: players([]) }), 0);
 });
 
 test('every stick lies inside its compartment and shows a strip', () => {
