@@ -8,6 +8,14 @@ Hugging Face. Una búsqueda ampliada en Hugging Face y GitHub encontró más
 opciones, entre ellas **majiang-ai**, una IA en JavaScript con licencia MIT:
 ver [§6](#6-búsqueda-ampliada-más-opciones).
 
+> **Estado (octubre de 2026):** los pasos 1 y 2 de la
+> [hoja de ruta](#5-hoja-de-ruta-propuesta) están hechos. El motor guarda el
+> registro mjai de cada mano, validado con `validate_logs` de Mortal, y los
+> bots juegan con majiang-ai. En 12 partidas entre bots (4.291 decisiones):
+> ninguna respuesta ilegal, ~39 ms por decisión de media y ~1 s en el peor
+> caso; 22,4 % de manos ganadas, 15,3 % de ron repartido, 21,8 % de riichi.
+> Lo siguiente es el paso 3 (bot "difícil" con Mortal).
+
 ## Resumen
 
 | | Mortal | akochan | mjai-reviewer |

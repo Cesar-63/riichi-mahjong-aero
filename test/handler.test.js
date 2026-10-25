@@ -102,7 +102,7 @@ test('redis env vars are found with any prefix', async () => {
   assert.equal(findRedisEnv({ REDIS_URL: 'redis://x' }).url, undefined);
 });
 
-test('bot room: one player against three bots that call and tsumogiri', async () => {
+test('bot room: one player against three bots that call and win', async () => {
   globalThis.__mjStore = new Map();
   const store = createStore({});
   let now = 9_000_000;
@@ -133,7 +133,7 @@ test('bot room: one player against three bots that call and tsumogiri', async ()
   const end = await call({ op: 'poll', token: me });
   assert.equal(end.status, 'finished');
   assert.ok(calls > 0, 'bots made calls');
-  assert.equal(botWins, 0, 'bots never win');
+  assert.ok(botWins > 0, 'bots win hands');
 });
 
 test('abandon: seat goes on autopilot, can rejoin; last human frees the room', async () => {

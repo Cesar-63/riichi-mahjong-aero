@@ -5,7 +5,9 @@ ranked de Tenhou**, jugado en 3D en un salón de mahjong clásico al estilo de
 los juegos *Tetsuya*. Las reglas, la pared y el reparto de puntos los maneja el
 servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
-- Sin build ni dependencias: HTML, CSS y JS (módulos ES) servidos estáticos.
+- Sin build: HTML, CSS y JS (módulos ES) servidos estáticos. El servidor
+  tiene una sola dependencia, la IA de los bots
+  ([majiang-ai](https://github.com/kobalab/majiang-ai), MIT).
 - El servidor es **una sola función de Vercel** (`api/game.js`) que guarda el
   estado de cada sala en **Upstash Redis**.
 - Funciona en cualquier navegador moderno (escritorio y móvil).
@@ -353,17 +355,45 @@ Solo en el modo **Por equipos**:
 En el menú principal, el modo **Práctica** con **Empezar práctica** crea una
 sala privada (`bots-…`) y empieza al instante: tú contra 3 bots o, con **Con
 Bot 1 de compañero**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y Bot 3 por
-equipos. Los bots:
+equipos. Sirve para jugar sin juntar a 4 personas. Cualquier sala cuyo código
+empiece por `bots-` funciona así, y los mismos bots ocupan los asientos libres
+con **Empezar y rellenar con bots**.
 
-- descartan siempre la ficha que acaban de robar (tras una llamada, la última
-  ficha legal de la mano);
-- hacen pon o chi siempre que pueden;
-- nunca declaran ron, tsumo, riichi ni kan;
-- en el modo por equipos, tu compañero bot descarta la ficha que le pidas (en
-  su turno, si es legal).
+### Cómo piensan los bots
 
-Sirve para probar la interfaz y las reglas sin juntar a 4 personas. Cualquier
-sala cuyo código empiece por `bots-` funciona así.
+Juegan con **majiang-ai**, la IA del juego web japonés 電脳麻将 (Denno Majan),
+de Satoshi Kobayashi (licencia MIT, sin redes neuronales):
+
+- eligen el descarte que mejor deja la mano: fichas útiles, puntos probables
+  y mejoras posibles;
+- llaman (chi, pon, kan) solo cuando la llamada mejora la mano;
+- declaran riichi, ganan por ron o tsumo y declaran kyuushu kyuuhai;
+- se defienden: cuando un rival está en riichi calculan el peligro de cada
+  ficha (genbutsu, suji, fichas ya vistas) y se retiran si su mano no vale el
+  riesgo;
+- en la última mano no ganan si la victoria terminaría la partida con ellos
+  en 4º lugar (*agarasu*);
+- en el modo por equipos, tu compañero bot descarta la ficha que le pidas
+  cuando le toca descartar (si es legal), salvo que prefiera ganar o hacer kan.
+
+Cada decisión tarda unos 40 ms (algunas, hasta 1 s). La IA no guarda nada
+entre decisiones: en cada una reconstruye la mesa desde el registro mjai de la
+mano (ver [Registro mjai](#registro-mjai)), viendo solo lo que ese asiento
+puede ver. Si alguna vez respondiera algo ilegal, el bot tira la ficha robada
+(o pasa) y la partida sigue. El adaptador está en `server/engine/majiang-bot.js`.
+
+### Registro mjai
+
+El motor guarda en `k.mjai` todos los eventos de la mano en curso en formato
+**mjai**, el que usan Mortal, akochan y mjai-reviewer (`start_kyoku`, `tsumo`,
+`dahai`, `reach`, `chi`, `pon`, kanes, `dora`, `hora`, `ryukyoku`,
+`end_kyoku`), con el mismo orden de eventos que los registros de Tenhou.
+`mjaiView(log, asiento)` (en `server/engine/mjai.js`) oculta las manos y los
+robos ajenos. El registro se validó con `validate_logs` de Mortal, que
+comprueba la legalidad de cada evento y los puntos de cada agari, sobre las
+partidas aleatorias de `test/mjai.test.js` y sobre partidas entre bots. Las
+de las pruebas se guardan con `MJAI_DUMP=dir npm test`. Más contexto en
+[docs/ia-investigacion.md](docs/ia-investigacion.md).
 
 ## Desplegar en Vercel
 
@@ -397,9 +427,10 @@ a un servicio de tiempo real (ver "Limitaciones").
 
 ## Desarrollo local
 
-Requiere Node.js 20 o superior. No hay que instalar paquetes.
+Requiere Node.js 20 o superior.
 
 ```sh
+npm install      # la IA de los bots
 npm run dev      # http://localhost:3000 (store en memoria)
 npm test         # tests del motor, puntuación y salas
 ```
@@ -451,6 +482,9 @@ server/store.js          Upstash Redis (REST) o memoria
 server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
+server/engine/mjai.js    Notación y registro mjai, vista por asiento
+server/engine/bot.js     Bots: decisión, peticiones del compañero, respaldo
+server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-core)
 public/                  Cliente (index.html, css/, js/)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
