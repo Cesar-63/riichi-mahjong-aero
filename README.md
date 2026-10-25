@@ -115,10 +115,21 @@ La interfaz se diseñó en Claude Design y se pasó al juego con estos
 materiales:
 
 - **Papel** viejo para botones, la ficha de la ronda, el menú, las reglas y la
-  hoja final; el botón principal de cada caja lleva un borde rojo, como un
-  sello.
+  hoja final; las hojas tienen las esquinas manchadas y algún cerco de té. El
+  botón principal de cada caja lleva un borde rojo, como un sello.
 - **Tablillas de madera** con nombre, viento y puntos de cada jugador.
-- **Cajas azul marino** (estilo menú de PS2) en el lobby y la sala de espera.
+- **Pizarras de tiza** en el lobby y la sala de espera (sin nada del estilo
+  de menú de PS2): pizarra mal borrada, con restos de cuentas viejas, en un
+  marco de madera abollado con clavos y una bandeja con un trozo de tiza.
+  Todo lo que hay en ellas está escrito con tiza, y el modo elegido queda
+  encerrado en un círculo de tiza; los equipos van en tiza azul y roja.
+- **Garito clandestino:** en la pared del lobby, un aviso policial de
+  "Prohibido apostar" (賭博禁止) tapado por pagarés con huella dactilar; en
+  las reglas de la casa, un sello "Solo socios" (会員制) y "Aquí no se fía";
+  en la trastienda (sala de espera), el cartel de "Cerrado" (本日休業) y la
+  nota de "Tres golpes y esperas". La lámpara parpadea de vez en cuando. La
+  hoja final es el libro de cuentas de la casa, con el vale de quien quedó
+  último. Los papeles están arrugados y clavados con chinchetas.
 - Letras: **Kaushan Script** (títulos y botones) y **Caveat Brush** (hojas y
   tablillas) con trazo de pincel; los avisos grandes (¡Pon!, ¡Ron!, Mangan…)
   en **Shippori Mincho B1** gruesa con un halo de luz detrás, no un contorno;
@@ -128,10 +139,24 @@ materiales:
 
 Pantallas:
 
+- Fuera de la partida (lobby, sala de espera, hoja final) el salón también
+  está de noche: una sola lámpara colgante ilumina la pared, con un cono de
+  luz y un poco de humo flotando en él, y todo se apaga hacia las esquinas;
+  la pared es papel tapiz desteñido sobre yeso con manchas de humedad, sobre
+  un zócalo de tablas oscuras. Son dibujos SVG con textura (`public/img/`).
+  Los campos para escribir (tu nombre, la sala) son papeletas de papel donde
+  se escribe a mano.
 - **Lobby** (pared verde oliva): título "Salón Mahjong", la caja **Elige cómo
   jugar** con los tres modos, tu nombre y la sala, y la hoja **Reglas de la
-  casa** pegada a la pared. **Reglas del salón** abre las reglas completas.
-- **Sala de espera**: la mesa dibujada desde arriba con los cuatro asientos
+  casa** pegada a la pared, con la lámpara colgando entre las dos. **Reglas
+  del salón** abre las reglas completas.
+- **Sala de espera** (la trastienda): vista desde arriba, un piso de
+  baldosas baratas rajadas y sucias, con mugre en las juntas, colillas,
+  ceniza, algo derramado y una ficha boca abajo tirada en el suelo. La mesa
+  tiene el paño pelado donde se arrastran las fichas, quemaduras de
+  cigarro, un cerco de vaso, un tajo parchado con cinta, el marco gris
+  astillado y un cenicero rebosante en la esquina. Los cuatro asientos son
+  tablillas de madera (los libres, marcados con tiza)
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =
@@ -414,6 +439,7 @@ server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
+public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)

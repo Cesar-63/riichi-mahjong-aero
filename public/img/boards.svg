@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="160">
+  <!-- Dark wainscot boards: long grain, a seam every 90px, worn knots. -->
+  <defs>
+    <filter id="grain" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".18 .006" numOctaves="3" seed="12" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .03  0 0 0 0 .025  0 0 0 0 .015  0 0 0 2.2 -.85"/>
+    </filter>
+    <filter id="light" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".35 .01" numOctaves="2" seed="4" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .55  0 0 0 0 .45  0 0 0 0 .3  0 0 0 1.4 -.82"/>
+    </filter>
+    <linearGradient id="seam" x1="0" x2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".7"/>
+      <stop offset=".4" stop-color="#000" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".06"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="160" filter="url(#grain)"/>
+  <rect width="360" height="160" filter="url(#light)" opacity=".35"/>
+  <g fill="url(#seam)">
+    <rect x="0" width="4" height="160"/><rect x="90" width="4" height="160"/>
+    <rect x="180" width="4" height="160"/><rect x="270" width="4" height="160"/>
+  </g>
+  <ellipse cx="226" cy="64" rx="7" ry="3" fill="#000" fill-opacity=".35"/>
+  <ellipse cx="44" cy="118" rx="5" ry="2.2" fill="#000" fill-opacity=".3"/>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" preserveAspectRatio="none">
+  <!-- The lamp's light falling through the smoke: soft edges, brightest
+       under the shade, with dust hanging in it. -->
+  <defs>
+    <linearGradient id="fall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd9a6" stop-opacity=".55"/>
+      <stop offset=".35" stop-color="#ffd9a6" stop-opacity=".22"/>
+      <stop offset=".8" stop-color="#ffd9a6" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#ffd9a6" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="core" cx=".5" cy="0" r=".9">
+      <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="m"><rect width="600" height="800" fill="url(#core)"/></mask>
+    <filter id="blur" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur stdDeviation="22 10"/></filter>
+    <filter id="haze" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".012 .016" numOctaves="4" seed="5" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 1  0 0 0 0 .85  0 0 0 0 .65  0 0 0 1.6 -.6" result="c"/>
+      <feComposite in="c" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="dust" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="1" seed="9" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .85  0 0 0 9 -7.6" result="c"/>
+      <feComposite in="c" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <clipPath id="cone"><path d="M250 0 H350 L600 800 H0 Z"/></clipPath>
+  </defs>
+  <g mask="url(#m)">
+    <path d="M250 0 H350 L600 800 H0 Z" fill="url(#fall)" filter="url(#blur)"/>
+    <g clip-path="url(#cone)" opacity=".28">
+      <rect width="600" height="800" fill="#000" filter="url(#haze)"/>
+    </g>
+    <g clip-path="url(#cone)" opacity=".7">
+      <rect width="600" height="800" fill="#000" filter="url(#dust)"/>
+    </g>
+  </g>
+</svg>

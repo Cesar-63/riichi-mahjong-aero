@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" preserveAspectRatio="none">
+  <!-- A quick chalk loop around a choice: overshoots where it closes, grainy. -->
+  <defs>
+    <filter id="chalk" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="7" result="n"/>
+      <feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.3" result="holes"/>
+      <feComposite in="SourceGraphic" in2="holes" operator="in" result="g"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="2" seed="3" result="w"/>
+      <feDisplacementMap in="g" in2="w" scale="5"/>
+    </filter>
+  </defs>
+  <g filter="url(#chalk)" fill="none" stroke="#f0ecdf" stroke-linecap="round">
+    <path d="M330 14 C250 2 90 4 30 22 C4 32 6 70 40 84 C110 100 300 98 368 82 C398 72 396 30 352 18 C330 12 300 12 280 14" stroke-width="4.5" stroke-opacity=".85"/>
+    <path d="M60 18 C120 8 250 8 320 16" stroke-width="2" stroke-opacity=".35"/>
+  </g>
+</svg>
