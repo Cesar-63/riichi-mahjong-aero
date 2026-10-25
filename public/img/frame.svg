@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+  <!-- A worn wooden frame for border-image (slice 16): mitred corners, long
+       grain along each side, dents, and a nail at each corner. -->
+  <defs>
+    <filter id="gh" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".02 .5" numOctaves="3" seed="3" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .02  0 0 0 0 .015  0 0 0 0 .01  0 0 0 2.4 -.95" result="g"/>
+      <feComposite in="g" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="gv" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".5 .02" numOctaves="3" seed="8" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .02  0 0 0 0 .015  0 0 0 0 .01  0 0 0 2.4 -.95" result="g"/>
+      <feComposite in="g" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="bt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a7556"/><stop offset=".5" stop-color="#5b4a33"/><stop offset="1" stop-color="#2c2216"/></linearGradient>
+    <linearGradient id="bb" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2a2015"/><stop offset=".5" stop-color="#4a3b28"/><stop offset="1" stop-color="#241b11"/></linearGradient>
+    <linearGradient id="bl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a6649"/><stop offset=".5" stop-color="#534330"/><stop offset="1" stop-color="#2a2015"/></linearGradient>
+    <linearGradient id="br" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#2a2015"/><stop offset=".5" stop-color="#47382a"/><stop offset="1" stop-color="#211910"/></linearGradient>
+    <radialGradient id="nail" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#d9c9a0"/><stop offset=".45" stop-color="#6e6450"/><stop offset="1" stop-color="#1c1810"/></radialGradient>
+  </defs>
+  <path d="M0 0 H120 L104 16 H16 Z" fill="url(#bt)"/>
+  <path d="M0 0 H120 L104 16 H16 Z" fill="#000" filter="url(#gh)"/>
+  <path d="M0 120 H120 L104 104 H16 Z" fill="url(#bb)"/>
+  <path d="M0 120 H120 L104 104 H16 Z" fill="#000" filter="url(#gh)"/>
+  <path d="M0 0 V120 L16 104 V16 Z" fill="url(#bl)"/>
+  <path d="M0 0 V120 L16 104 V16 Z" fill="#000" filter="url(#gv)"/>
+  <path d="M120 0 V120 L104 104 V16 Z" fill="url(#br)"/>
+  <path d="M120 0 V120 L104 104 V16 Z" fill="#000" filter="url(#gv)"/>
+  <!-- mitre joints and the inner lip -->
+  <path d="M0 0 L16 16 M120 0 L104 16 M0 120 L16 104 M120 120 L104 104" stroke="#120d07" stroke-width="1.2"/>
+  <rect x="15.5" y="15.5" width="89" height="89" fill="none" stroke="#0b0805" stroke-width="1"/>
+  <rect x=".5" y=".5" width="119" height="119" fill="none" stroke="#0b0805" stroke-opacity=".8"/>
+  <!-- dents -->
+  <path d="M38 6 l5 2 M70 9 l4 -1 M8 46 l2 5 M112 70 l-1 5 M60 112 l5 1" stroke="#120d07" stroke-opacity=".7" stroke-width="1.4"/>
+  <g fill="url(#nail)"><circle cx="8" cy="8" r="2.6"/><circle cx="112" cy="8" r="2.6"/><circle cx="8" cy="112" r="2.6"/><circle cx="112" cy="112" r="2.6"/></g>
+</svg>

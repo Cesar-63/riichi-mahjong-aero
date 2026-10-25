@@ -118,7 +118,17 @@ materiales:
   hoja final; las hojas tienen las esquinas manchadas y algún cerco de té. El
   botón principal de cada caja lleva un borde rojo, como un sello.
 - **Tablillas de madera** con nombre, viento y puntos de cada jugador.
-- **Cajas azul marino** (estilo menú de PS2) en el lobby y la sala de espera.
+- **Tableros azul marino** en el lobby y la sala de espera: laca gastada que
+  deja ver la madera, rayada y con una quemadura de cigarro, en un marco de
+  madera abollado con clavos; el título va en una tira de cinta pegada. El
+  modo elegido se marca con un palito de 1000 puntos.
+- **Garito clandestino:** en la pared del lobby, un aviso policial de
+  "Prohibido apostar" (賭博禁止) tapado por pagarés con huella dactilar; en
+  las reglas de la casa, un sello "Solo socios" (会員制) y "Aquí no se fía";
+  en la trastienda (sala de espera), el cartel de "Cerrado" (本日休業) y la
+  nota de "Tres golpes y esperas". La lámpara parpadea de vez en cuando. La
+  hoja final es el libro de cuentas de la casa, con el vale de quien quedó
+  último. Los papeles están arrugados y clavados con chinchetas.
 - Letras: **Kaushan Script** (títulos y botones) y **Caveat Brush** (hojas y
   tablillas) con trazo de pincel; los avisos grandes (¡Pon!, ¡Ron!, Mangan…)
   en **Shippori Mincho B1** gruesa con un halo de luz detrás, no un contorno;
@@ -140,7 +150,8 @@ Pantallas:
   casa** pegada a la pared, con la lámpara colgando entre las dos. **Reglas
   del salón** abre las reglas completas.
 - **Sala de espera**: la mesa (paño gastado y marco gris sin barnizar)
-  dibujada desde arriba bajo la luz, con los cuatro asientos
+  dibujada desde arriba bajo la luz, con los cuatro asientos como tablillas
+  de madera (los libres, marcados con tiza)
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =
@@ -423,7 +434,7 @@ server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
-public/img/              Lámpara, haz de luz, humo, papel tapiz, zócalo y mancha de té (SVG)
+public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, laca, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)

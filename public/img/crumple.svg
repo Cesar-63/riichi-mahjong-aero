@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300">
+  <!-- Crumpled paper: creases lit from the top left (multiply over paper). -->
+  <filter id="c" x="0" y="0" width="1" height="1">
+    <feTurbulence type="fractalNoise" baseFrequency=".018" numOctaves="4" seed="17" stitchTiles="stitch" result="t"/>
+    <feDiffuseLighting in="t" surfaceScale="3.2" diffuseConstant="1.15" lighting-color="#fff" result="l">
+      <feDistantLight azimuth="225" elevation="52"/>
+    </feDiffuseLighting>
+    <feColorMatrix in="l" values=".33 .33 .33 0 .02  .33 .33 .33 0 0  .3 .3 .3 0 -.03  0 0 0 0 1"/>
+  </filter>
+  <rect width="300" height="300" filter="url(#c)"/>
+</svg>

@@ -12,6 +12,14 @@
 </head>
 <body>
   <main id="lobby" class="screen">
+    <!-- what hangs on the walls of a place that isn't supposed to exist -->
+    <div class="wall-props" aria-hidden="true">
+      <div class="poster"><span class="kj">賭博禁止</span><b>Prohibido apostar</b><small>Por orden de la comisaría del barrio</small></div>
+      <div class="iou iou-1"><i class="tack"></i><span class="jp">借用書</span><b>Vale por 30.000</b><span>Debe: Tanaka</span><i class="thumb"></i></div>
+      <div class="iou iou-2"><i class="tack"></i><b>Fiado 8.000</b><span>— el de la gorra</span><i class="thumb"></i></div>
+      <div class="closed"><span class="es">Cerrado</span><span class="jp">本日休業</span></div>
+      <div class="knock"><i class="tack"></i>Tres golpes<br>y esperas.<br><small>No toques el timbre.</small></div>
+    </div>
     <div class="room-fx" aria-hidden="true"><span class="cord"></span><span class="lamp"></span><span class="cone"></span><span class="smoke"></span></div>
     <header class="brand">
       <span class="jp">麻雀荘</span>
@@ -56,10 +64,12 @@
           <li>25.000 puntos al empezar</li>
           <li>Retorno 30.000 · uma 10/20</li>
           <li>5 s por jugada + 10 s de reserva</li>
+          <li>Aquí no se fía</li>
         </ul>
         <span class="sign">— La casa</span>
       </div>
       <span class="jp" aria-hidden="true">当店規定</span>
+      <span class="members" aria-hidden="true">Solo socios<i>会員制</i></span>
     </aside>
 
     <section id="waiting" class="hidden">
@@ -141,7 +151,7 @@
       <button id="menu-btn" class="paper" type="button" aria-label="Menú" aria-expanded="false" aria-controls="menu-panel">
         <svg width="20" height="16" viewBox="0 0 20 16" aria-hidden="true"><path d="M1 2 H19 M1 8 H19 M1 14 H19" stroke="currentColor" stroke-width="2" fill="none"/></svg>
       </button>
-      <div id="menu-panel" class="hidden sheet">
+      <div id="menu-panel" class="hidden sheet crumpled">
         <h2>Menú <span class="jp">品書き</span></h2>
         <label class="check"><input type="checkbox" id="oneclick"> Descartar con un solo clic</label>
         <label class="check"><input type="checkbox" id="dbltsumo"> Doble clic (fuera de la mano): tsumogiri y saltar llamadas</label>
@@ -156,7 +166,7 @@
   </div>
 
   <div id="modal" class="hidden"></div>
-  <dialog id="rules-dialog" class="sheet">
+  <dialog id="rules-dialog" class="sheet crumpled">
     <h2>Reglas del salón <span class="jp">当店規定</span></h2>
     <ul>
       <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>

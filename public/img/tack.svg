@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- A rusty brass thumbtack seen from the front, with its shadow. -->
+  <defs>
+    <radialGradient id="head" cx=".35" cy=".3" r=".75">
+      <stop offset="0" stop-color="#e9cf8a"/><stop offset=".35" stop-color="#a77d35"/>
+      <stop offset=".8" stop-color="#5a3f16"/><stop offset="1" stop-color="#2a1d0a"/>
+    </radialGradient>
+    <filter id="sh"><feGaussianBlur stdDeviation="1.2"/></filter>
+  </defs>
+  <ellipse cx="14" cy="15" rx="7.5" ry="6.5" fill="#000" opacity=".55" filter="url(#sh)"/>
+  <circle cx="12" cy="12" r="7.5" fill="url(#head)"/>
+  <circle cx="12" cy="12" r="7.5" fill="none" stroke="#2a1d0a" stroke-opacity=".6"/>
+  <path d="M8 14 q2 2 5 1" stroke="#3b2a0e" stroke-opacity=".5" fill="none"/>
+  <circle cx="9.5" cy="9" r="1.6" fill="#fff8e0" opacity=".7"/>
+</svg>
