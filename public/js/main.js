@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -151,10 +151,14 @@ function showLobby(data) {
       setIfChanged(el, plate(p));
     });
   }
+  // the host can start right away, with bots in the empty seats
+  $('#fill').classList.toggle('hidden', !(me && me.host && players.length < 4));
   if (!teams) {
     $('#start').classList.add('hidden');
     $('#unassigned').innerHTML = `En la sala (${players.length}/4): ${players.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}`;
-    $('#w-hint').textContent = 'La partida empieza sola al llegar el cuarto jugador; los asientos se sortean.';
+    $('#w-hint').textContent = me && me.host
+      ? 'La partida empieza sola al llegar el cuarto jugador (los asientos se sortean), o puedes empezar ya con bots en los asientos libres.'
+      : 'La partida empieza sola al llegar el cuarto jugador; los asientos se sortean.';
     return;
   }
   const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}${p.host ? ' <span class="badge">anfitrión</span>' : ''}</li>`;
@@ -305,6 +309,7 @@ function ensure3d() {
       });
       t.setCallouts([...document.querySelectorAll('#hud3d .callout')]);
       t.setOneClick(state.ui.oneClick);
+      t.setViewByKey(state.ui.viewByKey);
       t.setAutoSort(state.ui.autoSort);
       t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
       // the top band folds away while the camera shows the whole table
@@ -598,6 +603,7 @@ $('#leave').addEventListener('click', () => api('leave'));
 document.querySelectorAll('[data-join-team]').forEach((b) => b.addEventListener('click', () => api('team', { team: b.dataset.joinTeam })));
 $('#ready').addEventListener('click', () => api('ready', { ready: $('#ready').textContent === 'Estoy listo' }));
 $('#start').addEventListener('click', () => api('start'));
+$('#fill').addEventListener('click', () => api('fill'));
 
 // Teammate's hand: click a tile to ask for it (click again to cancel).
 $('#partner-hand').addEventListener('click', (e) => {
@@ -643,6 +649,38 @@ $('#stage3d').addEventListener('contextmenu', (e) => {
   if (!state.ui.rightTsumo) return;
   e.preventDefault();
   tsumogiri();
+});
+
+// Camera by key (off by default; kept in the browser): the mouse no longer
+// switches between the player view and the whole table, the chosen key does.
+const keyLabel = (code) => code.replace(/^Key|^Digit/, '').replace(/^Arrow/, 'Flecha ').replace('Space', 'Espacio');
+$('#viewkey').checked = state.ui.viewByKey;
+$('#viewkey-name').textContent = keyLabel(state.ui.viewKey);
+$('#viewkey').addEventListener('change', (e) => {
+  state.ui.viewByKey = e.target.checked;
+  store.set('mj.viewByKey', state.ui.viewByKey ? '1' : '0');
+  if (table3d) table3d.then((t) => t.setViewByKey(state.ui.viewByKey));
+});
+let choosingKey = false;
+$('#viewkey-set').addEventListener('click', () => {
+  choosingKey = true;
+  $('#viewkey-name').textContent = '…';
+});
+document.addEventListener('keydown', (e) => {
+  if (choosingKey) {
+    e.preventDefault();
+    choosingKey = false;
+    if (e.code !== 'Escape') {
+      state.ui.viewKey = e.code;
+      store.set('mj.viewKey', e.code);
+    }
+    $('#viewkey-name').textContent = keyLabel(state.ui.viewKey);
+    return;
+  }
+  if (!state.ui.viewByKey || e.code !== state.ui.viewKey || e.repeat || !table3d) return;
+  if (e.target.closest('input, textarea, select') || $('#game').classList.contains('hidden')) return;
+  e.preventDefault();
+  table3d.then((t) => t.toggleView());
 });
 
 $('#oneclick').checked = state.ui.oneClick;

@@ -1314,9 +1314,17 @@ export function createTable3D(container, { onPick, signal } = {}) {
 
   // Mouse over the top half of the screen (or a touch there) shows the whole
   // table; the bottom half (or a touch there) goes back to the player view.
+  // With byKey on, the pointer leaves the camera alone and toggleView()
+  // (a key, see main.js) switches it.
+  let byKey = false;
+  let viewMode = 'player';
+  const setMode = (m) => {
+    viewMode = m;
+    world.setView(m);
+  };
   const pickView = (y) => {
     // carrying a tile up to discard it does not move the camera
-    if (!hand.dragging()) world.setView(y < window.innerHeight * 0.5 ? 'overview' : 'player');
+    if (!byKey && !hand.dragging()) setMode(y < window.innerHeight * 0.5 ? 'overview' : 'player');
   };
   window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pickView(e.clientY); }, { signal });
   window.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') pickView(e.clientY); }, { signal });
@@ -1352,6 +1360,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
     pointsOpen: () => drawerState.open,
     // discard with a single click (default: click to pick up, click again)
     setOneClick: hand.setOneClick,
+    setViewByKey(on) {
+      byKey = !!on;
+      if (byKey) setMode('player');
+    },
+    toggleView: () => setMode(viewMode === 'player' ? 'overview' : 'player'),
     overHandTile: hand.overTile,
     // keep the hand sorted (default) or as the player arranges it
     setAutoSort: hand.setAutoSort,
