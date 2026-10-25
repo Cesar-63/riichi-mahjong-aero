@@ -27,8 +27,8 @@
       <p>Riichi japonés · reglas Tenhou · partidas al Este</p>
     </header>
 
-    <section id="entry" class="navy">
-      <div class="navy-head"><span>Elige cómo jugar</span><span class="jp">モード選択</span></div>
+    <section id="entry" class="board">
+      <div class="board-head"><span>Elige cómo jugar</span><span class="jp">モード選択</span></div>
       <div class="modes" role="radiogroup" aria-label="Modo de juego">
         <label><input type="radio" name="mode" value="classic" checked>
           <span class="mark" aria-hidden="true"></span>
@@ -44,11 +44,11 @@
           <span class="jp">稽古</span></label>
       </div>
       <div class="fields">
-        <label>Tu nombre <input id="name" maxlength="16" autocomplete="nickname"></label>
-        <label class="room-field">Sala <input id="room" maxlength="24" placeholder="publica"></label>
-        <label class="mate-field check"><input type="checkbox" id="practice-mate"> Con Bot 1 de compañero (por equipos)</label>
+        <label><span class="chalk">Tu nombre</span><input id="name" maxlength="16" autocomplete="nickname"></label>
+        <label class="room-field"><span class="chalk">Sala</span><input id="room" maxlength="24" placeholder="publica"></label>
+        <label class="mate-field check"><input type="checkbox" id="practice-mate"><span class="chalk">Con Bot 1 de compañero (por equipos)</span></label>
       </div>
-      <div class="navy-foot">
+      <div class="board-foot">
         <a href="#reglas" id="rules-link">Reglas del salón</a>
         <button id="join" class="paper seal" type="button"><span class="es">Entrar a la sala</span><span class="jp">入場</span></button>
       </div>
@@ -85,8 +85,8 @@
         <div class="w-seat" data-pos="top"></div>
         <div class="w-seat" data-pos="left"></div>
       </div>
-      <div class="navy w-box">
-        <div class="navy-head"><span id="w-title">Elige tu equipo</span><span class="jp" id="w-title-jp">組分け</span></div>
+      <div class="board w-box">
+        <div class="board-head"><span id="w-title">Elige tu equipo</span><span class="jp" id="w-title-jp">組分け</span></div>
         <div class="teams">
           <section class="team" data-team="N">
             <h3>Norte <span class="jp">北</span></h3>

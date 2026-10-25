@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140">
+  <!-- Mask for chalk writing: mostly solid, pitted where the chalk skipped. -->
+  <filter id="g" x="0" y="0" width="1" height="1">
+    <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="9" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -3.2 2.55"/>
+  </filter>
+  <rect width="140" height="140" filter="url(#g)"/>
+</svg>

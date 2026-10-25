@@ -1,6 +1,6 @@
 /* The parlour: a dim mahjong salon in the spirit of the PS2 "Tetsuya"
    games. Materials: aged paper (buttons, chits, sheets), wooden plaques
-   (names and scores), navy lacquer boxes (lobby menus) and thick mincho
+   (names and scores), chalkboards (lobby menus) and thick mincho
    lettering with a soft glow for the big notices. Text is Spanish first;
    Japanese only as small accents (.jp).
    Most in-game sizes are design pixels of a 1280x720 screen times --px. */
@@ -30,13 +30,6 @@
   --wood-grain: repeating-linear-gradient(90deg, rgba(90, 60, 25, .18) 0 2px, transparent 2px 11px);
   --wood-ink: #1d140a;
   --wood-ink-soft: #4a3518;
-  --navy: #101a35;
-  --navy-head: #1b2a57;
-  --navy-select: #24366d;
-  --navy-rim: #8a98c4;
-  --navy-inner: #33427a;
-  --navy-input: #0a1128;
-  --navy-text: #c3cbe4;
   --gold: #e2c26a;
   --red: #8e2620;
   --red-ink: #7a1712;
@@ -68,7 +61,6 @@
   --shadow-seal: inset 0 1px 0 #fffaea, inset 0 -3px 0 #8e2620, 0 4px 6px rgba(0, 0, 0, .45);
   --shadow-plaque: 0 4px 6px rgba(0, 0, 0, .5);
   --shadow-plaque-turn: 0 0 0 2px #e2c26a, 0 4px 6px rgba(0, 0, 0, .5);
-  --shadow-navy: inset 0 0 0 3px #101a35, inset 0 0 0 4px #33427a, 0 18px 40px rgba(0, 0, 0, .55);
   --shadow-sheet: 0 14px 28px rgba(0, 0, 0, .5), inset 0 0 50px rgba(120, 100, 50, .22);
 
   /* The parlour at night: one weak lamp, everything else falls into the
@@ -143,72 +135,79 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
 .paper.danger { color: var(--red-ink); box-shadow: var(--shadow-seal); }
 .paper:focus-visible, .modes input:focus-visible ~ .txt { outline: 2px solid var(--gold); outline-offset: 3px; }
 
-/* The navy boxes are boards of the house: navy lacquer worn down to the
-   wood (img/lacquer.svg) in a nailed, dented frame (img/frame.svg), with a
-   cigarette burn, and their title on a strip of tape. */
-.navy {
+/* The house's boards are slate chalkboards in a dented, nailed wooden
+   frame (img/slate.svg, img/frame.svg): wiped badly too many times, a
+   chalk ledge underneath with a stub of chalk. Everything on them is
+   written in chalk (masked with img/chalk-grain.svg). */
+.board {
+  --chalk: #ece8dc;
+  --chalk-soft: rgba(236, 232, 220, .72);
+  --chalk-yellow: #f0d98a;
+  --chalk-blue: #a9c2e6;
+  --chalk-red: #eaa293;
   position: relative;
-  color: var(--cream);
-  background-color: var(--navy);
+  color: var(--chalk);
+  background-color: #1d2621;
   background-image:
-    url(../img/lacquer.svg),
-    radial-gradient(ellipse 80% 55% at 30% 0%, rgba(255, 217, 166, .08), rgba(255, 217, 166, 0) 70%),
-    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(0, 0, 0, .32));
+    url(../img/slate.svg),
+    radial-gradient(ellipse 80% 60% at 40% 0%, rgba(255, 217, 166, .07), rgba(255, 217, 166, 0) 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(0, 0, 0, .3));
   border: 16px solid #3a2e20;
   border-image: url(../img/frame.svg) 16 stretch;
   box-shadow: 0 18px 40px rgba(0, 0, 0, .65), inset 0 0 34px rgba(0, 0, 0, .6);
+  margin-bottom: 14px;
 }
-.navy::after {
+/* the chalk ledge and the stub of chalk lying on it */
+.board::after {
   content: "";
   position: absolute;
-  right: 12px;
-  top: 10px;
-  width: 30px;
-  height: 22px;
+  left: 6%;
+  right: 6%;
+  bottom: -26px;
+  height: 10px;
   pointer-events: none;
-  background: radial-gradient(ellipse at 45% 50%, #050302 0 22%, rgba(70, 38, 14, .85) 34%, rgba(110, 66, 28, .45) 52%, rgba(110, 66, 28, 0) 72%);
-  transform: rotate(-18deg);
+  background:
+    radial-gradient(ellipse 20% 60% at 64% 20%, rgba(236, 232, 220, .35), rgba(236, 232, 220, 0) 70%),
+    radial-gradient(ellipse 12% 50% at 20% 25%, rgba(236, 232, 220, .25), rgba(236, 232, 220, 0) 70%),
+    linear-gradient(180deg, #6a5539, #3a2e20 55%, #1c150c);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, .55);
 }
-.navy-head {
-  position: relative;
+.board::before {
+  content: "";
+  position: absolute;
   z-index: 1;
+  left: 24%;
+  bottom: -23px;
+  width: 30px;
+  height: 7px;
+  pointer-events: none;
+  background: linear-gradient(180deg, #faf7ee, #d4cebd);
+  border-radius: 2px 3px 3px 2px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .5);
+  transform: rotate(-5deg);
+}
+.chalk, .board-head, .modes .txt, .modes .jp, .board-foot a, .team h3, .team ul, .team .here, #unassigned, #w-hint {
+  -webkit-mask: url(../img/chalk-grain.svg) 0 0 / 140px;
+  mask: url(../img/chalk-grain.svg) 0 0 / 140px;
+  text-shadow: 0 0 1px rgba(236, 232, 220, .45);
+}
+.board-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 14px;
-  width: fit-content;
-  max-width: calc(100% - 20px);
-  margin: -28px 0 6px 6px;
-  padding: 6px 18px 4px;
-  color: var(--ink);
-  background: var(--paper-grain), linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(0, 0, 0, .08)), rgba(207, 200, 179, .94);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .55);
-  transform: rotate(-1.3deg);
+  padding: 12px 18px 6px;
   font-family: var(--f-title);
-  font-size: 20px;
+  font-size: 24px;
+  color: var(--chalk);
 }
-/* torn ends of the tape */
-.navy-head::before, .navy-head::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: inherit;
+/* a chalk stroke under the heading */
+.board-head span:first-child {
+  background: linear-gradient(179deg, transparent 0 calc(100% - 5px), var(--chalk-soft) calc(100% - 5px) calc(100% - 3px), transparent calc(100% - 3px)) 0 0 / 100% 100% no-repeat;
+  padding-bottom: 4px;
 }
-.navy-head::before { left: -4px; clip-path: polygon(100% 0, 0 12%, 80% 30%, 10% 52%, 70% 70%, 0 88%, 100% 100%); }
-.navy-head::after { right: -4px; clip-path: polygon(0 0, 100% 15%, 30% 35%, 90% 55%, 20% 74%, 100% 90%, 0 100%); }
-.navy-head .jp { font-size: 13px; letter-spacing: 3px; color: var(--ink-soft); }
+.board-head .jp { font-size: 13px; letter-spacing: 3px; color: var(--chalk-soft); }
 
-/* paper that has been around: foxed corners and a tea ring (each sheet
-   places its ring with --ring-x / --ring-y) */
-:is(.sheet, .house-rules, .f-sheet) {
-  --paper-age:
-    url(../img/stain.svg) var(--ring-x, 84%) var(--ring-y, 82%) / 74px 74px no-repeat,
-    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(105, 75, 28, .22), transparent 70%),
-    radial-gradient(ellipse 45% 35% at 100% 0%, rgba(105, 75, 28, .18), transparent 70%),
-    radial-gradient(ellipse 30% 20% at 100% 100%, rgba(60, 40, 15, .16), transparent 70%);
-}
 /* paper that was crumpled and flattened again (img/crumple.svg) */
 .crumpled::after {
   content: "";
@@ -282,8 +281,8 @@ label.check input:checked {
   border-color: var(--red);
 }
 label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-.navy label.check input { background-color: var(--navy-input); border-color: var(--navy-rim); }
-.navy label.check input:checked { background-color: var(--red); border-color: var(--red); }
+.board label.check input { background-color: transparent; border-color: var(--chalk-soft); }
+.board label.check input:checked { background-color: var(--red); border-color: var(--red); }
 
 /* ------------------------------------------------------------ lobby */
 /* An olive back wall at night: one weak lamp hangs between the menu and
@@ -409,28 +408,29 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 
 #entry { grid-area: entry; align-self: start; margin-top: clamp(16px, 4vh, 36px); }
 .modes { display: flex; flex-direction: column; padding: 8px 0; }
-.modes label { display: flex; align-items: center; gap: 14px; padding: 10px 18px; cursor: pointer; }
-.modes label:hover { background: rgba(255, 217, 166, .05); }
-.modes label:has(input:checked) { background: linear-gradient(90deg, rgba(255, 217, 166, .14), rgba(255, 217, 166, .04) 70%, rgba(255, 217, 166, 0)); }
-.modes input { position: absolute; opacity: 0; pointer-events: none; }
-.modes .mark { flex: none; width: 30px; height: 7px; border-radius: 3px; }
-.modes input:checked ~ .mark {
-  background: radial-gradient(circle, var(--seal-red) 0 2.4px, rgba(179, 38, 30, 0) 3px), linear-gradient(180deg, #fbf6e6, #d8cdb0);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, .65);
-  transform: rotate(-5deg);
+.modes label { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 42px 12px 48px; cursor: pointer; }
+.modes label:hover { background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(236, 232, 220, .06), rgba(236, 232, 220, 0)); }
+.modes label:has(input:checked)::before {
+  content: "";
+  position: absolute;
+  inset: 0 4px;
+  pointer-events: none;
+  background: url(../img/chalk-ring.svg) center / 100% 100% no-repeat;
 }
+.modes input { position: absolute; opacity: 0; pointer-events: none; }
+.modes .mark { display: none; }
 .modes .txt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.modes b { font-family: var(--f-title); font-weight: 400; font-size: 20px; }
-.modes small { font-size: 13px; color: var(--navy-text); }
-.modes .jp { font-size: 14px; color: var(--navy-text); opacity: .75; }
+.modes b { font-family: var(--f-title); font-weight: 400; font-size: 22px; }
+.modes small { font-family: var(--f-hand); font-size: 17px; line-height: 1.2; color: var(--chalk-soft); }
+.modes .jp { font-size: 14px; color: var(--chalk-soft); }
+.modes label:has(input:checked) b { color: var(--chalk-yellow); }
 .fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 12px 18px 4px;
-  border-top: 1px solid rgba(195, 203, 228, .14);
 }
-.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--navy-text); }
+.fields label { display: flex; flex-direction: column; gap: 4px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
 .fields input:not([type]) {
   min-width: 0;
   padding: 5px 12px 3px;
@@ -453,12 +453,12 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .fields .room-field input:not([type]) { transform: rotate(.7deg); }
 .fields input:not([type]):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .fields input::placeholder { color: var(--ink-soft); opacity: .45; }
-.fields .mate-field { flex-direction: row; grid-column: 1 / -1; font-size: 14px; display: none; }
+.fields .mate-field { flex-direction: row; grid-column: 1 / -1; font-size: 18px; display: none; }
 #entry.practice .room-field { display: none; }
 #entry.practice .mate-field { display: flex; }
 #entry.practice .fields { grid-template-columns: minmax(0, 1fr); }
-.navy-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; }
-.navy-foot a { font-size: 14px; }
+.board-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; }
+.board-foot a { font-family: var(--f-hand); font-size: 19px; color: var(--chalk-yellow); }
 
 /* the house rules, taped to the wall years ago */
 .house-rules {
@@ -707,7 +707,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 }
 .w-felt .es { font-family: var(--f-title); font-size: 26px; }
 .w-felt small { font-size: 13px; max-width: 240px; }
-/* a seat: a navy row with the player's team as a tag */
+/* a seat: a wooden plaque with the player's team as a tag */
 .w-seat {
   width: 100%;
   max-width: 200px;
@@ -746,26 +746,25 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 /* the two teams inside the box: no box in a box, just a rule between them */
 .teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 6px 0; }
 .team { display: flex; flex-direction: column; gap: 8px; padding: 10px 18px 12px; }
-.team + .team { border-left: 1px solid rgba(195, 203, 228, .14); }
-.team.mine { background: linear-gradient(180deg, rgba(255, 217, 166, .12), rgba(255, 217, 166, .02)); }
-.team h3 { display: flex; align-items: baseline; gap: 8px; margin: 0; font-family: var(--f-title); font-weight: 400; font-size: 20px; color: var(--cream); }
-.team h3::before { content: ""; flex: none; align-self: center; width: 10px; height: 10px; background: var(--tag-mate); box-shadow: 0 0 0 1px var(--navy-rim); }
-.team[data-team="S"] h3::before { background: var(--red); }
-.team h3 .jp { font-size: 13px; color: var(--navy-text); opacity: .75; }
-.team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.team + .team { border-left: 2px solid rgba(236, 232, 220, .18); }
+.team h3 { margin: 0; font-family: var(--f-title); font-weight: 400; font-size: 23px; color: var(--chalk-blue); }
+.team[data-team="S"] h3 { color: var(--chalk-red); }
+.team h3 .jp { font-size: 14px; opacity: .8; }
+.team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 20px; }
 .team li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.team li.ready::after { content: " · listo"; color: var(--gold); font-size: 12px; }
-.team li.empty { color: var(--navy-text); opacity: .7; }
+.team li small { font-size: 15px; color: var(--chalk-soft); }
+.team li.ready::after { content: " ✓ listo"; color: var(--chalk-yellow); font-size: 16px; }
+.team li.empty { color: var(--chalk-soft); opacity: .55; }
 .team .paper { margin-top: 6px; padding: 7px 8px; font-size: 16px; }
-.team .here { display: none; margin-top: 6px; padding: 8px 0; font-size: 14px; color: var(--gold); }
+.team .here { display: none; margin-top: 6px; padding: 6px 0; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-yellow); }
 .team.mine .here { display: block; }
-.badge { font-size: 12px; color: var(--gold); }
-#unassigned { margin: 0; padding: 6px 18px 4px; font-size: 14px; color: var(--navy-text); border-top: 1px solid rgba(195, 203, 228, .14); }
+.badge { font-size: 15px; color: var(--chalk-yellow); }
+#unassigned { margin: 0; padding: 6px 18px 4px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
 #unassigned:empty { display: none; }
 .w-actions { display: flex; flex-wrap: wrap; gap: 12px; padding: 14px 18px 18px; }
 .w-actions #leave { margin-left: auto; }
 .w-actions .paper { font-size: 17px; padding: 8px 16px; }
-#w-hint { margin: 0; padding: 0 18px 16px; font-size: 13px; color: var(--navy-text); }
+#w-hint { margin: 0; padding: 0 18px 16px; font-family: var(--f-hand); font-size: 18px; color: var(--chalk-soft); }
 
 @media (max-width: 900px) {
   #lobby {
@@ -786,13 +785,16 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   .w-seat { padding: 6px 8px; }
 }
 @media (max-width: 480px) {
-  .navy { border-width: 10px; }
-  .navy-head { margin-top: -20px; }
-  .modes label, .fields, .navy-foot { padding-left: 12px; padding-right: 12px; }
-  .navy-foot { flex-wrap: wrap; }
+  .board { border-width: 10px; }
+  .board::after { bottom: -20px; }
+  .board::before { bottom: -17px; }
+  .fields, .board-foot, .board-head { padding-left: 14px; padding-right: 14px; }
+  .modes label { padding-left: 36px; padding-right: 30px; }
+  .modes label:has(input:checked)::before { inset: 0 2px; }
+  .board-foot { flex-wrap: wrap; }
   .fields { grid-template-columns: minmax(0, 1fr); }
   .teams { grid-template-columns: minmax(0, 1fr); }
-  .team + .team { border-left: 0; border-top: 1px solid rgba(195, 203, 228, .14); }
+  .team + .team { border-left: 0; border-top: 2px solid rgba(236, 232, 220, .14); }
   .w-felt small { display: none; }
 }
 
@@ -1344,7 +1346,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   white-space: nowrap;
 }
 #partner-toggle .es { font-family: var(--f-title); font-size: 15px; line-height: 1.1; }
-#partner-toggle .jp { font-family: var(--f-mincho); font-size: 11px; letter-spacing: 3px; color: var(--navy-text); }
+#partner-toggle .jp { font-family: var(--f-mincho); font-size: 11px; letter-spacing: 3px; color: var(--cream); opacity: .75; }
 #partner-toggle b { font-family: var(--f-body); font-size: 12px; font-weight: 700; color: var(--gold); max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 #partner-hand { display: none; align-items: flex-end; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)); }
 #partner.open #partner-hand { display: flex; }

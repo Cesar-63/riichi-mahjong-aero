@@ -118,10 +118,11 @@ materiales:
   hoja final; las hojas tienen las esquinas manchadas y algún cerco de té. El
   botón principal de cada caja lleva un borde rojo, como un sello.
 - **Tablillas de madera** con nombre, viento y puntos de cada jugador.
-- **Tableros azul marino** en el lobby y la sala de espera: laca gastada que
-  deja ver la madera, rayada y con una quemadura de cigarro, en un marco de
-  madera abollado con clavos; el título va en una tira de cinta pegada. El
-  modo elegido se marca con un palito de 1000 puntos.
+- **Pizarras de tiza** en el lobby y la sala de espera (sin nada del estilo
+  de menú de PS2): pizarra mal borrada, con restos de cuentas viejas, en un
+  marco de madera abollado con clavos y una bandeja con un trozo de tiza.
+  Todo lo que hay en ellas está escrito con tiza, y el modo elegido queda
+  encerrado en un círculo de tiza; los equipos van en tiza azul y roja.
 - **Garito clandestino:** en la pared del lobby, un aviso policial de
   "Prohibido apostar" (賭博禁止) tapado por pagarés con huella dactilar; en
   las reglas de la casa, un sello "Solo socios" (会員制) y "Aquí no se fía";
@@ -434,7 +435,7 @@ server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
-public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, laca, papel arrugado, huella, chincheta)
+public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
