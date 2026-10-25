@@ -4,7 +4,9 @@ Investigación de octubre de 2026 sobre tres proyectos que podrían darles
 inteligencia a los bots: **Mortal**, **akochan** y **mjai-reviewer**. Se
 clonaron y leyeron los tres repositorios. akochan se compiló y se midió aquí.
 También se revisaron los pesos de Mortal publicados por la comunidad en
-Hugging Face.
+Hugging Face. Una búsqueda ampliada en Hugging Face y GitHub encontró más
+opciones, entre ellas **majiang-ai**, una IA en JavaScript con licencia MIT:
+ver [§6](#6-búsqueda-ampliada-más-opciones).
 
 ## Resumen
 
@@ -18,12 +20,16 @@ Hugging Face.
 | Licencia | Código AGPL-3.0 | Propia y restrictiva: uso no comercial, prohibido redistribuir versiones modificadas | Apache-2.0 |
 | Utilidad para nosotros | **El cerebro del nivel "difícil"** | Rival de entrenamiento o referencia fuera de línea, e ideas | Protocolo mjai, conversor de registros y la idea de "revisar mi partida" |
 
-**Recomendación:** (1) guardar el registro de cada mano en formato **mjai**,
-la base de todo lo demás; (2) escribir un **bot heurístico propio** en JS para
-el nivel "normal", sin dependencias ni problemas de licencia; (3) usar los
-pesos comunitarios **Mortal-S42** (Apache-2.0) para el nivel "difícil". El paso
-3 exige una decisión de licencia: el codificador de Mortal es AGPL. Ver
-[Decisiones pendientes](#decisiones-pendientes).
+**Recomendación** (actualizada tras la búsqueda ampliada):
+
+1. Guardar el registro de cada mano en formato **mjai**, la base de todo lo
+   demás.
+2. Para el nivel "normal", **adaptar majiang-ai** (JS, MIT, ~40 ms por
+   decisión, medido aquí) en lugar de escribir heurísticas desde cero.
+3. Para el nivel "difícil", **Mortal**: pesos Mortal-S42 (Apache-2.0, v4) o
+   mortal3-b40c192 (AGPL, v3, ya en ONNX y con un codificador más corto). Esto
+   exige una decisión de licencia, porque el codificador de Mortal es AGPL. Ver
+   [Decisiones pendientes](#decisiones-pendientes).
 
 ## Punto de partida
 
@@ -258,32 +264,156 @@ de 10 KB más en Redis.
 1. **Registro mjai por mano** (pequeño, sin riesgos). El motor emite eventos
    mjai además de los suyos y los guarda por mano. Una prueba compara el
    registro con una partida simulada.
-2. **Bot "normal" heurístico, propio, en JS** (sin licencias ni
-   dependencias, corre en Vercel en milisegundos):
-   - descartar maximizando ukeire (fichas útiles) tras minimizar el shanten;
-     `hand.js` ya tiene la descomposición;
-   - ganar siempre que pueda (ron o tsumo), con la regla anti-agarasu en la
-     última mano;
-   - riichi cuando está en tenpai cerrado con espera razonable; kan solo si no
-     estropea la mano;
-   - llamar solo si da yaku (yakuhai, tanyao, honitsu…) y no empeora el
-     shanten;
-   - **defensa (betaori)** ante un riichi rival: genbutsu, suji, kabe y
-     fichas de honor ya vistas.
+2. **Bot "normal" con majiang-ai** (MIT, JS, corre en Vercel en decenas de
+   ms; ver [§6.1](#61-majiang-ai-kobalab-la-mejor-opción-para-el-nivel-normal)):
+   - un adaptador que traduce nuestros eventos al protocolo de
+     `Majiang.Player` (`qipai`, `zimo`, `dapai`, `fulou`, `gang`…) y sus
+     respuestas a nuestras acciones. Notación: `m1…m9`, `m0` = 5 rojo,
+     `z1…z7`;
+   - reglas de majiang-core ajustadas a las nuestras: `場数: 1` (tonpuusen),
+     sin doble yakuman, `ノーテン宣言あり`… El uma por defecto ya coincide
+     (+20/+10/−10/−20);
+   - una capa propia encima para lo que majiang-ai no mira: los puntos y la
+     posición (regla anti-agarasu en la última mano, no arriesgar yendo 1º en
+     Este 4).
 
-   Quedaría muy por encima del bot actual, y sirve también de respaldo si el
-   bot difícil falla o se demora.
-3. **Bot "difícil" con Mortal-S42:**
-   1. Prototipo fuera de línea: libriichi y los pesos en Python, jugando
-      contra nuestro bot heurístico mediante nuestro registro mjai, para
-      validar eventos y acciones.
-   2. Elegir el despliegue (A, B o C). Mi recomendación es **B**
+   Si el adaptador resulta incómodo, el plan B es escribir las heurísticas
+   desde cero (ukeire, riichi, betaori con genbutsu, suji y kabe) usando
+   majiang-ai solo como referencia.
+3. **Bot "difícil" con Mortal:**
+   1. Elegir los pesos (ver [§6.2](#62-más-pesos-de-mortal-en-hugging-face)):
+      S42 (v4, Apache) o mortal3 (v3, AGPL, ya en ONNX; su codificador no
+      necesita el calculador de valor esperado de la v4).
+   2. Prototipo fuera de línea: libriichi y los pesos en Python, jugando
+      contra el bot normal mediante nuestro registro mjai, para validar
+      eventos y acciones.
+   3. Elegir el despliegue (A, B o C). Mi recomendación es **B**
       (libriichi → WASM, ONNX y todo en Vercel). Si se prefiere no tocar
-      código AGPL, **A**.
-   3. Arreglo de tonpuusen (`is_all_last` en Este 4) y medir la fuerza
-      contra el bot normal.
+      código AGPL, **A**. senegrom/mahjong demuestra que el patrón
+      "heurístico + red ONNX en el navegador con respaldo" funciona
+      ([§6.3](#63-otros-proyectos-relevantes)).
+   4. Arreglo de tonpuusen (`is_all_last` en Este 4) y medir la fuerza
+      contra el bot normal. Si hace falta, ajustar la red con partidas de
+      tonpuusen de los datasets públicos ([§6.4](#64-datasets-de-partidas)).
 4. **Revisión de partida** al estilo mjai-reviewer, con el bot difícil como
    juez. Opcional, para después.
+5. **Extras opcionales:** "personalidades" para los bots con los pesos de
+   estilo (más o menos llamadas o riichi) de `jjeyxb/mia-mortal-style`.
+
+## 6. Búsqueda ampliada: más opciones
+
+Se buscó en Hugging Face (modelos y datasets con `mahjong`, `riichi`,
+`mortal`, `mjai`, `tenhou`) y en GitHub. Lo más útil está abajo; lo descartado,
+en [§6.5](#65-descartados).
+
+### 6.1 majiang-ai (kobalab): la mejor opción para el nivel "normal"
+
+- [kobalab/majiang-ai](https://github.com/kobalab/majiang-ai) y su motor
+  [kobalab/majiang-core](https://github.com/kobalab/majiang-core): son la IA y
+  el motor del juego web japonés **電脳麻将** (Denno Majan). Licencia **MIT**,
+  **JavaScript puro**, publicados en npm (`@kobalab/majiang-ai` 1.3.0,
+  septiembre de 2026) y mantenidos activamente.
+- Es una IA sin red neuronal y pequeña: 1.089 líneas más ~3.000 del motor.
+  Para cada descarte calcula un "valor" de la mano (fichas útiles, puntos
+  probables, mejoras posibles) y lo pondera con el **peligro de cada ficha**
+  según lo visto en la mesa (`suanpai.js`: genbutsu, suji, fichas
+  agotadas). Ese mismo cálculo decide llamadas, riichi y kan. Trae 26
+  versiones anteriores de la IA (`legacy/`) y herramientas de partidas
+  duplicadas para comparar versiones.
+- **Medido aquí:** 20 hanchan entre 4 majiang-ai tardaron 400 s, **~40 ms por
+  decisión** en un hilo de Node. En autojuego: 20,6 % de manos ganadas, 12,3 %
+  de ron repartido, 22,5 % de riichi, 32,4 % de llamadas y 19,6 % de
+  ryuukyoku. Son perfiles parecidos a los de akochan en las tablas de Mortal
+  (19,5 % / 13,0 % / 21,5 % / 33,0 %). El autojuego no mide fuerza, pero
+  descarta comportamientos absurdos.
+- **Reglas configurables** y muy cercanas a las nuestras: akadora 1 por palo,
+  kuitan, tonpuusen con `場数: 1`, extensión a muerte súbita, nagashi mangan,
+  pao, uma +20/+10/−10/−20 por defecto.
+- **Lo que le falta:** no mira los puntos ni la posición (no tiene tácticas de
+  última mano) y su motor es otro, así que hace falta un adaptador. Ninguna de
+  las dos cosas es grave.
+
+### 6.2 Más pesos de Mortal en Hugging Face
+
+| Modelo | Versión y licencia | Lo interesante |
+| --- | --- | --- |
+| [hhim8826/mortal3-b40c192](https://huggingface.co/hhim8826/mortal3-b40c192) | v3, AGPL-3.0 | **Ya exportado a ONNX** (`mortal.onnx`, 45 MB, verificado contra PyTorch sin una sola acción distinta). Entrenado con 191 mil partidas de Houou; es el mejor de 6 checkpoints de su línea, sin comparación contra modelos externos. Su observación v3 (934 × 34) **no usa** las tablas de valor esperado de la v4 (`algo/sp/`, ~1.400 líneas), así que hay menos que portar. Trae **`tenpai.onnx`** (4 MB): estima si cada rival está en tenpai y sus esperas. Contra un riichi, entre fichas no suji, separa un 0,13 % de riesgo frente a un 17,2 %; las reglas clásicas solo llegan a 6,2 % frente a 9,0 %. Es un "detector de peligro" excelente, pero también requiere el codificador v3. |
+| [VoidShine/mortal-298k](https://huggingface.co/VoidShine/mortal-298k) | v4, AGPL-3.0 | Entrenado con Houou hanchan 2025–2026. Su dataset incluye partidas de tonpuusen (no usadas para entrenar). 125 MB con el estado de entrenamiento. |
+| [jjeyxb/mia-mortal-style](https://huggingface.co/jjeyxb/mia-mortal-style) | v4, AGPL-3.0 | Cuatro **estilos** ajustados desde 298k: llama mucho o poco, hace mucho o poco riichi. Las diferencias de estilo son claras (16–20 σ) y **la fuerza no cambia**. Servirían para dar "personalidades" a los bots. |
+| [haor/Mortal-S42](https://huggingface.co/haor/Mortal-S42) (y su copia banxiaweiliang/Mortal-S42) | v4, **pesos Apache-2.0** | Ya descrito arriba. La única con pesos de licencia permisiva. |
+| [Yuchen1457/mortal-582500](https://huggingface.co/Yuchen1457/mortal-582500) | v4, AGPL-3.0 | Ya descrito arriba. |
+| [zangjiucheng/riichippo](https://huggingface.co/zangjiucheng/riichippo) | Apache-2.0 | Otra pila (RiichiEnv, CQL + PPO), de 28 MB. No publica una comparación de fuerza contra referencias conocidas. |
+
+**Licencia de los pesos:** todos menos S42 y riichippo son AGPL. Con S42, solo
+el codificador es AGPL. En cualquier opción que meta el codificador en nuestro
+repo, el repo pasa a AGPL igualmente.
+
+### 6.3 Otros proyectos relevantes
+
+- [senegrom/mahjong](https://github.com/senegrom/mahjong) (AGPL-3.0,
+  actualizado en octubre de 2026): **un juego de riichi en el navegador
+  parecido al nuestro**. Su motor en Rust se compila a WASM y tiene rivales
+  "Beginner" y "Club" (heurísticos) y "Trained" (una red ONNX de 117 MB que
+  corre en el navegador con onnxruntime-web, cacheada para jugar sin
+  conexión). Si la red falla, cae a "Club". Usa reglas **EMA** (no Tenhou),
+  así que su red no nos sirve, pero confirma el patrón de arquitectura. Tiene
+  documentación detallada sobre memoria y descarga
+  (`docs/ONNX_RUNTIME.md`).
+- [Jimboom7/AlphaJong](https://github.com/Jimboom7/AlphaJong) (GPL-3.0, JS,
+  2024): una IA heurística en JS que simula turnos, pensada como script para
+  jugar solo en Mahjong Soul (dice llegar a rango Master). Su licencia y su
+  propósito son peores que los de majiang-ai, pero sirve como referencia de
+  constantes de defensa y llamadas.
+- [gimite/mjai-manue](https://github.com/gimite/mjai-manue) (BSD, 2015): la
+  IA de referencia del creador de mjai. Su fórmula es sencilla y explicable:
+  `expPt = (1 − P_ron_repartido) × P_ganar × puntos_medios − P_ron_repartido ×
+  6265`. La probabilidad de ganar sale de Monte Carlo y la de repartir ron de
+  un árbol de decisión entrenado con Tenhou.
+- [EndlessCheng/mahjong-helper](https://github.com/EndlessCheng/mahjong-helper)
+  (MIT, Go) y
+  [MahjongRepository/tenhou-python-bot](https://github.com/MahjongRepository/tenhou-python-bot)
+  (MIT, Python): análisis de eficiencia y defensa, y un bot heurístico
+  completo. Son referencias por si se escriben heurísticas propias.
+- [smly/RiichiEnv](https://github.com/smly/RiichiEnv) (Apache-2.0): un
+  entorno de entrenamiento en Rust y Python, compatible con mjai y Mortal.
+  Útil si algún día entrenamos.
+- [NikkeTryHard/tenhou-to-mjai](https://github.com/NikkeTryHard/tenhou-to-mjai)
+  (Apache-2.0): un conversor de registros de Tenhou y Mahjong Soul a mjai.
+- [twu3202/TanyaoDojo](https://github.com/twu3202/TanyaoDojo) (MIT): una pila
+  de entrenamiento completa. Su ficha documenta con mucho rigor cómo medir la
+  fuerza (partidas duplicadas, 100 mil partidas para diferencias de 1 pt).
+
+### 6.4 Datasets de partidas
+
+Sirven solo si entrenamos o ajustamos una red, por ejemplo para tonpuusen.
+
+- [hhim8826/tenhou-houou-mjai](https://huggingface.co/datasets/hhim8826/tenhou-houou-mjai):
+  **2,12 millones de partidas Houou ya en mjai** (parquet, 6,3 GB), listas
+  para el `GameplayLoader` de libriichi. 29.875 son tonpuusen.
+- [nikketryhard/tenhou-houou-mjai](https://huggingface.co/datasets/nikketryhard/tenhou-houou-mjai):
+  Tenhou Houou 2009–2026 más Mahjong Soul (salas Jade y Throne) 2019–2026 en
+  mjai, ~64 GB. Mahjong Soul tiene muchas partidas de tonpuusen.
+- [1nfrared218/tenhou-mjai-riichi-training](https://huggingface.co/datasets/1nfrared218/tenhou-mjai-riichi-training):
+  partidas ya procesadas, CC BY 4.0.
+- **Ojo:** Tenhou tiene sus propios términos sobre el uso de sus registros y
+  varios de estos datasets los redistribuyen igualmente (`license: other`).
+  Para entrenar en privado el riesgo es bajo; para redistribuir datos,
+  revisarlo antes.
+
+### 6.5 Descartados
+
+- **TanyaoDojo** (pesos MIT): más débil que Mortal según sus propias
+  mediciones, y en `.pkl` (pickle, inseguro de cargar).
+- **MahjongLM** (mitsutani) y **Qwen3-4B-mahjong**: modelos de lenguaje.
+  El primero genera registros, no está hecho para jugar y tiene licencia
+  "other". El segundo pesa 8 GB y no contempla akadora.
+- **IJCAI-2026 (Dannibal)**: para mahjong chino de competición (MCR), otras
+  reglas.
+- **kanachan**: solo código para entrenar con reglas de Mahjong Soul, sin
+  pesos ni archivo de licencia.
+- **pjura/mahjong_ai**: un clasificador de descartes con 66 % de acierto;
+  no es una IA de juego completa.
+- **NAGA, Suphx, LuckyJ**: cerrados.
 
 ## Decisiones pendientes
 
@@ -308,3 +438,8 @@ de 10 KB más en Redis.
   <https://huggingface.co/Yuchen1457/mortal-582500>,
   <https://huggingface.co/Twu31/TanyaoDojo>
 - Calculador de valor esperado original: <https://github.com/nekobean/mahjong-cpp>
+- Búsqueda ampliada: los enlaces de la [§6](#6-búsqueda-ampliada-más-opciones).
+  Las licencias y fechas salen de clonar cada repositorio (octubre de 2026) y
+  de la API de Hugging Face. Las cifras de majiang-ai y akochan se midieron en
+  este entorno; las de los modelos de Hugging Face son las que publican sus
+  autores.
