@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480">
+  <!-- Old wallpaper over plaster: a faded printed lattice (asanoha-like
+       diamonds), mottled damp and soot. Tiles seamlessly. -->
+  <defs>
+    <pattern id="print" width="48" height="56" patternUnits="userSpaceOnUse">
+      <path d="M24 2 L44 28 L24 54 L4 28 Z M24 2 V54 M4 28 H44" fill="none" stroke="#1c1a0a" stroke-opacity=".14" stroke-width="1.2"/>
+      <circle cx="24" cy="28" r="2.4" fill="#1c1a0a" fill-opacity=".12"/>
+    </pattern>
+    <filter id="mottle" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".012" numOctaves="4" seed="2" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .08  0 0 0 0 .07  0 0 0 0 .03  0 0 0 1.5 -.62"/>
+    </filter>
+    <filter id="fade" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="2" seed="6" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2 1.4" result="a"/>
+      <feComposite in="SourceGraphic" in2="a" operator="in"/>
+    </filter>
+    <filter id="soot" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="2" seed="1" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .05  0 0 0 0 .04  0 0 0 0 .02  0 0 0 .9 -.25"/>
+    </filter>
+  </defs>
+  <rect width="480" height="480" fill="url(#print)" filter="url(#fade)"/>
+  <rect width="480" height="480" filter="url(#mottle)"/>
+  <rect width="480" height="480" filter="url(#soot)" opacity=".5"/>
+</svg>

@@ -316,7 +316,8 @@ export function finalHTML(v, room) {
       <p class="team-verdict">${win ? `¡Gana el ${label[win]}!` : 'Empate entre equipos'}</p>`;
   }
   const where = room && !room.startsWith('bots-') ? ` · sala «${esc(room)}»` : ' · práctica';
-  return `<div class="f-sheet">
+  return `<div class="room-fx" aria-hidden="true"><span class="smoke"></span></div>
+    <div class="f-sheet">
       <span class="stamp-win" aria-hidden="true">Gana<i>勝</i></span>
       <div class="f-head"><span class="f-title">Resultados <span class="jp">成績表</span></span><span class="f-where">Fin de la partida · al Este${where}</span></div>
       ${teams}

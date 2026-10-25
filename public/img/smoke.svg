@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520">
+  <!-- Cigarette smoke: soft blobs pulled into curls by turbulence. -->
+  <defs>
+    <filter id="curl" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency=".011 .018" numOctaves="4" seed="4" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="140" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="7"/>
+    </filter>
+    <filter id="curl2" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency=".02 .03" numOctaves="3" seed="21" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="90" xChannelSelector="G" yChannelSelector="R" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="4"/>
+    </filter>
+    <radialGradient id="puff"><stop offset="0" stop-color="#e8e0cf" stop-opacity=".5"/><stop offset="1" stop-color="#e8e0cf" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g filter="url(#curl)">
+    <ellipse cx="300" cy="300" rx="230" ry="70" fill="url(#puff)"/>
+    <ellipse cx="560" cy="220" rx="260" ry="60" fill="url(#puff)"/>
+    <ellipse cx="450" cy="380" rx="200" ry="50" fill="url(#puff)"/>
+  </g>
+  <g filter="url(#curl2)" opacity=".8">
+    <path d="M200 260 C300 200 380 300 470 240 S640 180 720 250" stroke="#e8e0cf" stroke-opacity=".28" stroke-width="16" fill="none" stroke-linecap="round"/>
+    <path d="M260 360 C360 320 430 400 540 340 S700 320 780 360" stroke="#e8e0cf" stroke-opacity=".18" stroke-width="12" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

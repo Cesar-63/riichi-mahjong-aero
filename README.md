@@ -115,8 +115,8 @@ La interfaz se diseñó en Claude Design y se pasó al juego con estos
 materiales:
 
 - **Papel** viejo para botones, la ficha de la ronda, el menú, las reglas y la
-  hoja final; el botón principal de cada caja lleva un borde rojo, como un
-  sello.
+  hoja final; las hojas tienen las esquinas manchadas y algún cerco de té. El
+  botón principal de cada caja lleva un borde rojo, como un sello.
 - **Tablillas de madera** con nombre, viento y puntos de cada jugador.
 - **Cajas azul marino** (estilo menú de PS2) en el lobby y la sala de espera.
 - Letras: **Kaushan Script** (títulos y botones) y **Caveat Brush** (hojas y
@@ -128,10 +128,19 @@ materiales:
 
 Pantallas:
 
+- Fuera de la partida (lobby, sala de espera, hoja final) el salón también
+  está de noche: una sola lámpara colgante ilumina la pared, con un cono de
+  luz y un poco de humo flotando en él, y todo se apaga hacia las esquinas;
+  la pared es papel tapiz desteñido sobre yeso con manchas de humedad, sobre
+  un zócalo de tablas oscuras. Son dibujos SVG con textura (`public/img/`).
+  Los campos para escribir (tu nombre, la sala) son papeletas de papel donde
+  se escribe a mano.
 - **Lobby** (pared verde oliva): título "Salón Mahjong", la caja **Elige cómo
   jugar** con los tres modos, tu nombre y la sala, y la hoja **Reglas de la
-  casa** pegada a la pared. **Reglas del salón** abre las reglas completas.
-- **Sala de espera**: la mesa dibujada desde arriba con los cuatro asientos
+  casa** pegada a la pared, con la lámpara colgando entre las dos. **Reglas
+  del salón** abre las reglas completas.
+- **Sala de espera**: la mesa (paño gastado y marco gris sin barnizar)
+  dibujada desde arriba bajo la luz, con los cuatro asientos
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =
@@ -414,6 +423,7 @@ server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 public/                  Cliente (index.html, css/, js/)
+public/img/              Lámpara, haz de luz, humo, papel tapiz, zócalo y mancha de té (SVG)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
