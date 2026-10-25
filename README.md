@@ -298,10 +298,11 @@ La mesa 3D dibuja la "vista" que envía el servidor (`public/js/three3d/`).
 Solo en el modo **Por equipos**:
 
 
-- Cada jugador ve la **mano de su compañero** en un panel: acoplado al lado
-  de la pantalla donde se sienta el compañero si hay espacio, o como franja
-  desplegable arriba en pantallas angostas. Se
-  puede plegar con su botón.
+- Cada jugador ve la **mano de su compañero** como en Tetsuya: una fila
+  ordenada y algo traslúcida justo encima de la propia mano, con el aviso
+  "Mano de tu compañero" a la izquierda (al pasar el mouse se ve nítida).
+  Aparece cuando termina el reparto y el oya puede hacer su primer descarte,
+  y se oculta en el resultado. Clic en el aviso la pliega.
 - **Pedir descarte**: clic en una ficha del compañero. A él se le resalta en
   naranja en su mano con el aviso "X te pide ▢". Es una sugerencia, no
   obliga; otro clic la cancela y caduca cuando la ficha sale de su mano o

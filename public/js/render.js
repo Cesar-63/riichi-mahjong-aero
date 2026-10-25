@@ -274,22 +274,17 @@ export function resultHTML(v) {
 export function renderPartner(v, ui) {
   const panel = document.getElementById('partner');
   const p = v.partner;
-  if (!p || v.phase === 'end') {
-    panel.classList.add('hidden');
-    return;
-  }
-  const margin = innerWidth >= 1100 ? 260 : 0;
-  const docked = margin >= 190;
-  const side = (p.seat - v.seat + 4) % 4 === 1 ? 'right' : 'left';
+  // shown once the deal is over and the dealer can make the first discard,
+  // and only while the hand is being played
+  const dealing = ui.introActive || Date.now() < (ui.introUntil || 0);
+  const shown = !!p && v.phase !== 'end' && v.phase !== 'result' && !dealing;
+  panel.classList.toggle('hidden', !shown);
+  document.getElementById('game').classList.toggle('with-partner', shown);
+  if (!shown) return;
   const open = ui.partnerOpen;
-  panel.className = `${docked ? 'docked' : 'floating'} ${side}${open ? ' open' : ''}`;
-  const width = docked ? margin - 24 : Math.min(innerWidth - 24, 640);
-  const perRow = docked ? 7 : 14;
-  const tw = Math.max(18, Math.min(46, Math.floor((width - 20) / (perRow + 0.6)) - 3));
-  panel.style.width = `${width}px`;
-  panel.style.setProperty('--pt', `${tw}px`);
+  panel.classList.toggle('open', open);
   const name = v.players[p.seat].name;
-  setHTML(document.getElementById('partner-toggle'), `${open ? '▾' : '▸'} Mano de ${esc(name)} <span class="hint">compañero · 相方</span>`);
+  setHTML(document.getElementById('partner-toggle'), `<span class="es">Mano de tu compañero</span><span class="jp">相方手牌</span><b>${esc(name)}</b>`);
   document.getElementById('partner-toggle').setAttribute('aria-expanded', String(open));
   const items = p.hand.map((id) => ({ key: String(id), html: tile(id, { attrs: `data-id="${id}"` }) }));
   if (p.drawn !== null) {

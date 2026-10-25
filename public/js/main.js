@@ -205,6 +205,12 @@ function showGame(v) {
     t.update(v, ui);
   });
   showCallouts($('#hud3d'), v, ui);
+  // the teammate's hand waits for the deal to end (server clock and animation)
+  if (v.intro) {
+    ui.introUntil = Date.now() + v.intro.left;
+    clearTimeout(ui.introTimer);
+    ui.introTimer = setTimeout(() => state.view && renderPartner(state.view, state.ui), v.intro.left + 50);
+  }
   renderPartner(v, ui);
   // A win first plays its reveal before the score screen opens, and an
   // exhaustive draw first lays the hands down (tenpai face up, noten face
@@ -311,7 +317,11 @@ function ensure3d() {
       t.setOneClick(state.ui.oneClick);
       t.setViewByKey(state.ui.viewByKey);
       t.setAutoSort(state.ui.autoSort);
-      t.onIntro(({ active }) => $('#hud3d').classList.toggle('intro', active));
+      t.onIntro(({ active }) => {
+        $('#hud3d').classList.toggle('intro', active);
+        state.ui.introActive = active;
+        if (state.view) renderPartner(state.view, state.ui);
+      });
       // the top band folds away while the camera shows the whole table
       t.onView((name) => {
         $('#game').classList.toggle('v-overview', name === 'overview' || name === 'free');
