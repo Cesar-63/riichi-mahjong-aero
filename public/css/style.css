@@ -698,7 +698,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 /* bottom: Puntos and the timer on the left, the calls on the right */
 #hud3d .bottom-left, #hud3d .actions {
   position: absolute;
-  bottom: calc(var(--hand3d-h, 110px) + 14px);
+  bottom: calc(var(--hand3d-h, 110px) + 14px + var(--partner-h, 0px));
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -753,7 +753,7 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 #hud3d .ask {
   position: absolute;
   left: max(16px, calc(150 * var(--px)));
-  bottom: calc(var(--hand3d-h, 110px) + 76px);
+  bottom: calc(var(--hand3d-h, 110px) + 76px + var(--partner-h, 0px));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -897,37 +897,49 @@ label.check input { width: 16px; height: 16px; margin: 0; accent-color: var(--re
 }
 
 /* ------------------------------------------------------------ teammate's hand */
-/* a navy box (its class list is rewritten by renderPartner) */
+/* a translucent row just above my own hand, its label on the left */
+#game { --pt: clamp(18px, calc((100vw - 260px) / 17), 32px); } /* its tile width */
 #partner {
   position: fixed;
   z-index: 12;
-  padding: 8px 10px;
-  color: var(--cream);
-  background: var(--navy);
-  border: 1px solid var(--navy-rim);
-  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4px var(--navy-inner), 0 12px 30px rgba(0, 0, 0, .6);
+  left: 50%;
+  bottom: calc(var(--hand3d-h, 110px) + 6px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: calc(100vw - 16px);
+  opacity: .72;
+  transition: opacity .15s;
 }
-#partner.docked { top: 50%; transform: translateY(-50%); }
-#partner.docked.left { left: 80px; } /* beside the closed sidebar */
-#partner.docked.right { right: 12px; }
-#partner.floating { top: 54px; left: 50%; transform: translateX(-50%); }
+#partner:hover { opacity: .97; }
 #partner-toggle {
-  width: 100%;
-  text-align: left;
-  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0 0 2px;
   color: var(--cream);
   background: none;
   border: 0;
-  font-family: var(--f-title);
-  font-size: 17px;
+  text-align: right;
+  text-shadow: var(--glow-dark);
+  white-space: nowrap;
 }
-#partner-toggle .hint { font-family: var(--f-body); font-size: 12px; color: #8d98bd; }
-#partner-body { display: none; padding-top: 8px; }
-#partner.open #partner-body { display: block; }
-#partner-hand { display: flex; flex-wrap: wrap; row-gap: 8px; align-items: flex-end; }
-#partner-hand .tile { --w: var(--pt, 36px); margin: 0 2px 0 0; cursor: pointer; transition: transform .1s; }
+#partner-toggle .es { font-family: var(--f-title); font-size: 15px; line-height: 1.1; }
+#partner-toggle .jp { font-family: var(--f-mincho); font-size: 11px; letter-spacing: 3px; color: var(--navy-text); }
+#partner-toggle b { font-family: var(--f-body); font-size: 12px; font-weight: 700; color: var(--gold); max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+#partner-hand { display: none; align-items: flex-end; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .6)); }
+#partner.open #partner-hand { display: flex; }
+#partner-hand .tile { --w: var(--pt); margin: 0 2px 0 0; cursor: pointer; transition: transform .1s; }
 #partner-hand .tile:hover { transform: translateY(-4px); filter: drop-shadow(0 0 6px var(--gold)); }
-#partner .hint { margin: 6px 0 0; font-size: 12px; color: var(--navy-text); }
+#partner-hand .gap { width: calc(var(--pt) * .45); }
+/* the calls, Puntos and requests move up above the row */
+#game.with-partner { --partner-h: calc(var(--pt) * 1.5 + 10px); }
+@media (max-width: 760px) {
+  #partner { flex-direction: column; align-items: center; gap: 2px; }
+  #partner-toggle { flex-direction: row; align-items: baseline; gap: 8px; }
+  #game.with-partner { --partner-h: calc(var(--pt) * 1.5 + 30px); }
+}
 .gap { display: inline-block; width: calc(var(--u) * 1.2); flex: none; }
 /* a requested tile glows orange */
 .tile.asked .tf { outline: 3px solid #ffb02e; outline-offset: 1px; }
