@@ -650,11 +650,11 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   background-color: var(--wall-grey);
   background-image:
     var(--stains),
-    var(--grime),
-    repeating-linear-gradient(0deg, rgba(14, 14, 15, .6) 0 2px, transparent 2px 180px),
-    repeating-linear-gradient(90deg, rgba(14, 14, 15, .6) 0 2px, transparent 2px 180px),
-    radial-gradient(ellipse 40% 60% at var(--lamp-x) 46%, rgba(255, 217, 166, .2), rgba(255, 217, 166, 0) 100%),
-    linear-gradient(180deg, #3a3c3e, var(--wall-grey) 40%, #333537);
+    var(--stains),
+    radial-gradient(ellipse 40% 60% at var(--lamp-x) 46%, rgba(255, 217, 166, .16), rgba(255, 217, 166, 0) 100%),
+    url(../img/floor-tiles.svg);
+  background-position: 0 0, 230px 170px, 0 0, -40px -20px;
+  background-attachment: fixed;
 }
 #lobby.waiting .room-fx :is(.cord, .lamp, .cone) { display: none; }
 #lobby.waiting .room-fx .smoke { top: 18%; }
@@ -696,16 +696,50 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   text-align: center;
   color: var(--cream);
   text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
-  border: 16px solid transparent;
+  position: relative;
+  border: 16px solid var(--table-wood);
+  border-image: url(../img/table-frame.svg) 16 stretch;
+  /* the felt after years of nights (img/felt-wear.svg) */
   background:
-    var(--grime) padding-box,
-    radial-gradient(circle at 50% 45%, rgba(255, 217, 166, .12) 0%, rgba(255, 217, 166, 0) 55%) padding-box,
-    radial-gradient(circle at 50% 50%, var(--felt-centre) 0%, var(--felt) 45%, var(--felt-edge) 80%, #22392a 100%) padding-box,
-    var(--grime) border-box,
-    var(--table-wood) border-box;
-  box-shadow: inset 0 0 0 2px var(--apron), inset 0 0 40px rgba(0, 0, 0, .55), 0 24px 40px rgba(0, 0, 0, .65);
+    url(../img/felt-wear.svg) 0 0 / 100% 100% no-repeat,
+    var(--grime),
+    radial-gradient(circle at 50% 45%, rgba(255, 217, 166, .1) 0%, rgba(255, 217, 166, 0) 55%),
+    radial-gradient(circle at 50% 50%, var(--felt-centre) 0%, var(--felt) 45%, var(--felt-edge) 80%, #22392a 100%);
+  filter: saturate(.8);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, .6), 0 24px 40px rgba(0, 0, 0, .7);
 }
-.w-felt .es { font-family: var(--f-title); font-size: 26px; }
+.w-table { position: relative; }
+.junk { position: absolute; pointer-events: none; background: center / contain no-repeat; }
+/* an overflowing ashtray on the corner of the table */
+.w-felt .ashtray { right: -30px; top: -30px; width: 74px; height: 74px; background-image: url(../img/ashtray.svg); transform: rotate(20deg); }
+.w-table .butts { width: 150px; height: 89px; background-image: url(../img/butts.svg); }
+.w-table .b1 { left: 4%; bottom: -70px; transform: rotate(-12deg); }
+.w-table .b2 { right: 2%; top: -40px; width: 110px; height: 65px; transform: rotate(160deg); }
+/* something spilt and never mopped */
+.w-table .spill {
+  left: 6%;
+  top: 4%;
+  width: 150px;
+  height: 110px;
+  background:
+    radial-gradient(ellipse 40% 45% at 45% 50%, rgba(18, 14, 8, .55), rgba(18, 14, 8, 0) 70%),
+    radial-gradient(ellipse 22% 18% at 74% 30%, rgba(18, 14, 8, .45), rgba(18, 14, 8, 0) 70%),
+    radial-gradient(ellipse 14% 12% at 20% 80%, rgba(18, 14, 8, .4), rgba(18, 14, 8, 0) 70%);
+  transform: rotate(-20deg);
+}
+/* a tile on the floor, face down, under where a player sits: someone's
+   spare */
+.w-table .dropped {
+  right: 14%;
+  bottom: -46px;
+  width: 22px;
+  height: 29px;
+  background: linear-gradient(160deg, #d8b36a, #c49c4e 40%, #8a6426);
+  border-radius: 3px;
+  box-shadow: 2px 3px 0 #e9e1c9, 3px 5px 5px rgba(0, 0, 0, .6);
+  transform: rotate(28deg);
+}
+.w-felt .es { position: relative; font-family: var(--f-title); font-size: 26px; }
 .w-felt small { font-size: 13px; max-width: 240px; }
 /* a seat: a wooden plaque with the player's team as a tag */
 .w-seat {
@@ -782,6 +816,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   #waiting { grid-template-columns: minmax(0, 1fr); }
   .w-table { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
   .w-felt { border-width: 10px; }
+  .w-table :is(.b1, .dropped) { display: none; }
+  .w-felt .ashtray { right: -20px; top: -20px; width: 54px; height: 54px; }
   .w-seat { padding: 6px 8px; }
 }
 @media (max-width: 480px) {

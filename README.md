@@ -150,9 +150,13 @@ Pantallas:
   jugar** con los tres modos, tu nombre y la sala, y la hoja **Reglas de la
   casa** pegada a la pared, con la lámpara colgando entre las dos. **Reglas
   del salón** abre las reglas completas.
-- **Sala de espera**: la mesa (paño gastado y marco gris sin barnizar)
-  dibujada desde arriba bajo la luz, con los cuatro asientos como tablillas
-  de madera (los libres, marcados con tiza)
+- **Sala de espera** (la trastienda): vista desde arriba, un piso de
+  baldosas baratas rajadas y sucias, con mugre en las juntas, colillas,
+  ceniza, algo derramado y una ficha boca abajo tirada en el suelo. La mesa
+  tiene el paño pelado donde se arrastran las fichas, quemaduras de
+  cigarro, un cerco de vaso, un tajo parchado con cinta, el marco gris
+  astillado y un cenicero rebosante en la esquina. Los cuatro asientos son
+  tablillas de madera (los libres, marcados con tiza)
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 130">
+  <!-- Stubbed-out cigarettes and ash on the floor, one ground in with a heel. -->
+  <defs>
+    <linearGradient id="filt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2b46e"/><stop offset="1" stop-color="#9c6f33"/></linearGradient>
+    <linearGradient id="pap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1ece0"/><stop offset="1" stop-color="#b9b2a2"/></linearGradient>
+    <filter id="ash"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="sh"><feGaussianBlur stdDeviation="1.2"/></filter>
+    <filter id="speck" x="0" y="0" width="1" height="1">
+      <feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="2" seed="4" result="t"/>
+      <feColorMatrix in="t" values="0 0 0 0 .45  0 0 0 0 .44  0 0 0 0 .42  0 0 0 4 -2.6" result="c"/>
+      <feComposite in="c" in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+  <!-- ash smears -->
+  <ellipse cx="70" cy="70" rx="48" ry="20" fill="#8d8a84" opacity=".35" filter="url(#ash)"/>
+  <ellipse cx="160" cy="90" rx="30" ry="12" fill="#8d8a84" opacity=".3" filter="url(#ash)"/>
+  <ellipse cx="70" cy="70" rx="56" ry="26" fill="#000" filter="url(#speck)"/>
+  <!-- butts -->
+  <g transform="rotate(-18 60 60)">
+    <rect x="42" y="56" width="34" height="8" rx="2" fill="#000" opacity=".5" filter="url(#sh)" transform="translate(2 3)"/>
+    <rect x="42" y="56" width="16" height="8" rx="1.5" fill="url(#filt)"/>
+    <rect x="58" y="56" width="14" height="8" fill="url(#pap)"/>
+    <path d="M72 56 h4 q3 4 0 8 h-4 z" fill="#3a3632"/>
+  </g>
+  <g transform="rotate(34 120 50)">
+    <rect x="104" y="44" width="30" height="7" rx="2" fill="#000" opacity=".5" filter="url(#sh)" transform="translate(2 3)"/>
+    <rect x="104" y="44" width="15" height="7" rx="1.5" fill="url(#filt)"/>
+    <rect x="119" y="44" width="11" height="7" fill="url(#pap)"/>
+    <path d="M130 44 h3 q3 3.5 0 7 h-3 z" fill="#2a2724"/>
+  </g>
+  <!-- the one ground in: flattened, torn, paper splayed -->
+  <g transform="rotate(8 160 95)">
+    <path d="M140 90 l14 -3 l3 9 l-14 3 z" fill="url(#filt)"/>
+    <path d="M157 87 l10 -1 l6 4 l-4 3 l4 3 l-12 1 z" fill="#d8d1c2"/>
+    <path d="M169 90 l8 2" stroke="#2a2724" stroke-width="2"/>
+  </g>
+  <g transform="rotate(-70 30 100)">
+    <rect x="22" y="96" width="13" height="7" rx="1.5" fill="url(#filt)"/>
+    <path d="M35 96 h4 q3 3.5 0 7 h-4 z" fill="#3a3632"/>
+  </g>
+</svg>
