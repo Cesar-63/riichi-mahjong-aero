@@ -623,11 +623,15 @@ $('#partner-hand').addEventListener('click', (e) => {
   const id = Number(t.dataset.id);
   api('request', { tile: v.partner.myRequest === id ? null : id });
 });
-$('#partner-toggle').addEventListener('click', () => {
-  state.ui.partnerOpen = !state.ui.partnerOpen;
-  store.set('mj.partnerOpen', state.ui.partnerOpen ? '1' : '0');
+function setPartnerOpen(open) {
+  state.ui.partnerOpen = open;
+  store.set('mj.partnerOpen', open ? '1' : '0');
+  $('#partneropen').checked = open;
   if (state.view) renderPartner(state.view, state.ui);
-});
+}
+$('#partner-toggle').addEventListener('click', () => setPartnerOpen(!state.ui.partnerOpen));
+$('#partneropen').checked = state.ui.partnerOpen;
+$('#partneropen').addEventListener('change', (e) => setPartnerOpen(e.target.checked));
 
 // Discard style: click to pick a tile up and again to discard it (the
 // default), or a single click.
@@ -714,6 +718,21 @@ document.addEventListener('click', (e) => {
 $('#rules-link').addEventListener('click', (e) => {
   e.preventDefault();
   $('#rules-dialog').showModal();
+});
+// gameplay options: one sheet, from the lobby and from the in-game menu
+$('#options-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  $('#options-dialog').showModal();
+});
+$('#m-options').addEventListener('click', () => {
+  setMenu(false);
+  $('#options-dialog').showModal();
+});
+// closing the sheet while a key is being chosen keeps the old key
+$('#options-dialog').addEventListener('close', () => {
+  if (!choosingKey) return;
+  choosingKey = false;
+  $('#viewkey-name').textContent = keyLabel(state.ui.viewKey);
 });
 $('#m-rules').addEventListener('click', () => {
   setMenu(false);
