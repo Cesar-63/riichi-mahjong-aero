@@ -229,7 +229,10 @@ primera partida.
 - Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
   una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
   pantalla, levemente inclinadas para que se vea el canto superior, y con el
-  tamaño ajustado al ancho y alto de la pantalla. La mano siempre deja libre
+  tamaño ajustado al ancho y alto de la pantalla. No hay recuadro detrás:
+  solo la penumbra del lado del jugador, una sombra suave sin bordes que sube
+  desde el borde de la pantalla para que las fichas se lean sobre el marco
+  de la mesa. La mano siempre deja libre
   el lugar de la ficha robada, así no se corre cada vez que robas. La ficha
   robada vuela desde su hueco del muro hasta ese lugar. Al descartar de la
   mano (tedashi), la ficha robada sube, pasa por encima de las demás y baja a
