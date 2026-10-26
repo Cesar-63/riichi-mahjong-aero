@@ -1422,6 +1422,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #partner-hand .tile { --w: var(--pt); margin: 0 2px 0 0; cursor: pointer; transition: transform .1s; }
 #partner-hand .tile:hover { transform: translateY(-4px); filter: drop-shadow(0 0 6px var(--gold)); }
 #partner-hand .gap { width: calc(var(--pt) * .45); }
+#partner-hand .slot { visibility: hidden; cursor: default; }
 /* the calls, Puntos and requests move up above the row */
 #game.with-partner { --partner-h: calc(var(--pt) * 1.5 + 10px); }
 @media (max-width: 760px) {

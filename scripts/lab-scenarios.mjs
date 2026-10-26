@@ -85,6 +85,8 @@ const scenes = [];
 // ------------------------------------------------------- discards, draws
 {
   const g = Game.create(NAMES, {}, seeded(3));
+  g.s.honba = 3; // three honba sticks at my right (I deal), out of my tray
+  g.s.kyoutaku = 2; // two riichi deposits left from earlier hands, in the middle
   const rec = recorder();
   rec.add(g, 900);
   // me: a tile from inside the hand (tedashi), then the others tsumogiri
@@ -105,7 +107,7 @@ const scenes = [];
     passAll(g);
     rec.add(g);
   }
-  scenes.push({ id: 'discards', name: 'Robos y descartes', note: 'Tu descarte de la mano (tedashi), los rivales robando y descartando, y tu tsumogiri.', steps: rec.steps, length: rec.end + 800 });
+  scenes.push({ id: 'discards', name: 'Robos y descartes', note: 'Tu descarte de la mano (tedashi), los rivales robando y descartando, y tu tsumogiri. Honba 3: los tres palitos de 100 a tu derecha (eres oya). Dos depósitos de riichi de manos anteriores en el centro.', steps: rec.steps, length: rec.end + 800 });
 }
 
 // ------------------------------------------------------------ rival pon
