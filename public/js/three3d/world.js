@@ -86,10 +86,11 @@ export function createWorld(container, { signal } = {}) {
     };
     // aimed nearer than the scaled view, so the player's own wall (further
     // out on the larger table) shows above the hand and the calls against
-    // the player's edge show in the right-hand corner
+    // the player's edge show in the right-hand corner; close enough that
+    // the felt runs on behind the hand, so it never floats over the floor
     views.player = portrait ? views.overview : {
-      pos: new THREE.Vector3(0, 14.5 * k + 3.5, 24 * k + 4),
-      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 6.5),
+      pos: new THREE.Vector3(0, 13 * k + 3.5, 21 * k + 3.8),
+      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 5.4),
     };
     // the drawer comes out of the player's edge of the table
     views.drawer = {
