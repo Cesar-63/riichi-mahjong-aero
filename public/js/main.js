@@ -35,7 +35,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: 0, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: null, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -96,7 +96,7 @@ const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 function showLobby(data) {
   state.view = null;
   // automatic play is per game (sorting is a preference and stays)
-  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false, lastEvent: null });
   showAutoButtons();
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
@@ -204,6 +204,9 @@ function showGame(v) {
     if (state.view !== v) return;
     t.update(v, ui);
   });
+  // entering a game (a reload, joining or coming back to a room) catches up
+  // with its recent events without shouting the calls made before
+  if (ui.lastEvent === null) ui.lastEvent = Math.max(0, ...v.events.map((e) => e.id));
   showCallouts($('#hud3d'), v, ui);
   // the teammate's hand waits for the deal to end (server clock and animation)
   if (v.intro) {

@@ -1090,17 +1090,18 @@ export function createTable3D(container, { onPick, signal } = {}) {
   }
   // Honba counters: one 100 stick per honba, which the dealer takes from
   // their tray and lays on the felt at their right, just past the dice,
-  // side by side and pointing to the centre. They stay out while the hand's
-  // dice do (the same key). Their inner ends stop short of the first tiles
-  // of the next player's pond (which reach z = 3.39), so they never slip
-  // under them.
+  // side by side and lying across in front of them (the dealer sees them
+  // level, like a riichi stick), each row centred on the dice. They stay
+  // out while the hand's dice do (the same key). The row stops short of the
+  // first tiles of the next player's pond (which reach z = 3.39), so the
+  // sticks never slip under them.
   const honbaOnTable = (v) => (v.wall && v.phase !== 'end' ? v.honba : 0);
   function honbaRest(v, k) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
     const row = Math.floor(k / 5); // five to a row, a second row on top
-    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 5.15);
-    const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
-    return { p: local.applyQuaternion(qSeat[dealerRel]), q };
+    const inRow = Math.min(5, honbaOnTable(v) - row * 5);
+    const local = new THREE.Vector3(7.25, 0.05 + row * 0.1, 4.6 + ((k % 5) - (inRow - 1) / 2) * 0.46 + row * 0.23);
+    return { p: local.applyQuaternion(qSeat[dealerRel]), q: qSeat[dealerRel].clone() };
   }
   // Riichi deposits left from earlier hands (kyoutaku that nobody has won
   // yet): their 1000 sticks wait in the middle of the table, side by side
