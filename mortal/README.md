@@ -38,10 +38,10 @@ Si algo falla, decide majiang-ai (el nivel normal).
   `tools/strip_pyo3.py` de forma mecánica: quita atributos de Python y las
   funciones que reciben tipos de Python; el resto queda igual.
 - `encoder/` es nuestro: la API en C que expone el codificador a JavaScript.
-- Nuestras partidas son al Este (tonpuusen) y Mortal solo conoce el hanchan;
-  juega igual, sin ajustes. Se probó mostrarle nuestro Este como el Sur de un
-  hanchan (para que supiera que quedan pocas manos) y jugó peor: ver
-  [Fuerza](#velocidad-y-fuerza).
+- Nuestras partidas son al Este (tonpuusen) y Mortal solo conoce el hanchan:
+  juega nuestro Este como el Este de un hanchan, sin ajustes. Se probaron dos
+  ajustes y ninguno mejoró (ver [Fuerza](#velocidad-y-fuerza)). La regla
+  anti-agarasu, que está fuera de la red, sí sabe que Este 4 es la última mano.
 
 ## Verificación
 
@@ -81,6 +81,12 @@ Si algo falla, decide majiang-ai (el nivel normal).
   más avanzada y juega demasiado a la defensiva. Por eso se quitó. Los bots
   normales, entre ellos, ganan el 22,5 % de las manos y reparten ron en el
   13,4 %.
+- **Avisarle solo en Este 4 que es la última mano** (la fila de progreso de la
+  observación con el valor de Sur 4): otras 1.024 partidas con muros nuevos.
+  Cambió el resultado de 305 de 512 partidas, pero no mejoró: 2,383 ± 0,096 con
+  el aviso y **2,344 ± 0,103** sin él; en los mismos muros, 0,039 ± 0,058 puestos
+  peor. Tampoco se dejó. Juntando las dos tandas, Mortal tal cual queda en
+  2,32 de puesto medio en 1.024 partidas contra 3 bots normales.
 
 ## Rehacer las piezas
 

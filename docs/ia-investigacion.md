@@ -24,7 +24,8 @@ ver [§6](#6-búsqueda-ampliada-más-opciones).
 > por decisión. En 512 partidas duplicadas (1 difícil contra 3 normales) el
 > puesto medio del difícil fue 2,31 ± 0,11: más fuerte que el normal. El ajuste
 > de tonpuusen previsto en el plan (mostrar el Este como Sur) se probó en otras
-> 512 y lo empeoró, así que se quitó. El juego pasó a AGPL-3.0. Detalles en [mortal/README.md](../mortal/README.md).
+> 512 y lo empeoró, y avisarle solo en Este 4 tampoco mejoró: juega nuestro
+> Este como el Este de un hanchan. El juego pasó a AGPL-3.0. Detalles en [mortal/README.md](../mortal/README.md).
 
 ## Resumen
 
