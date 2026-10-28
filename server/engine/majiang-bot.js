@@ -106,7 +106,7 @@ function messages(log, seat) {
 
 // True when winning now would end the game with this seat still last
 // (アガラス). The engine's end rules, without pao, and no ura dora (hidden).
-function winsIntoLast(game, seat, from) {
+export function winsIntoLast(game, seat, from) {
   const s = game.s;
   const k = s.k;
   const tsumo = from === null;

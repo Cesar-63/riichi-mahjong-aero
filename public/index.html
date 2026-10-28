@@ -40,16 +40,27 @@
           <span class="jp">団体戦</span></label>
         <label><input type="radio" name="mode" value="practice">
           <span class="mark" aria-hidden="true"></span>
-          <span class="txt"><b>Práctica</b><small>Contra bots que descartan lo que roban</small></span>
+          <span class="txt"><b>Práctica</b><small>Contra bots, normales o difíciles</small></span>
           <span class="jp">稽古</span></label>
       </div>
       <div class="fields">
         <label><span class="chalk">Tu nombre</span><input id="name" maxlength="16" autocomplete="nickname"></label>
         <label class="room-field"><span class="chalk">Sala</span><input id="room" maxlength="24" placeholder="publica"></label>
         <label class="mate-field check"><input type="checkbox" id="practice-mate"><span class="chalk">Con Bot 1 de compañero (por equipos)</span></label>
+        <div class="bots-field" role="group" aria-labelledby="bots-label">
+          <span class="chalk" id="bots-label">Nivel de los bots <small>(práctica y al rellenar con bots)</small></span>
+          <div class="bot-levels">
+            <button type="button" class="bot-level" data-bot="1" aria-pressed="false">Bot 1 · <b>normal</b></button>
+            <button type="button" class="bot-level" data-bot="2" aria-pressed="false">Bot 2 · <b>normal</b></button>
+            <button type="button" class="bot-level" data-bot="3" aria-pressed="false">Bot 3 · <b>normal</b></button>
+          </div>
+        </div>
       </div>
       <div class="board-foot">
-        <a href="#reglas" id="rules-link">Reglas del salón</a>
+        <span class="foot-links">
+          <a href="#reglas" id="rules-link">Reglas del salón</a>
+          <a href="https://github.com/Cesar-63/riichi-mahjong-aero" target="_blank" rel="noopener">Código fuente (AGPL)</a>
+        </span>
         <button id="join" class="paper seal" type="button"><span class="es">Entrar a la sala</span><span class="jp">入場</span></button>
       </div>
     </section>
@@ -176,7 +187,7 @@
     <ul>
       <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>
       <li><b>Por equipos:</b> Norte contra Sur, 2 y 2. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero). Al final se suman los resultados de cada equipo.</li>
-      <li><b>Práctica:</b> los bots solo descartan lo que roban y hacen pon y chi siempre que pueden (nunca ganan). Por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
+      <li><b>Práctica:</b> contra bots que juegan de verdad: ganan, declaran riichi y se defienden. Cada bot puede ser normal (la IA de 電脳麻将) o difícil (Mortal, una red neuronal entrenada con partidas de jugadores fuertes); los eliges en el menú. Por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
       <li>25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (oka +20 al primero).</li>
       <li>Kuitan (tanyao abierto) permitido. Tres akadora (un 5 rojo por palo).</li>
       <li>Sin kiriage mangan. Doble ron permitido; triple ron es empate abortivo.</li>

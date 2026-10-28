@@ -14,7 +14,14 @@ ver [§6](#6-búsqueda-ampliada-más-opciones).
 > bots juegan con majiang-ai. En 12 partidas entre bots (4.291 decisiones):
 > ninguna respuesta ilegal, ~39 ms por decisión de media y ~1 s en el peor
 > caso; 22,4 % de manos ganadas, 15,3 % de ron repartido, 21,8 % de riichi.
-> Lo siguiente es el paso 3 (bot "difícil" con Mortal).
+>
+> **Paso 3 hecho (opción B, todo dentro de la función):** bots difíciles con
+> Mortal y los pesos Mortal-S42, mezclables con los normales en la misma mesa.
+> libriichi va compilado a WASM sin su capa de Python, y la red en ONNX con
+> onnxruntime-web. Verificado: misma acción que PyTorch en 3.000 posiciones y
+> misma acción que el libriichi original en 23.198 posiciones. Unos 80 ms por
+> decisión. El juego pasó a AGPL-3.0. Detalles en
+> [mortal/README.md](../mortal/README.md).
 
 ## Resumen
 

@@ -1,0 +1,27 @@
+# Subset of Mortal's libriichi (https://github.com/Equim-chan/Mortal, commit
+# 0cff2b52982be5b1163aa9a62fb01f03ce91e0d2) without its Python layer, made by
+# ../tools/strip_pyo3.py. AGPL-3.0-or-later, like the original.
+[package]
+name = "libriichi"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+
+[lib]
+name = "riichi"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = "3"
+derivative = "2"
+ahash = { version = "0.8", default-features = false, features = ["std", "compile-time-rng"] }
+tinyvec = { version = "1", features = ["alloc", "serde", "rustc_1_57"] }
+flate2 = "1"
+byteorder = "1"
+boomphf = "0.6"
+ndarray = "0.16"
+
+[features]
+sp_reproduce_cpp_ver = []

@@ -297,3 +297,30 @@ test('fill with bots: the host starts now and bots take the empty seats', async 
   assert.ok(t.game.players[t.game.partner.seat].bot);
   assert.equal(t.game.players[t.game.partner.seat].team, me.team);
 });
+
+test('bot levels: each bot plays at the level chosen for it, practice and fill', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  let now = 12_000_000;
+  const call = async (body, room = 'bots-lv') => (await handle({ room, ...body }, store, now)).body;
+  const first = await call({ op: 'join', token: tokens[0], name: 'Yo', hb: true, levels: ['hard', 'normal', 'bogus'] });
+  const levels = (v) => Object.fromEntries(v.game.players.filter((p) => p.bot).map((p) => [p.name, p.level]));
+  assert.deepEqual(levels(first), { 'Bot 1': 'hard', 'Bot 2': 'normal', 'Bot 3': 'normal' });
+  const hard = first.game.players.findIndex((p) => p.name === 'Bot 1');
+  // the hard bot takes its turns like any other
+  let acted = false;
+  for (let step = 0; step < 300 && !acted; step++) {
+    now += 700;
+    const v = await call({ op: 'poll', token: tokens[0], hb: step % 5 === 0 });
+    acted = v.game.players[hard].discards.length > 0;
+    if (v.game.options && v.game.options.kind === 'turn') {
+      await call({ op: 'act', token: tokens[0], action: { type: 'discard', tile: v.game.drawn ?? v.game.options.discard[0] } });
+    } else if (v.game.options) await call({ op: 'act', token: tokens[0], action: { type: 'pass' } });
+    else if (v.game.phase === 'result') await call({ op: 'act', token: tokens[0], action: { type: 'ok' } });
+  }
+  assert.ok(acted, 'the hard bot discarded');
+
+  for (const t of tokens.slice(0, 2)) await call({ op: 'join', token: t, name: t.slice(0, 2), hb: true }, 'lv2');
+  const filled = await call({ op: 'fill', token: tokens[0], levels: ['normal', 'hard'] }, 'lv2');
+  assert.deepEqual(levels(filled), { 'Bot 1': 'normal', 'Bot 2': 'hard' });
+});

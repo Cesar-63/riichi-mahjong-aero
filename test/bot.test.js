@@ -37,33 +37,33 @@ function scripted(hands, wallStr, { kyokuNum = 0, scores } = {}) {
 
 const RON_HANDS = ['4m11z22z33z44z55z66z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'];
 
-test('the bot wins by tsumo', () => {
+test('the bot wins by tsumo', async () => {
   const g = scripted(['23m456p789s11p678s', '4m11z22z33z44z55z66z', '19m19p19s1234z56z7z', '258m258p258s1357z'], '1m');
   assert.ok(g.view(0).options.tsumo);
-  assert.deepEqual(botAction(g, 0), { type: 'tsumo' });
+  assert.deepEqual(await botAction(g, 0), { type: 'tsumo' });
 });
 
-test('the bot wins by ron', () => {
+test('the bot wins by ron', async () => {
   const g = scripted(RON_HANDS, '9p');
   g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
   assert.ok(g.view(1).options.ron);
-  assert.deepEqual(botAction(g, 1), { type: 'ron' });
+  assert.deepEqual(await botAction(g, 1), { type: 'ron' });
 });
 
-test('in the last hand the bot does not win into last place', () => {
+test('in the last hand the bot does not win into last place', async () => {
   // East 4, seat 1 far behind: a cheap ron would end the game with it last.
   const last = { kyokuNum: 3, scores: [40000, 10000, 25000, 25000] };
   let g = scripted(RON_HANDS, '9p', last);
   g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
   assert.ok(g.view(1).options.ron);
-  assert.deepEqual(botAction(g, 1), { type: 'pass' });
+  assert.deepEqual(await botAction(g, 1), { type: 'pass' });
   // the same ron is taken when it does not leave the bot last
   g = scripted(RON_HANDS, '9p', { kyokuNum: 3, scores: [40000, 20000, 20000, 20000] });
   g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
-  assert.deepEqual(botAction(g, 1), { type: 'ron' });
+  assert.deepEqual(await botAction(g, 1), { type: 'ron' });
 });
 
-test('a hand saved before the mjai log existed: bots fall back, the next hand logs', (t) => {
+test('a hand saved before the mjai log existed: bots fall back, the next hand logs', async (t) => {
   t.mock.method(console, 'error', () => {});
   const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(5));
   delete g.s.k.mjai;
@@ -71,7 +71,7 @@ test('a hand saved before the mjai log existed: bots fall back, the next hand lo
   for (let steps = 0; g.s.k === first; steps++) {
     assert.ok(steps < 2000);
     const seat = g.pendingSeats()[0];
-    g.act(seat, botAction(g, seat));
+    g.act(seat, await botAction(g, seat));
   }
   assert.equal(g.s.k.mjai[0].type, 'start_kyoku');
 });

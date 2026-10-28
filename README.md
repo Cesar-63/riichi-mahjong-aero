@@ -6,8 +6,10 @@ los juegos *Tetsuya*. Las reglas, la pared y el reparto de puntos los maneja el
 servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 - Sin build: HTML, CSS y JS (módulos ES) servidos estáticos. El servidor
-  tiene una sola dependencia, la IA de los bots
-  ([majiang-ai](https://github.com/kobalab/majiang-ai), MIT).
+  tiene dos dependencias, para las IA de los bots:
+  [majiang-ai](https://github.com/kobalab/majiang-ai) (MIT) y
+  [onnxruntime-web](https://www.npmjs.com/package/onnxruntime-web) (MIT).
+- Licencia **AGPL-3.0** (ver [Licencia](#licencia)).
 - El servidor es **una sola función de Vercel** (`api/game.js`) que guarda el
   estado de cada sala en **Upstash Redis**.
 - Funciona en cualquier navegador moderno (escritorio y móvil).
@@ -359,7 +361,22 @@ equipos. Sirve para jugar sin juntar a 4 personas. Cualquier sala cuyo código
 empiece por `bots-` funciona así, y los mismos bots ocupan los asientos libres
 con **Empezar y rellenar con bots**.
 
-### Cómo piensan los bots
+### Niveles de los bots
+
+Cada bot es **normal** o **difícil**, y en una misma mesa puede haber de los
+dos. En el menú, **Nivel de los bots** tiene Bot 1, Bot 2 y Bot 3: un clic
+cambia el nivel de cada uno (queda guardado en el navegador). Vale para la
+práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
+"bot" o "bot difícil".
+
+- **Normal:** majiang-ai (abajo). Unos 40 ms por decisión.
+- **Difícil:** [Mortal](https://github.com/Equim-chan/Mortal), una red neuronal
+  entrenada con partidas de jugadores fuertes de Tenhou y Mahjong Soul (pesos
+  Mortal-S42). Unos 80 ms por decisión (hasta unos 250 ms) y medio segundo la
+  primera vez que carga la red. Si algo falla, decide majiang-ai. Detalles,
+  verificación y licencias en [mortal/README.md](mortal/README.md).
+
+### Cómo piensan los bots normales
 
 Juegan con **majiang-ai**, la IA del juego web japonés 電脳麻将 (Denno Majan),
 de Satoshi Kobayashi (licencia MIT, sin redes neuronales):
@@ -430,7 +447,7 @@ a un servicio de tiempo real (ver "Limitaciones").
 Requiere Node.js 20 o superior.
 
 ```sh
-npm install      # la IA de los bots
+npm install      # las IA de los bots
 npm run dev      # http://localhost:3000 (store en memoria)
 npm test         # tests del motor, puntuación y salas
 ```
@@ -485,6 +502,8 @@ server/engine/hand.js    Descomposición de manos, esperas, shanten
 server/engine/mjai.js    Notación y registro mjai, vista por asiento
 server/engine/bot.js     Bots: decisión, peticiones del compañero, respaldo
 server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-core)
+server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
+mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas
 public/                  Cliente (index.html, css/, js/)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
@@ -516,3 +535,27 @@ las manos ajenas ni la pared).
   primero en orden de turno desde quien descartó.
 - En pao se aplica la responsabilidad a todo el valor de la mano.
 - En móvil vertical se ve siempre la mesa entera desde arriba.
+
+## Licencia
+
+El juego se publica con la **GNU Affero General Public License v3.0**
+([LICENSE](LICENSE)), porque incluye código de Mortal, que usa esa licencia. En
+la práctica: cualquiera puede usar, modificar y hospedar el juego, siempre que
+publique su código con la misma licencia, también si solo lo ofrece por
+internet. El menú tiene el enlace **Código fuente (AGPL)**.
+
+Componentes de terceros:
+
+| | Licencia |
+| --- | --- |
+| Mortal / libriichi (`mortal/libriichi`) | AGPL-3.0-or-later |
+| Pesos Mortal-S42 (`server/engine/mortal/mortal-s42.onnx`) | Apache-2.0 |
+| majiang-ai y majiang-core | MIT |
+| onnxruntime-web | MIT |
+| three.js (`public/vendor/three/`) | MIT |
+| Fichas FluffyStuff | CC0 |
+
+**Contribuciones.** Para poder reutilizar el código propio en otros proyectos
+(incluso con otra licencia), las contribuciones externas se aceptan solo si su
+autor acepta ceder ese permiso al dueño del repositorio.
+
