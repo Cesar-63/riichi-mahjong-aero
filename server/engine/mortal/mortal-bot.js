@@ -57,12 +57,13 @@ function best(q, mask, skip = -1) {
 // Prefers spending a red five, as Mortal does when it calls.
 const withRed = (options, ids) => options.find((x) => ids(x).some(isAka)) ?? options[0];
 
-export async function mortalAction(game, seat) {
+// `tonpuusen` can be forced off to compare with Mortal's own Python bot.
+export async function mortalAction(game, seat, { tonpuusen = game.s.config.rounds === 1 } = {}) {
   const s = game.s;
   const k = s.k;
   const o = game.view(seat).options;
   if (!o) return null;
-  const opts = { tonpuusen: s.config.rounds === 1 };
+  const opts = { tonpuusen };
   const events = mjaiView(k.mjai, seat);
   const enc = encode(events, seat, opts);
   if (!enc) return null;

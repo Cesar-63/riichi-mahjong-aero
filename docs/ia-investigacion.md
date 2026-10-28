@@ -19,9 +19,11 @@ ver [§6](#6-búsqueda-ampliada-más-opciones).
 > Mortal y los pesos Mortal-S42, mezclables con los normales en la misma mesa.
 > libriichi va compilado a WASM sin su capa de Python, y la red en ONNX con
 > onnxruntime-web. Verificado: misma acción que PyTorch en 3.000 posiciones y
-> misma acción que el libriichi original en 23.198 posiciones. Unos 80 ms por
-> decisión. El juego pasó a AGPL-3.0. Detalles en
-> [mortal/README.md](../mortal/README.md).
+> misma acción que el libriichi original en 23.198 posiciones, y de punta a
+> punta lo mismo que el bot oficial de Mortal en 1.867 decisiones. Unos 70 ms
+> por decisión. En 240 partidas duplicadas (1 difícil contra 3 normales) el
+> puesto medio del difícil fue 2,50 ± 0,16: sin diferencia medible todavía. El
+> juego pasó a AGPL-3.0. Detalles en [mortal/README.md](../mortal/README.md).
 
 ## Resumen
 

@@ -372,9 +372,11 @@ práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
 - **Normal:** majiang-ai (abajo). Unos 40 ms por decisión.
 - **Difícil:** [Mortal](https://github.com/Equim-chan/Mortal), una red neuronal
   entrenada con partidas de jugadores fuertes de Tenhou y Mahjong Soul (pesos
-  Mortal-S42). Unos 80 ms por decisión (hasta unos 250 ms) y medio segundo la
-  primera vez que carga la red. Si algo falla, decide majiang-ai. Detalles,
-  verificación y licencias en [mortal/README.md](mortal/README.md).
+  Mortal-S42). Unos 70 ms por decisión (hasta unos 300 ms; un riichi hace dos
+  consultas) y medio segundo la primera vez que carga la red. Si algo falla,
+  decide majiang-ai. Juega más prudente que el normal (reparte menos ron), pero
+  en 240 partidas de prueba no se midió que gane más: ver la fuerza medida,
+  la verificación y las licencias en [mortal/README.md](mortal/README.md).
 
 ### Cómo piensan los bots normales
 

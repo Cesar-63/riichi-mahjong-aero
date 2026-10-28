@@ -55,7 +55,29 @@ Si algo falla, decide majiang-ai (el nivel normal).
   libriichi original en 23.198 posiciones de 52 partidas. Las observaciones
   difieren como mucho en 7,5 × 10⁻⁹ por redondeo de las funciones matemáticas, y
   la red elige la misma acción en las 23.198 posiciones y en los 52 kanes.
+- **De punta a punta:** en 1.867 decisiones de 24 partidas (sin el ajuste de
+  tonpuusen, para comparar lo mismo), el bot difícil eligió exactamente lo
+  mismo que el `Bot` mjai oficial de Mortal en Python con los mismos pesos,
+  incluidos 35 riichi en dos pasos, pon y chi con cincos rojos, ankan, ron y
+  tsumo.
 - `test/mortal.test.js` prueba el codificador y el bot difícil en el juego.
+
+## Velocidad y fuerza
+
+- **Velocidad** (un hilo, sin otros procesos): codificador 0,7 ms de mediana y
+  160 ms como máximo; red 69 ms de mediana y 133 ms como máximo. Un riichi hace
+  dos consultas. La primera decisión de cada instancia carga la red (unos
+  0,6 s). Memoria: unos 480 MB.
+- **Fuerza:** 240 partidas duplicadas (60 juegos de muros, cada uno 4 veces con
+  el bot difícil en cada asiento contra 3 normales). Puesto medio del difícil:
+  **2,50 ± 0,16** (intervalo de 95 %), sin diferencia medible con los normales.
+  Juega como Mortal: más prudente, reparte menos ron (11,0 % de las manos contra
+  13,4 %), gana algo menos (18,7 % contra 22,5 %), declara menos riichi (17,3 %
+  contra 24,0 %) y llama menos (28,8 % contra 34,9 %). Esas cifras son casi las
+  que Mortal publica de sí mismo (11,3 % de ron repartido, 21,2 % de victorias,
+  18,9 % de riichi). Para separar diferencias de 0,1 puestos hacen falta miles de
+  partidas: la ventaja publicada de Mortal sobre akochan es de 0,09 puestos en
+  13.152 partidas. El efecto del ajuste de tonpuusen tampoco está medido.
 
 ## Rehacer las piezas
 
