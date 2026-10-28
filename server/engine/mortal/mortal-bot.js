@@ -57,15 +57,28 @@ function best(q, mask, skip = -1) {
 // Prefers spending a red five, as Mortal does when it calls.
 const withRed = (options, ids) => options.find((x) => ids(x).some(isAka)) ?? options[0];
 
+// Row 27 of the observation is the game's progress, kyoku / 7 (East 1 = 0,
+// South 4 = 1).
+const PROGRESS_ROW = 27;
+
 // Mortal plays our East-only games as it is: telling it that East is the
 // South of a hanchan made it play too safe (see mortal/README.md).
-export async function mortalAction(game, seat) {
+// `lastHand`: in East 4 of a tonpuusen, show it the progress of South 4.
+export async function mortalAction(game, seat, { lastHand = false } = {}) {
   const s = game.s;
   const k = s.k;
   const o = game.view(seat).options;
   if (!o) return null;
   const events = mjaiView(k.mjai, seat);
-  const enc = encode(events, seat);
+  const markLast = lastHand && s.config.rounds === 1 && s.round === 0 && s.kyokuNum === 3;
+  const look = (evs) => {
+    const r = encode(evs, seat);
+    if (r && markLast) {
+      for (const obs of [r.obs, r.kan && r.kan.obs]) if (obs) obs.fill(1, PROGRESS_ROW * 34, PROGRESS_ROW * 34 + 34);
+    }
+    return r;
+  };
+  const enc = look(events);
   if (!enc) return null;
   const q = await qValues(enc);
   let a = best(q, enc.mask);
@@ -84,7 +97,7 @@ export async function mortalAction(game, seat) {
       return id === undefined ? null : { type: 'discard', tile: id };
     }
     if (a === 37) {
-      const after = encode([...events, { type: 'reach', actor: seat }], seat);
+      const after = look([...events, { type: 'reach', actor: seat }]);
       if (!after) return null;
       const id = discard(best(await qValues(after), after.mask));
       return o.riichi.includes(id) ? { type: 'riichi', tile: id } : null;
