@@ -6,6 +6,7 @@ import {
 } from '../../public/js/shared/tiles.js';
 import { waits, isAgari, isKokushi, decompose } from './hand.js';
 import { evaluate, ronValue, tsumoValues, limitName } from './score.js';
+import { mjaiTile, mjaiWind } from './mjai.js';
 
 export const DEFAULT_CONFIG = {
   startScore: 25000,
@@ -69,6 +70,29 @@ export class Game {
     if (this.s.events.length > 12) this.s.events.shift();
   }
 
+  // Full mjai event log of the current kyoku (k.mjai), what the bots read.
+  // A hand saved before the log existed starts one mid-way.
+  log(e) {
+    if (!this.k.mjai) this.k.mjai = [];
+    this.k.mjai.push(e);
+  }
+
+  logStart() {
+    const s = this.s;
+    const k = this.k;
+    this.log({
+      type: 'start_kyoku',
+      bakaze: mjaiWind(s.round),
+      dora_marker: mjaiTile(k.dead[4]),
+      kyoku: s.kyokuNum + 1,
+      honba: s.honba,
+      kyotaku: s.kyoutaku,
+      oya: this.dealer(),
+      scores: s.players.map((p) => p.score),
+      tehais: k.hands.map((h) => h.map(mjaiTile)),
+    });
+  }
+
   // ---------------------------------------------------------------- kyoku
 
   startKyoku() {
@@ -114,6 +138,7 @@ export class Game {
       kuikae: [],
       pending: null,
       pao: four(() => ({ daisangen: null, daisuushii: null })),
+      mjai: [],
     };
     this.s.k = k;
     this.s.result = null;
@@ -121,6 +146,7 @@ export class Game {
       const seat = (this.dealer() + i) % 4;
       k.hands[seat] = k.wall.splice(0, 13);
     }
+    this.logStart();
     this.event({ type: 'start' });
     this.draw(this.dealer());
   }
@@ -148,6 +174,7 @@ export class Game {
     k.rinshan = rinshan;
     k.kuikae = [];
     this.s.phase = 'turn';
+    this.log({ type: 'tsumo', actor: seat, pai: mjaiTile(tile) });
   }
 
   // -------------------------------------------------------------- helpers
@@ -181,10 +208,13 @@ export class Game {
 
   flushPendingDora() {
     const k = this.k;
-    if (k.pendingDora > 0) {
-      k.doraCount += k.pendingDora;
-      k.pendingDora = 0;
-    }
+    for (; k.pendingDora > 0; k.pendingDora--) this.revealDora();
+  }
+
+  revealDora() {
+    const k = this.k;
+    this.log({ type: 'dora', dora_marker: mjaiTile(k.dead[4 + k.doraCount]) });
+    k.doraCount++;
   }
 
   buildCtx(seat, winTile, tsumo, chankan = false) {
@@ -425,7 +455,8 @@ export class Game {
     hand.splice(hand.indexOf(id), 1);
     const r = k.riichi[seat];
     if (r) r.ippatsu = false;
-    k.discards[seat].push({ tile: id, tsumogiri: id === k.drawn, riichi, called: false });
+    const tsumogiri = id === k.drawn;
+    k.discards[seat].push({ tile: id, tsumogiri, riichi, called: false });
     k.furitenTemp[seat] = false;
     if (riichi) k.riichiPending = { seat, double: k.discardCount[seat] === 0 && !k.callsMade };
     if (!k.callsMade && k.discardCount.reduce((a, b) => a + b, 0) < 4) k.firstDiscards.push(tileType(id));
@@ -435,6 +466,8 @@ export class Game {
     k.rinshan = false;
     k.kuikae = [];
     this.flushPendingDora();
+    if (riichi) this.log({ type: 'reach', actor: seat });
+    this.log({ type: 'dahai', actor: seat, pai: mjaiTile(id), tsumogiri });
     this.event({ type: riichi ? 'riichi' : 'discard', seat, tile: id });
     this.openWindow('discard', seat, id);
   }
@@ -447,7 +480,8 @@ export class Game {
     k.kanCount++;
     k.kansBy[seat]++;
     this.flushPendingDora();
-    k.doraCount++;
+    this.log({ type: 'ankan', actor: seat, consumed: ids.map(mjaiTile) });
+    this.revealDora();
     this.breakIppatsu();
     k.callsMade = true;
     k.drawn = null;
@@ -460,12 +494,14 @@ export class Game {
     const id = k.hands[seat].find((x) => tileType(x) === t);
     k.hands[seat].splice(k.hands[seat].indexOf(id), 1);
     const m = k.melds[seat].find((x) => x.type === 'pon' && tileType(x.tiles[0]) === t);
+    const consumed = m.tiles.map(mjaiTile);
     m.type = 'kakan';
     m.added = id;
     m.tiles.push(id);
     k.kanCount++;
     k.kansBy[seat]++;
     this.flushPendingDora();
+    this.log({ type: 'kakan', actor: seat, pai: mjaiTile(id), consumed });
     k.pendingDora++;
     this.breakIppatsu();
     k.callsMade = true;
@@ -512,6 +548,7 @@ export class Game {
       this.s.players[seat].score -= 1000;
       this.s.kyoutaku++;
       k.riichi[seat] = { double, ippatsu: true };
+      this.log({ type: 'reach_accepted', actor: seat });
       if (k.riichi.every(Boolean)) return this.abortiveDraw('suucha');
     }
     if (k.kanCount === 4 && k.kansBy.filter((n) => n > 0).length > 1) {
@@ -539,18 +576,22 @@ export class Game {
     const hand = k.hands[seat];
     const take = (ids) => ids.forEach((id) => hand.splice(hand.indexOf(id), 1));
     let meld;
+    let consumed;
     if (a.type === 'chi') {
       const opt = this.chiOptions(hand, t).find((x) => sameIds(x.tiles, a.tiles));
       take(a.tiles);
+      consumed = a.tiles;
       meld = { type: 'chi', tiles: [tile, ...sortTiles(a.tiles)], called: tile, from };
       k.kuikae = opt.forbid;
     } else if (a.type === 'pon') {
       take(a.tiles);
+      consumed = a.tiles;
       meld = { type: 'pon', tiles: [...a.tiles, tile], called: tile, from };
       k.kuikae = [t];
     } else {
       const ids = hand.filter((x) => tileType(x) === t);
       take(ids);
+      consumed = ids;
       meld = { type: 'minkan', tiles: [...ids, tile], called: tile, from };
       k.kanCount++;
       k.kansBy[seat]++;
@@ -558,6 +599,13 @@ export class Game {
       k.pendingDora++;
     }
     k.melds[seat].push(meld);
+    this.log({
+      type: a.type === 'minkan' ? 'daiminkan' : a.type,
+      actor: seat,
+      target: from,
+      pai: mjaiTile(tile),
+      consumed: consumed.map(mjaiTile),
+    });
 
     if (meld.type !== 'chi') {
       const trips = k.melds[seat].filter((m) => m.type !== 'chi').map((m) => tileType(m.tiles[0]));
@@ -610,9 +658,16 @@ export class Game {
         }
       }
       const gain = pay.reduce((a, b) => a + b, 0);
-      SEATS.forEach((x) => { deltas[x] -= pay[x]; });
-      deltas[w] += gain;
-      if (i === 0) deltas[w] += s.kyoutaku * 1000;
+      const own = pay.map((p) => -p);
+      own[w] += gain + (i === 0 ? s.kyoutaku * 1000 : 0);
+      SEATS.forEach((x) => { deltas[x] += own[x]; });
+      this.log({
+        type: 'hora',
+        actor: w,
+        target: tsumo ? w : from,
+        deltas: own,
+        ura_markers: ctx.riichi ? ctx.ura.map(mjaiTile) : [],
+      });
       wins.push({
         seat: w,
         from,
@@ -659,6 +714,7 @@ export class Game {
     }
     const hands = {};
     for (const x of tenpai) hands[x] = sortTiles(k.hands[x]);
+    this.log({ type: 'ryukyoku', deltas });
     this.event({ type: 'draw' });
     this.endKyoku(
       { type: 'draw', reason: nagashi.length ? 'nagashi' : 'exhaustive', tenpai, nagashi, hands, deltas },
@@ -667,6 +723,7 @@ export class Game {
   }
 
   abortiveDraw(reason, extra = {}) {
+    this.log({ type: 'ryukyoku', deltas: [0, 0, 0, 0] });
     this.event({ type: 'draw' });
     this.endKyoku({ type: 'draw', reason, abortive: true, deltas: [0, 0, 0, 0], tenpai: [], ...extra }, true);
   }
@@ -679,6 +736,7 @@ export class Game {
     const s = this.s;
     s.players.forEach((p, i) => { p.score += result.deltas[i]; });
     s.k.pending = null;
+    this.log({ type: 'end_kyoku' });
     const draw = result.type === 'draw';
     let { round, kyokuNum, honba } = s;
     if (renchan) honba++;

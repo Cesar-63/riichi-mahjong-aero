@@ -454,11 +454,37 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .fields input:not([type]):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .fields input::placeholder { color: var(--ink-soft); opacity: .45; }
 .fields .mate-field { flex-direction: row; grid-column: 1 / -1; font-size: 18px; display: none; }
+.fields .bots-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
+.fields .bots-field small { font-size: 15px; opacity: .8; }
+.bot-levels { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.bot-level {
+  position: relative;
+  padding: 4px 14px;
+  font-family: var(--f-hand);
+  font-size: 19px;
+  color: var(--chalk);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.bot-level b { font-weight: 400; }
+.bot-level[aria-pressed="true"] { color: var(--chalk-yellow); }
+.bot-level[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: -2px -4px;
+  pointer-events: none;
+  background: url(../img/chalk-ring.svg) center / 100% 100% no-repeat;
+}
+.bot-level:hover { color: var(--chalk-yellow); }
+.bot-level:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 #entry.practice .room-field { display: none; }
 #entry.practice .mate-field { display: flex; }
 #entry.practice .fields { grid-template-columns: minmax(0, 1fr); }
 .board-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; }
 .board-foot a { font-family: var(--f-hand); font-size: 19px; color: var(--chalk-yellow); }
+.foot-links { display: flex; flex-direction: column; gap: 2px; }
+.foot-links a + a { font-size: 16px; color: var(--chalk-soft); }
 
 /* the house rules, taped to the wall years ago */
 .house-rules {
