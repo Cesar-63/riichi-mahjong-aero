@@ -374,9 +374,10 @@ práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
   entrenada con partidas de jugadores fuertes de Tenhou y Mahjong Soul (pesos
   Mortal-S42). Unos 70 ms por decisión (hasta unos 300 ms; un riichi hace dos
   consultas) y medio segundo la primera vez que carga la red. Si algo falla,
-  decide majiang-ai. Juega más prudente que el normal (reparte menos ron), pero
-  en 240 partidas de prueba no se midió que gane más: ver la fuerza medida,
-  la verificación y las licencias en [mortal/README.md](mortal/README.md).
+  decide majiang-ai. En 512 partidas de prueba contra 3 normales quedó en el
+  puesto medio 2,31 (un rival igual daría 2,5): primero el 31 % de las veces y
+  último el 19 %. Fuerza medida, verificación y licencias en
+  [mortal/README.md](mortal/README.md).
 
 ### Cómo piensan los bots normales
 

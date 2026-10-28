@@ -67,10 +67,6 @@ pub struct PlayerState {
     pub(super) oya: u8,
     /// Including 西入 sudden death.
     pub(super) is_all_last: bool,
-    /// salón: an East-only game (tonpuusen) with sudden death in South.
-    /// Mortal knows hanchan only, so the East round is shown to it as the
-    /// South round of a hanchan and the South extension as the West one.
-    pub tonpuusen: bool,
     pub(super) dora_indicators: ArrayVec<[Tile; 5]>,
 
     /// 24 is the theoretical max size of kawa, however, since None is included

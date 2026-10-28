@@ -196,12 +196,7 @@ impl<'a> ObsEncoderContext<'a> {
         self.idx += 2;
 
         if matches!(self.version, 2 | 3 | 4) {
-            // salón: game progress of a tonpuusen as that of a hanchan's South
-            let n = if state.tonpuusen {
-                4 + state.kyoku
-            } else {
-                (state.bakaze.as_u8() - tu8!(E)).min(1) * 4 + state.kyoku
-            };
+            let n = (state.bakaze.as_u8() - tu8!(E)).min(1) * 4 + state.kyoku;
             IntegerEncoder::new(n as usize, 7)
                 .rescale(true)
                 .encode(&mut self);

@@ -6,9 +6,6 @@ use riichi::mjai::Event;
 use riichi::state::{ActionCandidate, PlayerState};
 use std::cell::RefCell;
 
-/// `flags` bit: the game is East-only (see `PlayerState::tonpuusen`).
-const FLAG_TONPUUSEN: u32 = 1;
-
 #[derive(Default)]
 struct Output {
     obs: Vec<f32>,
@@ -43,10 +40,9 @@ fn cans_bits(c: &ActionCandidate) -> u32 {
     .fold(0, |bits, (i, &b)| bits | (u32::from(b) << i))
 }
 
-fn run(log: &str, seat: u8, version: u32, flags: u32) -> anyhow::Result<Output> {
+fn run(log: &str, seat: u8, version: u32) -> anyhow::Result<Output> {
     let events: Vec<Event> = serde_json::from_str(log)?;
     let mut state = PlayerState::new(seat);
-    state.tonpuusen = flags & FLAG_TONPUUSEN != 0;
     let mut cans = ActionCandidate::default();
     for ev in &events {
         cans = state.update(ev)?;
@@ -89,12 +85,12 @@ pub unsafe extern "C" fn dealloc(ptr: *mut u8, len: usize) {
 /// # Safety
 /// `ptr` must point to `len` readable bytes.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn encode(ptr: *const u8, len: usize, seat: u32, version: u32, flags: u32) -> i32 {
+pub unsafe extern "C" fn encode(ptr: *const u8, len: usize, seat: u32, version: u32) -> i32 {
     // SAFETY: the caller wrote `len` bytes at `ptr`
     let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
     let result = std::str::from_utf8(bytes)
         .map_err(anyhow::Error::from)
-        .and_then(|log| run(log, seat as u8, version, flags));
+        .and_then(|log| run(log, seat as u8, version));
     OUT.with_borrow_mut(|out| match result {
         Ok(o) => {
             *out = o;

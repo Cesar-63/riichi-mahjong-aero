@@ -57,15 +57,15 @@ function best(q, mask, skip = -1) {
 // Prefers spending a red five, as Mortal does when it calls.
 const withRed = (options, ids) => options.find((x) => ids(x).some(isAka)) ?? options[0];
 
-// `tonpuusen` can be forced off to compare with Mortal's own Python bot.
-export async function mortalAction(game, seat, { tonpuusen = game.s.config.rounds === 1 } = {}) {
+// Mortal plays our East-only games as it is: telling it that East is the
+// South of a hanchan made it play too safe (see mortal/README.md).
+export async function mortalAction(game, seat) {
   const s = game.s;
   const k = s.k;
   const o = game.view(seat).options;
   if (!o) return null;
-  const opts = { tonpuusen };
   const events = mjaiView(k.mjai, seat);
-  const enc = encode(events, seat, opts);
+  const enc = encode(events, seat);
   if (!enc) return null;
   const q = await qValues(enc);
   let a = best(q, enc.mask);
@@ -84,7 +84,7 @@ export async function mortalAction(game, seat, { tonpuusen = game.s.config.round
       return id === undefined ? null : { type: 'discard', tile: id };
     }
     if (a === 37) {
-      const after = encode([...events, { type: 'reach', actor: seat }], seat, opts);
+      const after = encode([...events, { type: 'reach', actor: seat }], seat);
       if (!after) return null;
       const id = discard(best(await qValues(after), after.mask));
       return o.riichi.includes(id) ? { type: 'riichi', tile: id } : null;

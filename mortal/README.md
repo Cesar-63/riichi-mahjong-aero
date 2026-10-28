@@ -37,27 +37,24 @@ Si algo falla, decide majiang-ai (el nivel normal).
   codificador y **sin la capa de Python** (pyo3/numpy). La hace
   `tools/strip_pyo3.py` de forma mecánica: quita atributos de Python y las
   funciones que reciben tipos de Python; el resto queda igual.
-- **Tonpuusen.** Mortal solo conoce el hanchan, y la red recibe el progreso de
-  la partida (Este 1 = 0 … Sur 4 = 7). Con `PlayerState::tonpuusen`, nuestro
-  Este se le muestra como el Sur de un hanchan (quedan 4 manos y luego muerte
-  súbita, como el 西入 de Tenhou) y el Sur de muerte súbita como el Oeste. El
-  viento de ronda sigue siendo Este, así que los yaku se calculan bien. Son tres
-  cambios a mano, marcados con `salón:` en `state/player_state.rs`,
-  `state/update.rs` y `state/obs_repr.rs`.
 - `encoder/` es nuestro: la API en C que expone el codificador a JavaScript.
+- Nuestras partidas son al Este (tonpuusen) y Mortal solo conoce el hanchan;
+  juega igual, sin ajustes. Se probó mostrarle nuestro Este como el Sur de un
+  hanchan (para que supiera que quedan pocas manos) y jugó peor: ver
+  [Fuerza](#velocidad-y-fuerza).
 
 ## Verificación
 
 - La red en ONNX elige la misma acción que PyTorch en 3.000 posiciones de
   nuestras partidas (diferencia máxima 6,7 × 10⁻⁶; con los pesos guardados en
   16 bits, 0,004).
-- El codificador WASM, sin el ajuste de tonpuusen, da las mismas máscaras que el
-  libriichi original en 23.198 posiciones de 52 partidas. Las observaciones
+- El codificador WASM da las mismas máscaras que el libriichi original en
+  23.198 posiciones de 52 partidas. Las observaciones
   difieren como mucho en 7,5 × 10⁻⁹ por redondeo de las funciones matemáticas, y
   la red elige la misma acción en las 23.198 posiciones y en los 52 kanes.
-- **De punta a punta:** en 1.867 decisiones de 24 partidas (sin el ajuste de
-  tonpuusen, para comparar lo mismo), el bot difícil eligió exactamente lo
-  mismo que el `Bot` mjai oficial de Mortal en Python con los mismos pesos,
+- **De punta a punta:** en 1.867 decisiones de 24 partidas, el bot difícil
+  eligió exactamente lo mismo que el `Bot` mjai oficial de Mortal en Python con
+  los mismos pesos,
   incluidos 35 riichi en dos pasos, pon y chi con cincos rojos, ankan, ron y
   tsumo.
 - `test/mortal.test.js` prueba el codificador y el bot difícil en el juego.
@@ -68,16 +65,22 @@ Si algo falla, decide majiang-ai (el nivel normal).
   160 ms como máximo; red 69 ms de mediana y 133 ms como máximo. Un riichi hace
   dos consultas. La primera decisión de cada instancia carga la red (unos
   0,6 s). Memoria: unos 480 MB.
-- **Fuerza:** 240 partidas duplicadas (60 juegos de muros, cada uno 4 veces con
-  el bot difícil en cada asiento contra 3 normales). Puesto medio del difícil:
-  **2,50 ± 0,16** (intervalo de 95 %), sin diferencia medible con los normales.
-  Juega como Mortal: más prudente, reparte menos ron (11,0 % de las manos contra
-  13,4 %), gana algo menos (18,7 % contra 22,5 %), declara menos riichi (17,3 %
-  contra 24,0 %) y llama menos (28,8 % contra 34,9 %). Esas cifras son casi las
-  que Mortal publica de sí mismo (11,3 % de ron repartido, 21,2 % de victorias,
-  18,9 % de riichi). Para separar diferencias de 0,1 puestos hacen falta miles de
-  partidas: la ventaja publicada de Mortal sobre akochan es de 0,09 puestos en
-  13.152 partidas. El efecto del ajuste de tonpuusen tampoco está medido.
+- **Fuerza:** partidas duplicadas al Este con un bot difícil contra 3 normales:
+  128 juegos de muros, cada uno con el difícil en los 4 asientos, con y sin
+  mostrarle el Este como Sur (1.024 partidas). Intervalos de 95 % calculados por
+  juego de muros.
+
+  | 512 partidas cada uno | Puesto medio | Puntos Tenhou (90/45/0/−135) | 1º / 4º | Gana / reparte ron |
+  | --- | --- | --- | --- | --- |
+  | **Mortal tal cual (el que juega)** | **2,305 ± 0,107** | **+14,2 ± 7,7** | 30,7 % / 18,9 % | 23,1 % / 11,6 % de las manos |
+  | Con el Este mostrado como Sur | 2,453 ± 0,105 | +4,6 ± 8,1 | 24,0 % / 22,3 % | 18,1 % / 12,7 % |
+
+  Mortal tal cual es claramente más fuerte que el bot normal (un rival igual
+  daría 2,5 y 0 puntos). Mostrarle el Este como Sur lo empeora: en los mismos
+  muros queda 0,148 ± 0,124 puestos más abajo, porque cree que la partida está
+  más avanzada y juega demasiado a la defensiva. Por eso se quitó. Los bots
+  normales, entre ellos, ganan el 22,5 % de las manos y reparten ron en el
+  13,4 %.
 
 ## Rehacer las piezas
 
@@ -85,17 +88,15 @@ Si algo falla, decide majiang-ai (el nivel normal).
 # encoder.wasm (necesita: rustup target add wasm32-unknown-unknown)
 ./mortal/build.sh
 
-# libriichi/ desde un checkout de Mortal; después hay que volver a aplicar
-# los tres cambios "salón:" de tonpuusen
+# libriichi/ desde un checkout de Mortal (lib.rs se escribe a mano)
 python3 mortal/tools/strip_pyo3.py <Mortal> mortal/libriichi/src
 
 # mortal-s42.onnx (necesita torch y onnx)
 python3 mortal/tools/export_onnx.py <Mortal> s42-inference.pth server/engine/mortal/mortal-s42.onnx
 ```
 
-`build.sh` y `export_onnx.py` reproducen byte a byte `encoder.wasm` y
-`mortal-s42.onnx`. `strip_pyo3.py` reproduce `libriichi/src` salvo `lib.rs` (escrito
-a mano) y los tres cambios `salón:`.
+Los tres reproducen byte a byte lo que está en el repositorio (`strip_pyo3.py`
+todo `libriichi/src` salvo `lib.rs`).
 
 ## Licencias
 

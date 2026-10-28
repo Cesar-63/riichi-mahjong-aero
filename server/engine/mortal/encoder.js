@@ -21,15 +21,14 @@ const CANS = ['discard', 'chiLow', 'chiMid', 'chiHigh', 'pon', 'daiminkan', 'kak
 
 // -> null when the seat cannot act at the last event, else
 //    { obs: Float32Array, mask: Uint8Array, kan: {obs, mask} | null, cans }
-// tonpuusen: an East-only game, shown to Mortal as the South round of a hanchan.
-export function encode(events, seat, { tonpuusen = false, version = 4 } = {}) {
+export function encode(events, seat, version = 4) {
   const w = load();
   const bytes = new TextEncoder().encode(JSON.stringify(events));
   const ptr = w.alloc(bytes.length);
   new Uint8Array(w.memory.buffer, ptr, bytes.length).set(bytes);
   let status;
   try {
-    status = w.encode(ptr, bytes.length, seat, version, tonpuusen ? 1 : 0);
+    status = w.encode(ptr, bytes.length, seat, version);
   } catch (e) {
     wasm = null; // a trap (Rust panic) leaves the instance unusable
     throw e;

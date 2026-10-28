@@ -150,10 +150,7 @@ impl PlayerState {
         self.jikaze = must_tile!(tu8!(E) + (4 - self.oya) % 4);
         self.kyoku = kyoku - 1;
         self.is_all_last = match self.bakaze.as_u8() {
-            // salón: in tonpuusen, East 4 and the South extension are last
-            tu8!(E) if self.tonpuusen => self.kyoku == 3,
             tu8!(E) => false,
-            tu8!(S) if self.tonpuusen => true,
             tu8!(S) => self.kyoku == 3,
             _ => true,
         };

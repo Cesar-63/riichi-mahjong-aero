@@ -51,17 +51,6 @@ test('the encoder sees the dealer\'s first decision, and only the dealer\'s', ()
   assert.equal(encode(mjaiView(log, 1), 1), null, 'seat 1 has nothing to decide');
 });
 
-test('tonpuusen: only the game-progress rows of the observation change', () => {
-  const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(3));
-  const view = mjaiView(g.s.k.mjai, 0);
-  const a = encode(view, 0);
-  const b = encode(view, 0, { tonpuusen: true });
-  const rows = new Set();
-  for (let i = 0; i < a.obs.length; i++) if (a.obs[i] !== b.obs[i]) rows.add(Math.floor(i / 34));
-  assert.ok(rows.size > 0 && rows.size <= 7, `${rows.size} rows differ`);
-  assert.deepEqual(a.mask, b.mask);
-});
-
 test('a hard bot wins by tsumo and by ron', async () => {
   let g = scripted(['23m456p789s11p678s', '4m11z22z33z44z55z66z', '19m19p19s1234z56z7z', '258m258p258s1357z'], '1m');
   assert.deepEqual(await mortalAction(g, 0), { type: 'tsumo' });
