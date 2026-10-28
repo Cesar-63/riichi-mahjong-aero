@@ -97,8 +97,8 @@ const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 
 function showLobby(data) {
   state.view = null;
-  // automatic play is per game (sorting is a preference and stays)
-  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+  // automatic play is per hand (sorting is a preference and stays)
+  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false, autoHand: null });
   showAutoButtons();
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
@@ -196,6 +196,14 @@ function showGame(v) {
   $('#lobby').classList.add('hidden');
   $('#game').classList.remove('hidden');
   const ui = state.ui;
+  // R, C and D last one hand: left on, D would throw away the first tile of
+  // the next hand before the player even looks at it
+  const handKey = `${v.round}-${v.kyokuNum}-${v.honba}`;
+  if (ui.autoHand !== handKey) {
+    if (ui.autoHand) Object.assign(ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+    ui.autoHand = handKey;
+    showAutoButtons();
+  }
   const optKey = v.options ? `${v.phase}:${v.events.length ? v.events[v.events.length - 1].id : 0}:${v.options.kind}` : '';
   if (optKey !== ui.optKey) {
     ui.optKey = optKey;
@@ -246,7 +254,8 @@ function showGame(v) {
 // Soul: R wins as soon as possible, C passes chi/pon/kan on the others'
 // discards (my own kan, riichi or tsumo are untouched), D discards every
 // drawn tile. All three together play like a riichi. Each decision is acted
-// on once. A (auto sort) is on top of them.
+// on once; the three switch off when a new hand starts. A (auto sort) is on
+// top of them and stays.
 function autoPlay(v, ui) {
   const o = v.options;
   if (!o || state.busy || ui.autoKey === ui.optKey) return;
