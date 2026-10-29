@@ -123,13 +123,58 @@ export function createWorld(container, { signal } = {}) {
     for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
     renderer.clear();
-    renderer.render(scene, camera);
+    draw(scene, camera, false);
     // overlays (the player's hand) are drawn on top with their own depth
     for (const [s2, c2] of overlaysOn ? overlays : []) {
       renderer.clearDepth();
-      renderer.render(s2, c2);
+      draw(s2, c2, true);
     }
   });
+
+  // Render passes for the lab's video capture, as guides for video-to-video
+  // models: 'color' (the game as it is), 'arcilla' (every surface in one
+  // matte clay, no textures: shapes, light and shadows only) and
+  // 'profundidad' (white near the camera, black far). Transparent things
+  // (contact shadows, labels, the band behind the hand) are left out of the
+  // guides, and the overlay hand counts as the nearest thing on screen.
+  let pass = 'color';
+  const clay = new THREE.MeshStandardMaterial({ color: 0xb4ada2, roughness: 0.92 });
+  const depth = new THREE.ShaderMaterial({
+    uniforms: { near: { value: 1 }, far: { value: 100 } },
+    vertexShader: 'varying float vz; void main() { vec4 p = modelViewMatrix * vec4(position, 1.0); vz = -p.z; gl_Position = projectionMatrix * p; }',
+    fragmentShader: 'uniform float near; uniform float far; varying float vz; void main() { float d = 1.0 - smoothstep(near, far, vz); gl_FragColor = vec4(vec3(d), 1.0); }',
+  });
+  const nearest = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const black = new THREE.Color(0x000000);
+  const grey = new THREE.Color(0x3a3834);
+  function draw(s, c, overlay) {
+    if (pass === 'color') return renderer.render(s, c);
+    const mat = pass === 'arcilla' ? clay : overlay ? nearest : depth;
+    if (mat === depth) {
+      // the depth range follows the camera: from a bit before what it looks at to well past it
+      const d = c.position.distanceTo(look);
+      depth.uniforms.near.value = Math.max(0.5, d * 0.6);
+      depth.uniforms.far.value = d * 1.45;
+    }
+    const swapped = [];
+    s.traverse((o) => {
+      if (!o.material || !o.visible) return;
+      swapped.push([o, o.material]);
+      if ([o.material].flat().some((m) => m.transparent)) o.visible = false;
+      else o.material = mat;
+    });
+    const keep = [s.background, s.fog];
+    if (!overlay) {
+      s.background = pass === 'arcilla' ? grey : black;
+      s.fog = null;
+    }
+    renderer.render(s, c);
+    [s.background, s.fog] = keep;
+    for (const [o, m] of swapped) {
+      o.material = m;
+      o.visible = true;
+    }
+  }
 
   return {
     THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
@@ -141,6 +186,8 @@ export function createWorld(container, { signal } = {}) {
     lockView: (v) => { locked = v; },
     // lab: hide the overlays (the player's hand facing the screen)
     showOverlays: (on) => { overlaysOn = on; },
+    // lab: 'color', 'arcilla' or 'profundidad' (see draw above)
+    setPass: (p) => { pass = p; },
     destroy() {
       renderer.setAnimationLoop(null);
       renderer.dispose();

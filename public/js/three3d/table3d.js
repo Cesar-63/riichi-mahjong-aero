@@ -1424,9 +1424,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
     },
     resize: world.fit,
     // animation lab: a free camera ({ pos, target } of plain {x, y, z},
-    // null to give the camera back) and teardown
+    // null to give the camera back), render passes for video capture and
+    // teardown
     lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
     showHand: world.showOverlays,
+    setPass: world.setPass,
     destroy: world.destroy,
   };
 }

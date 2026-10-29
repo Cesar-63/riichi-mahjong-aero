@@ -26,6 +26,8 @@
           clock.ff -= d;
         } else if (!clock.paused) clock.t += (r - clock.last) * clock.speed;
         clock.t += clock.step;
+        // stepping while paused moves the CSS animations (the calls) too
+        if (clock.step && clock.paused) for (const a of document.getAnimations()) a.currentTime = (a.currentTime || 0) + clock.step;
         clock.step = 0;
         clock.last = r;
         // CSS animations (the calls) follow the same clock
@@ -86,6 +88,10 @@
     .lab-param.changed label::after { content: " ●"; }
     #lab-out { width: 100%; min-height: 90px; margin-top: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
     #lab-cam { font-family: ui-monospace, monospace; font-size: 11px; color: var(--navy-text); word-break: break-all; }
+    /* video capture (scripts/lab-capture.mjs): the stage alone, full screen */
+    body.capture #lab-panel { display: none; }
+    body.capture #lab-stage { right: 0; bottom: 0; }
+    body.capture.no-callouts #lab-stage .callouts { display: none; }
     @media (max-width: 800px) {
       #lab-stage { right: 0; bottom: 45vh; }
       #lab-panel { top: auto; width: 100%; height: 45vh; border-left: 0; border-top: 1px solid var(--navy-rim); }

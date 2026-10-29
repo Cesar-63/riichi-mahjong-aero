@@ -28,6 +28,7 @@ let t0 = 0;
 let next = 0;
 let lastView = null;
 let seeking = false;
+let pass = 'color';
 
 // a fresh table for every run, so each run starts from nothing
 function start() {
@@ -39,6 +40,7 @@ function start() {
   table = createTable3D(stage, { signal: abort.signal, onPick: () => {} });
   table.setCallouts([...stage.querySelectorAll('.callout')]);
   table.showHand($('#lab-hand').checked);
+  table.setPass(pass);
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
   ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)) };
@@ -285,5 +287,32 @@ buildParams();
 const res = await fetch('lab/scenarios.json');
 scenes = (await res.json()).scenes;
 $('#lab-scene').innerHTML = scenes.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
+// Video capture (lab.html?captura, driven by scripts/lab-capture.mjs): the
+// stage alone, and a scene played from its start with the clock paused, so
+// the script steps it frame by frame and takes each one.
+if (new URLSearchParams(location.search).has('captura')) {
+  document.body.classList.add('capture');
+  $('#lab-loop').checked = false;
+  window.labCapture = {
+    scenes: () => scenes.map((s) => ({ id: s.id, name: s.name, length: s.length })),
+    cameras: () => PRESETS.map(([name]) => name),
+    // { scene, camera (a preset's name or { pos, target }), hand, callouts, pass }
+    load(o) {
+      setPaused(true);
+      const preset = PRESETS.find(([name]) => name === o.camera);
+      if (o.camera && typeof o.camera === 'object') cam = orbitFrom(o.camera.pos, o.camera.target);
+      else if (preset) cam = preset[1] ? orbitFrom(preset[1], preset[2]) : null;
+      else if (o.camera) throw new Error(`no hay cámara "${o.camera}"`);
+      $('#lab-hand').checked = o.hand !== false;
+      pass = o.pass || 'color';
+      // the guides go without the calls: they are added later from the color take
+      document.body.classList.toggle('no-callouts', o.callouts === false || pass !== 'color');
+      if (!scenes.some((s) => s.id === o.scene)) throw new Error(`no hay escena "${o.scene}"`);
+      chooseScene(o.scene);
+      return scene.length;
+    },
+  };
+}
+
 chooseScene(store.get('lab.scene'));
 requestAnimationFrame(frame);

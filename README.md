@@ -493,6 +493,16 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
   con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
   de una animación ya empezada) se ven al volver al comienzo.
+- **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
+  graba una escena cuadro a cuadro con el reloj del laboratorio, así cada
+  toma sale igual, con cualquier cámara de la lista. Además del juego tal
+  cual (`color`) graba dos guías para modelos de IA de video a video:
+  `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
+  sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
+  llamada. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  opciones están al principio de `scripts/lab-capture.mjs` y el plan en
+  [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
+  `capturas/` (fuera del repositorio).
 
 ## Fichas
 
@@ -522,6 +532,7 @@ public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
+scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
 dev-server.js            Servidor local
 test/                    node:test
 ```
