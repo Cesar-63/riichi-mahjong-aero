@@ -495,8 +495,9 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   de una animación ya empezada) se ven al volver al comienzo.
 - **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
   graba una escena cuadro a cuadro con el reloj del laboratorio, así cada
-  toma sale igual, con cualquier cámara de la lista. Además del juego tal
-  cual (`color`) graba dos guías para modelos de IA de video a video:
+  toma sale igual, con cualquier cámara de la lista y en cualquier tamaño
+  (también vertical, para redes). Además del juego tal cual (`color`) graba
+  dos guías para modelos de IA de video a video:
   `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
   sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
   llamada. `npm run lab:capture -- --lista` muestra escenas y cámaras; las

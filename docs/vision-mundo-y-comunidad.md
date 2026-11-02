@@ -119,6 +119,7 @@ Varias ideas se montan sobre piezas que el repo ya tiene:
 | Cálculo de yaku y puntos | `server/engine/score.js`, `hand.js` | C (análisis de yaku), D (calculadora) |
 | Bots normal (majiang-ai) y difícil (Mortal) | `server/engine/bot.js`, `mortal/` | Edición 1: rivales con personalidad (E), entrenamiento (D) |
 | Garito fuera de la mesa: lobby, trastienda, menú | PR #17 | A, E |
+| Laboratorio de animaciones y su grabación en video | `public/lab.html`, `scripts/lab-capture.mjs` | A (cámara de cine, ron con física), videos y tutoriales ([animaciones-ia.md](animaciones-ia.md)) |
 
 El juego se publica bajo **AGPL-3.0** por Mortal (ver
 [mortal/README.md](../mortal/README.md)). Eso importa para la edición liga y
@@ -170,6 +171,10 @@ para una eventual venta: ver [Riesgos](#riesgos-y-pendientes).
 - **Vida ambiental, barata y efectiva:** humo de cigarro, la lámpara con un
   parpadeo leve, gente en otras mesas al fondo, un ventilador, sonido de
   ambiente.
+- **Las mismas animaciones sirven para videos.** El laboratorio graba
+  cualquier escena en video, así que la cámara de cine, la mano rota y los
+  personajes sirven también para tutoriales, el tráiler y jugadas
+  destacadas. Ver [animaciones-ia.md](animaciones-ia.md).
 - **El riesgo es el ritmo.** Cada animación suma segundos por mano. Desde el
   principio tiene que haber una opción de velocidad (completa, rápida o sin
   animaciones) y todo se tiene que poder saltar con un clic. Ojo con el
@@ -529,7 +534,8 @@ experimentos de [bots propios](#bots-propios).
   ni código de terceros aportado bajo AGPL. Mantener el núcleo separado y, si
   entran colaboradores, que acepten que su código se use en las versiones
   cerradas. Si la Edición 3 se vende, confirmarlo con alguien que sepa de
-  licencias.
+  licencias, incluido el estatus del código escrito con IA, que no está del
+  todo resuelto.
 - **Tres productos a mantener.** El núcleo compartido evita duplicar trabajo,
   pero el código que entre al repo privado no puede venir de Mortal ni de
   aportes de terceros bajo AGPL (ver [Repositorios](#repositorios)).
