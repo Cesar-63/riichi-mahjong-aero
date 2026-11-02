@@ -48,8 +48,9 @@ cara, ropa y estilo de juego propios.
 **Edición 2: Liga.** Código cerrado y **sin bots**: en la liga juegan
 personas. Lleva los avatares personalizados, las cuentas con Discord, el
 ranking y las estadísticas, el comentarista, las repeticiones y el modo
-transmisión, con las **reglas de la liga A de Mahjong Chile, que siguen lo más
-posible las reglas WRC actualizadas**. Sin Mortal, el modo comentarista pierde
+transmisión, con las **reglas WRC actualizadas, idénticas en el juego y en el
+cálculo de puntajes**, que son las que quiere usar la liga A de Mahjong Chile.
+Sin Mortal, el modo comentarista pierde
 la recomendación de la IA, pero mantiene el análisis de yaku, que es pura
 combinatoria. La app de mesa presencial (D) entra **al final** de esta edición,
 cuando la plataforma ya tenga vida.
@@ -314,12 +315,19 @@ persisten las partidas completas, salen casi gratis:
 de jugadores, no miles), es realista hacer cada personaje a mano. Es lo que
 hace que la gente se apropie del juego.
 
-**8. Reglas WRC.** La liga A de Mahjong Chile usa reglas lo más parecidas
-posible a las WRC actualizadas. El motor hoy usa reglas tipo Tenhou
-(tonpuusen, 3 aka dora, uma +20/+10/−10/−20). Hay que agregar un set de reglas
-WRC configurable y revisar el reglamento punto por punto contra el motor:
-duración, puntos iniciales, uma y oka, dora rojas, yaku y empates. Que las
-reglas sean configurables también sirve para otros torneos y para la Edición 3.
+**8. Reglas WRC, sin concesiones.** La intención de la liga A de Mahjong Chile
+es usar las reglas WRC actualizadas tal cual, tanto en el juego como en el
+cálculo de puntajes. Si hoy se aparta en algo, es solo porque Mahjong Soul no
+permite configurar ciertas reglas. Un juego propio elimina esa limitación, y es
+un argumento fuerte a favor de la Edición 2: **la primera plataforma donde la
+liga juega exactamente con su reglamento**.
+
+El motor hoy usa reglas tipo Tenhou (tonpuusen, 3 aka dora, uma
++20/+10/−10/−20). Hay que agregar el set WRC y revisar el reglamento punto por
+punto contra el motor: duración, puntos iniciales, uma y oka, dora rojas, yaku,
+empates y pagos. El objetivo es la fidelidad total al reglamento, verificada
+con pruebas que reproduzcan sus ejemplos. Que las reglas sean configurables
+también sirve para otros torneos y para la Edición 3.
 
 ---
 
@@ -540,8 +548,9 @@ experimentos de [bots propios](#bots-propios).
 ## Decisiones tomadas
 
 - **Referencia de la mano rota tras el ron:** los juegos *Tetsuya*.
-- **Reglas de la Edición 2:** las de la liga A de Mahjong Chile, lo más
-  parecidas posible a las WRC actualizadas.
+- **Reglas de la Edición 2:** las WRC actualizadas, idénticas en el juego y
+  en el cálculo de puntajes. Las diferencias actuales de la liga A solo vienen
+  de las limitaciones de configuración de Mahjong Soul.
 - **Edición 2:** código cerrado y sin bots.
 - **Edición 3:** bots propios entrenados desde cero.
 - **App de mesa:** al final de la Edición 2, no antes.
@@ -550,6 +559,5 @@ experimentos de [bots propios](#bots-propios).
 
 ## Preguntas abiertas
 
-- ¿En qué puntos se aparta la liga A de las reglas WRC, si es que se aparta?
 - ¿Cómo se sincroniza el núcleo entre el repo público y el privado? (Se decide
   al empezar la Edición 2.)
