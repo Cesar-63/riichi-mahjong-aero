@@ -219,7 +219,11 @@ Detalles:
    `scripts/lab-scenarios.mjs`. Es el puente con las repeticiones del
    bloque C.
 5. **Personajes a la mesa**: primero provisorios CC0 para montar el rig y
-   las animaciones, después los del bloque B.
+   las animaciones, después los del bloque B. *Primera prueba hecha:* tres
+   hombres PSX de Mesh2Motion (CC0) sentados en el laboratorio, con
+   animaciones de respirar y hablar (**Rivales en la mesa**,
+   `--rivales`). Ver
+   [public/models/personajes/README.md](../public/models/personajes/README.md).
 6. Más episodios (chi y pon, furiten, esperas, yaku) y el tráiler.
 7. Solo si hace falta, probar video a video en un tráiler.
 

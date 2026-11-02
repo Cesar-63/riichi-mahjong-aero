@@ -11,6 +11,7 @@
 //   --pasadas color,arcilla,profundidad
 //   --fps 30  --ancho 1280  --alto 720
 //   --sin-mano                without the player's hand facing the screen
+//   --rivales                 the rivals sitting at the table (characters.js)
 //   --sin-avisos              without the big calls (¡Riichi!, ¡Ron!…); the
 //                             guides never have them
 //   --desde 0 --hasta <ms>    a part of the scene
@@ -23,7 +24,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(fileURLToPath(new URL('..', import.meta.url)), 'public');
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.glb': 'model/gltf-binary' };
 
 // ---------------------------------------------------------------- options
 const args = process.argv.slice(2);
@@ -40,6 +41,7 @@ const o = {
   width: Number(opt('ancho', 1280)),
   height: Number(opt('alto', 720)),
   hand: !flag('sin-mano'),
+  people: flag('rivales'),
   callouts: !flag('sin-avisos'),
   from: Number(opt('desde', 0)),
   to: opt('hasta', null),
@@ -84,7 +86,7 @@ try {
     await mkdir(o.out, { recursive: true });
     const cam = o.camera.replace(/[^\p{L}\d]+/gu, '-').toLowerCase();
     for (const pass of o.passes) {
-      const length = await page.evaluate((x) => window.labCapture.load(x), { scene: o.scene, camera: o.camera, hand: o.hand, callouts: o.callouts, pass });
+      const length = await page.evaluate((x) => window.labCapture.load(x), { scene: o.scene, camera: o.camera, hand: o.hand, people: o.people, callouts: o.callouts, pass });
       const end = Math.min(length, o.to === null ? length : Number(o.to));
       const step = 1000 / o.fps;
       const name = `${o.scene}-${cam}-${pass}`;

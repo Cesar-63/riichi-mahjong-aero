@@ -488,6 +488,14 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   Se puede ocultar tu mano de frente.
 - **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
   palitos.
+- **Rivales en la mesa** (prueba, solo en el laboratorio): tres hombres
+  low-poly estilo PS1 sentados en las sillas de los rivales, respirando y de
+  vez en cuando hablando (`public/js/three3d/characters.js`). Comparten un
+  solo esqueleto, así que cualquier animación sirve para todos. Con ellos
+  las sillas se corren detrás de sus espaldas. Las cámaras **Rivales desde
+  tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
+  las animaciones son CC0, de Mesh2Motion: ver
+  [public/models/personajes/README.md](public/models/personajes/README.md).
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
@@ -500,7 +508,7 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   dos guías para modelos de IA de video a video:
   `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
   sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
-  llamada. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  llamada. `--rivales` graba con los rivales en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
   opciones están al principio de `scripts/lab-capture.mjs` y el plan en
   [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
   `capturas/` (fuera del repositorio).
@@ -528,6 +536,7 @@ server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-
 server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
 mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas
 public/                  Cliente (index.html, css/, js/)
+public/models/personajes/  Rivales de prueba para el laboratorio (glTF, CC0)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
@@ -576,8 +585,9 @@ Componentes de terceros:
 | Pesos Mortal-S42 (`server/engine/mortal/mortal-s42.onnx`) | Apache-2.0 |
 | majiang-ai y majiang-core | MIT |
 | onnxruntime-web | MIT |
-| three.js (`public/vendor/three/`) | MIT |
+| three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
 | Fichas FluffyStuff | CC0 |
+| Personajes y animaciones de Mesh2Motion (`public/models/personajes/`) | CC0 |
 
 **Contribuciones.** Para poder reutilizar el código propio en otros proyectos
 (incluso con otra licencia), las contribuciones externas se aceptan solo si su

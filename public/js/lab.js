@@ -29,6 +29,7 @@ let next = 0;
 let lastView = null;
 let seeking = false;
 let pass = 'color';
+let peopleReady = Promise.resolve();
 
 // a fresh table for every run, so each run starts from nothing
 function start() {
@@ -41,6 +42,7 @@ function start() {
   table.setCallouts([...stage.querySelectorAll('.callout')]);
   table.showHand($('#lab-hand').checked);
   table.setPass(pass);
+  peopleReady = table.showCharacters($('#lab-people').checked);
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
   ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)) };
@@ -138,6 +140,9 @@ const PRESETS = [
   ['Rival izquierda', [-24, 9, 0], [-12, 0.5, 0]],
   ['Tus llamadas (esquina)', [13, 7, 24], [10, 0.5, 13.5]],
   ['Llamadas del rival derecho', [5, 11, -3], [13.5, 0.3, -11]],
+  // the rivals at the table ("Rivales en la mesa")
+  ['Rivales desde tu silla', [0, 14, 31], [0, 7, -16]],
+  ['Rival de enfrente, de cerca', [3, 13, 2], [0, 12, -24]],
 ];
 let cam = null; // { target: [x, y, z], yaw, pitch, dist }
 function orbitFrom(pos, target) {
@@ -174,6 +179,11 @@ for (const [name, pos, target] of PRESETS) {
   $('#lab-presets').append(b);
 }
 $('#lab-hand').addEventListener('change', (e) => table && table.showHand(e.target.checked));
+$('#lab-people').addEventListener('change', (e) => {
+  store.set('lab.people', e.target.checked ? '1' : '');
+  if (table) table.showCharacters(e.target.checked);
+});
+$('#lab-people').checked = store.get('lab.people') === '1';
 $('#lab-copycam').addEventListener('click', () => copy(cam ? `posición ${fmt(camPos(cam))}, mira a ${fmt(cam.target)}` : 'cámara del juego'));
 
 let drag = null;
@@ -296,19 +306,23 @@ if (new URLSearchParams(location.search).has('captura')) {
   window.labCapture = {
     scenes: () => scenes.map((s) => ({ id: s.id, name: s.name, length: s.length })),
     cameras: () => PRESETS.map(([name]) => name),
-    // { scene, camera (a preset's name or { pos, target }), hand, callouts, pass }
-    load(o) {
+    // { scene, camera (a preset's name or { pos, target }), hand, people,
+    // callouts, pass }; resolves with the scene's length once all is loaded
+    async load(o) {
       setPaused(true);
       const preset = PRESETS.find(([name]) => name === o.camera);
       if (o.camera && typeof o.camera === 'object') cam = orbitFrom(o.camera.pos, o.camera.target);
       else if (preset) cam = preset[1] ? orbitFrom(preset[1], preset[2]) : null;
       else if (o.camera) throw new Error(`no hay cámara "${o.camera}"`);
       $('#lab-hand').checked = o.hand !== false;
+      $('#lab-people').checked = !!o.people;
       pass = o.pass || 'color';
       // the guides go without the calls: they are added later from the color take
       document.body.classList.toggle('no-callouts', o.callouts === false || pass !== 'color');
       if (!scenes.some((s) => s.id === o.scene)) throw new Error(`no hay escena "${o.scene}"`);
       chooseScene(o.scene);
+      // the clock waits, paused, for the models: the take starts with them seated
+      await peopleReady;
       return scene.length;
     },
   };

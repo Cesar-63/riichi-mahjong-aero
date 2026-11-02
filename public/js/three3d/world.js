@@ -141,7 +141,17 @@ export function createWorld(container, { signal } = {}) {
   const clay = new THREE.MeshStandardMaterial({ color: 0xb4ada2, roughness: 0.92 });
   const depth = new THREE.ShaderMaterial({
     uniforms: { near: { value: 1 }, far: { value: 100 } },
-    vertexShader: 'varying float vz; void main() { vec4 p = modelViewMatrix * vec4(position, 1.0); vz = -p.z; gl_Position = projectionMatrix * p; }',
+    // with three's skinning chunks, so the rivals at the table keep their pose
+    vertexShader: `#include <common>
+      #include <skinning_pars_vertex>
+      varying float vz;
+      void main() {
+        #include <skinbase_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        #include <project_vertex>
+        vz = -mvPosition.z;
+      }`,
     fragmentShader: 'uniform float near; uniform float far; varying float vz; void main() { float d = 1.0 - smoothstep(near, far, vz); gl_FragColor = vec4(vec3(d), 1.0); }',
   });
   const nearest = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -177,7 +187,7 @@ export function createWorld(container, { signal } = {}) {
   }
 
   return {
-    THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
+    THREE, scene, camera, renderer, chairs: lights.chairs, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
     setView: (m) => { mode = m; announce(); },
     forceView: (m) => { forced = m; announce(); },
     onView: (f) => { viewListeners.push(f); f(announced || mode); },
@@ -374,6 +384,7 @@ function addParlour(group) {
   }
   // chairs around the table, only their backs catch the lamp light
   const chairMat = new THREE.MeshStandardMaterial({ color: 0x55504a, roughness: 0.6 });
+  const chairs = [];
   for (let i = 0; i < 4; i++) {
     const chair = new THREE.Group();
     for (let k = -1.5; k <= 1.5; k++) {
@@ -389,6 +400,7 @@ function addParlour(group) {
     chair.rotation.y = a;
     if (i === 0) chair.visible = false; // the player's own chair would block the view
     group.add(chair);
+    chairs.push(chair);
   }
   // floor and a far wall to swallow the light
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x1a140f, roughness: 0.9 }));
@@ -412,5 +424,5 @@ function addParlour(group) {
   lamp.shadow.camera.near = 12;
   lamp.shadow.camera.far = 60;
   group.add(lamp, lamp.target);
-  return { lamp, hemi, ambient };
+  return { lamp, hemi, ambient, chairs };
 }
