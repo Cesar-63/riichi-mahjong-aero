@@ -75,6 +75,35 @@ permiten que el juego sea cerrado y se pueda vender.
    cuando detrás se ve la plataforma (ranking, historial, perfiles) a la que se
    conecta.
 
+### Repositorios
+
+**Público, Edición 1: este mismo repo.** No se parte de cero, porque este repo
+ya es la Edición 1:
+
+- **Historial:** commits y PRs que documentan cada decisión (la mesa 3D, la
+  integración de Mortal). Empezar de cero pierde esa trazabilidad.
+- **Infraestructura:** el despliegue en Vercel, la base Redis y la
+  configuración ya están conectados aquí.
+- **Licencia en orden:** ya está bajo AGPL-3.0 y documenta de dónde viene cada
+  pieza (`mortal/README.md`).
+- **Está limpio:** el historial no tiene claves ni tokens filtrados. Lo único
+  pesado es el modelo de Mortal (21 MB), y no es un problema.
+- **El nombre** (`riichi-mahjong-aero`) se puede cambiar en GitHub sin perder
+  nada; los enlaces viejos redirigen solos.
+
+**Privado, Ediciones 2 y 3: repo nuevo, desde cero.**
+
+- No puede ser un fork de GitHub: el fork de un repo público no puede ser
+  privado.
+- Se crea vacío y se copia **solo el núcleo**: reglas, motor, mesa 3D y
+  animaciones. No entran `server/engine/mortal/` ni `bot.js` en su forma
+  actual.
+- Como el autor es dueño de ese código, puede usarlo cerrado allá aunque acá
+  siga público bajo AGPL (ver la condición 1).
+- **Por decidir al empezar la Edición 2:** cómo se sincroniza el núcleo entre
+  los dos repos. Por ejemplo, el privado copia del público cada cierto tiempo,
+  o el núcleo pasa a ser un paquete propio que importan ambos.
+
 ## Punto de partida: lo que ya existe
 
 Varias ideas se montan sobre piezas que el repo ya tiene:
@@ -494,8 +523,8 @@ experimentos de [bots propios](#bots-propios).
   cerradas. Si la Edición 3 se vende, confirmarlo con alguien que sepa de
   licencias.
 - **Tres productos a mantener.** El núcleo compartido evita duplicar trabajo,
-  pero hay que decidir cómo convive: un repo público para la Edición 1 y otro
-  privado para las cerradas que importe el núcleo.
+  pero el código que entre al repo privado no puede venir de Mortal ni de
+  aportes de terceros bajo AGPL (ver [Repositorios](#repositorios)).
 - **Homenaje sí, copia no.** Inspirarse en el ambiente de *Saki*, *Tetsuya* o
   *Sega Network Mahjong MJ*, sin usar nombres, personajes, logos ni escenas
   reconocibles de esas obras.
@@ -516,9 +545,11 @@ experimentos de [bots propios](#bots-propios).
 - **Edición 2:** código cerrado y sin bots.
 - **Edición 3:** bots propios entrenados desde cero.
 - **App de mesa:** al final de la Edición 2, no antes.
+- **Repositorios:** este repo sigue como el público de la Edición 1; las
+  ediciones cerradas van en un repo privado nuevo con el núcleo copiado.
 
 ## Preguntas abiertas
 
 - ¿En qué puntos se aparta la liga A de las reglas WRC, si es que se aparta?
-- ¿Cómo se organizan los repos: uno público para la Edición 1 y uno privado
-  para las cerradas, o de otra forma?
+- ¿Cómo se sincroniza el núcleo entre el repo público y el privado? (Se decide
+  al empezar la Edición 2.)
