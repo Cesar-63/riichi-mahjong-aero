@@ -4,7 +4,12 @@ Notas de diseño de noviembre de 2026. Recogen una conversación de ideas sobre
 hacia dónde podría crecer el juego. **Nada de esto está implementado ni
 decidido**: es una lista anotada y evaluada para volver a ella cuando toque.
 
-Son cinco bloques:
+Las ideas se reparten en **tres ediciones** del juego (ver
+[Ediciones](#ediciones)): una primera edición en torno a *Tetsuya*, una
+edición liga cerrada para Mahjong Chile y una edición definitiva con modo
+historia y bots propios.
+
+Las ideas están en cinco bloques:
 
 - **A.** [Mundo, cámara y animaciones](#a-mundo-cámara-y-animaciones): que el
   juego se sienta vivo.
@@ -17,8 +22,58 @@ Son cinco bloques:
 - **E.** [Mundo navegable y modo historia](#e-mundo-navegable-y-modo-historia):
   un Chile inventado donde se juega mahjong.
 
-Al final hay una [hoja de ruta](#hoja-de-ruta-propuesta) que ordena todo y una
+Al final hay una [hoja de ruta por edición](#hoja-de-ruta-por-edición) y una
 lista de [riesgos y pendientes](#riesgos-y-pendientes).
+
+## Ediciones
+
+| | Edición 1: *Tetsuya* | Edición 2: Liga | Edición 3: Definitiva |
+| --- | --- | --- | --- |
+| Para qué | Laboratorio de estilo, animaciones y personalidad | Plataforma de la liga Mahjong Chile | El juego completo, eventualmente a la venta |
+| Animaciones y física (A) | Se crean | Se reutilizan | Se pulen |
+| Personajes (B) | Fijos, con personalidad | Avatares personalizados por jugador | Los dos |
+| Comunidad (C, D) | — | Todo: cuentas, ranking, comentarista, transmisión | Integrado al mundo |
+| Mundo (E) | El edificio del parlor | La sala de torneo | La ciudad y el modo historia |
+| Reglas | Tipo Tenhou (las actuales) | WRC | Varían por escenario |
+| Bots | majiang-ai y Mortal | Ninguno | Propios, entrenados desde cero |
+| Código | Público, AGPL-3.0 | Cerrado | Cerrado |
+
+**Edición 1: *Tetsuya*.** Es la versión actual, extendida. Sirve como
+laboratorio: aquí se prueban el estilo PS1, las animaciones, la física del ron
+y la intro con cámara. El "mundo abierto" se limita al edificio del parlor (la
+calle de la entrada, el salón y la trastienda), lo justo para probar el paso
+entre zonas sin pagar el costo de una ciudad. Los personajes son fijos, con
+cara, ropa y estilo de juego propios.
+
+**Edición 2: Liga.** Código cerrado y **sin bots**: en la liga juegan
+personas. Lleva los avatares personalizados, las cuentas con Discord, el
+ranking y las estadísticas, el comentarista, las repeticiones y el modo
+transmisión, con las **reglas de la liga A de Mahjong Chile, que siguen lo más
+posible las reglas WRC actualizadas**. Sin Mortal, el modo comentarista pierde
+la recomendación de la IA, pero mantiene el análisis de yaku, que es pura
+combinatoria. La app de mesa presencial (D) entra **al final** de esta edición,
+cuando la plataforma ya tenga vida.
+
+**Edición 3: Definitiva.** Modo historia, ambientes distintos, el Chile
+inventado y **bots propios entrenados desde cero**, que reemplazan a Mortal y
+permiten que el juego sea cerrado y se pueda vender.
+
+### Tres condiciones para que el orden funcione
+
+1. **Separar el núcleo desde la Edición 1.** El código compartido (reglas,
+   motor, mesa 3D, animaciones) no puede depender de Mortal, para que la
+   Edición 2 pueda ser cerrada. Hoy se cumple: Mortal está aislado en
+   `server/engine/mortal/` y solo lo usa `bot.js`, y `mjai.js` solo implementa
+   el formato de eventos. Todos los commits son del autor del proyecto o
+   hechos con Claude, así que el autor es dueño del código y puede publicarlo
+   bajo AGPL en la Edición 1 y usarlo cerrado en la Edición 2. Hay que
+   mantenerlo así: si entran colaboradores, que acepten que su código pueda
+   usarse en las versiones cerradas.
+2. **Empezar los bots propios temprano**, en paralelo desde la Edición 1 (ver
+   [Bots propios](#bots-propios)). Es lo más lento de todo el plan.
+3. **La app de mesa va tarde.** Sola es una calculadora más; solo interesa
+   cuando detrás se ve la plataforma (ranking, historial, perfiles) a la que se
+   conecta.
 
 ## Punto de partida: lo que ya existe
 
@@ -32,7 +87,7 @@ Varias ideas se montan sobre piezas que el repo ya tiene:
 | Juego en línea: salas, timers, desconexión, bots | `server/handler.js`, `api/game.js` | C |
 | Registro mjai de cada mano | `server/engine/mjai.js` | C (repeticiones, análisis), D |
 | Cálculo de yaku y puntos | `server/engine/score.js`, `hand.js` | C (análisis de yaku), D (calculadora) |
-| Bots normal (majiang-ai) y difícil (Mortal) | `server/engine/bot.js`, `mortal/` | C (análisis), E (rivales con personalidad) |
+| Bots normal (majiang-ai) y difícil (Mortal) | `server/engine/bot.js`, `mortal/` | Edición 1: rivales con personalidad (E), entrenamiento (D) |
 | Garito fuera de la mesa: lobby, trastienda, menú | PR #17 | A, E |
 
 El juego se publica bajo **AGPL-3.0** por Mortal (ver
@@ -54,7 +109,8 @@ para una eventual venta: ver [Riesgos](#riesgos-y-pendientes).
   mesa al que se los quitó, en su dirección.
 - **Mano rota tras el ron:** a quien le hicieron ron empuja su mano, pasa a
   llevar el muro de enfrente y las fichas se caen con física, como si tuvieran
-  material y peso propios. El ganador da vuelta su mano.
+  material y peso propios, como en los juegos *Tetsuya*. El ganador da vuelta
+  su mano.
 
 ### Evaluación
 
@@ -195,8 +251,9 @@ persisten las partidas completas, salen casi gratis:
   llegaba esto y cerraba un mangan".
 - No necesita IA: es combinatoria sobre el cálculo de yaku que ya hace
   `score.js`.
-- **Mortal complementa** con lo que recomendaba la IA y con qué confianza, y
-  puede marcar los errores grandes de una mano.
+- **Recomendación de IA:** lo que recomendaba la IA y con qué confianza, y los
+  errores grandes de una mano. La Edición 2 no lleva Mortal, así que esto
+  queda para cuando existan los bots propios.
 
 **4. Comentarista automático con líneas predefinidas.**
 
@@ -228,8 +285,12 @@ persisten las partidas completas, salen casi gratis:
 de jugadores, no miles), es realista hacer cada personaje a mano. Es lo que
 hace que la gente se apropie del juego.
 
-**8. Reglas configurables por torneo:** uma, oka, aka dora, duración (hoy es
-tonpuusen fijo) y lo que use la liga chilena.
+**8. Reglas WRC.** La liga A de Mahjong Chile usa reglas lo más parecidas
+posible a las WRC actualizadas. El motor hoy usa reglas tipo Tenhou
+(tonpuusen, 3 aka dora, uma +20/+10/−10/−20). Hay que agregar un set de reglas
+WRC configurable y revisar el reglamento punto por punto contra el motor:
+duración, puntos iniciales, uma y oka, dora rojas, yaku y empates. Que las
+reglas sean configurables también sirve para otros torneos y para la Edición 3.
 
 ---
 
@@ -256,8 +317,13 @@ mesa presencial, el comentarista y cualquier módulo nuevo se conectan a eso.
 Si cada cosa nace por su lado, en seis meses hay diez herramientas que no se
 hablan.
 
-**2. La app de mesa presencial es lo de mayor impacto con menor esfuerzo.** No
-necesita 3D ni tiempo real. Tendría tres partes:
+**2. La app de mesa presencial va tarde, al final de la Edición 2.** Sola es
+una calculadora más, y ya existen varias. Su valor es que la partida presencial
+quede en el mismo ranking, historial y estadísticas que el online, así que solo
+interesa cuando la gente ya usa la plataforma y le importa su perfil. Entonces
+se presenta como "registra tu partida presencial y que cuente en tu ranking".
+La lógica que necesita (puntaje, yaku y registro) se construye igual para la
+plataforma, así que en ese momento es casi solo interfaz. Tendría tres partes:
 
 - **Marcador de mesa:** puntos de los cuatro jugadores, quién es dealer,
   honba, riichi depositados y cambio de viento.
@@ -271,14 +337,15 @@ necesita 3D ni tiempo real. Tendría tres partes:
 Si registra mano por mano, una partida presencial queda con un historial casi
 tan rico como una online: estadísticas e incluso repetición en la mesa 3D.
 
-**3. Reutilización.** El cálculo de yaku y puntos, las reglas configurables y
-Mortal son los mismos de C. La calculadora presencial y el análisis del
-comentarista usan el mismo código.
+**3. Reutilización.** El cálculo de yaku y puntos y las reglas configurables
+son los mismos de C. La calculadora presencial y el análisis del comentarista
+usan el mismo código.
 
 **4. Otros módulos posibles:**
 
-- **Entrenamiento:** ejercicios de "¿qué descartas?" corregidos con Mortal,
-  práctica de eficiencia y de cálculo de puntos.
+- **Entrenamiento:** ejercicios de "¿qué descartas?" corregidos por una IA
+  (Mortal en la Edición 1, los bots propios después), práctica de eficiencia y
+  de cálculo de puntos.
 - **Para principiantes:** aprender los yaku jugando, la guía de reglas de la
   liga, partidas contra bots con pistas.
 - **Gestión de torneos:** inscripción, sorteo de mesas por ronda, tabla en
@@ -339,9 +406,10 @@ original y le da una identidad que un estudio japonés no puede copiar.
 
 - Reglas distintas por etapa: reglas viejas sin aka dora en el garito, reglas
   de torneo en el salón, las de la liga chilena en el modo profesional.
-- **Rivales con personalidad:** ajustar el estilo de majiang-ai y Mortal
-  (agresivo, defensivo, que persigue manos caras). Cada personaje juega
-  distinto, no solo se ve distinto.
+- **Rivales con personalidad:** ajustar el estilo de los bots (agresivo,
+  defensivo, que persigue manos caras). Cada personaje juega distinto, no solo
+  se ve distinto. Se puede probar en la Edición 1 con majiang-ai y Mortal; en
+  la Edición 3 son los bots propios.
 
 **6. La comunidad dentro de la historia.** Los jugadores reales de Mahjong
 Chile, con sus avatares (B), pueden aparecer como personajes: rivales o caras
@@ -353,30 +421,65 @@ tres personajes (B). Si eso se siente bien, el resto escala.
 
 ---
 
-## Hoja de ruta propuesta
+## Bots propios
 
-Las cinco notas comparten tres cosas: una **plataforma común** (cuentas,
-partidas, ranking), un **motor compartido** y el **estilo PS1**. El orden que se
-propone va de lo más útil para la comunidad a lo más ambicioso:
+Para la Edición 3 los bots se entrenan desde cero, sin código ni pesos de
+Mortal. Es lo más lento de todo el plan (datos y cómputo), así que conviene
+empezar en paralelo desde la Edición 1:
 
-1. **Persistir partidas completas** (registro mjai más semilla) y
+- **Datos propios.** Las partidas de las Ediciones 1 y 2 ya quedan registradas
+  en formato mjai. Las de la liga son personas jugando con reglas WRC: el
+  material ideal. Hay que avisar en los términos de uso que las partidas se
+  usan para entrenar.
+- **Etapas.** Primero imitar partidas humanas (aprendizaje supervisado), luego
+  mejorar jugando contra sí mismos (aprendizaje por refuerzo).
+- **Trabajo limpio.** Un repo aparte. Las ideas de Mortal y de la
+  [investigación](ia-investigacion.md) se pueden aprovechar; el código y los
+  pesos, no.
+- **Uso intermedio.** Cuando sean decentes, pueden darle a la Edición 2 la
+  recomendación de IA del modo comentarista, y reemplazar a Mortal en los
+  ejercicios de entrenamiento.
+
+## Hoja de ruta por edición
+
+Las tres ediciones comparten una **plataforma común** (cuentas, partidas,
+ranking), un **motor compartido** y el **estilo PS1**.
+
+**Edición 1: *Tetsuya*** (pública, AGPL)
+
+1. **Separar el núcleo** de Mortal y dejar la regla por escrito: nada del
+   núcleo depende de `server/engine/mortal/`.
+2. **Animaciones de vida:** ron con física, palitos arrojados, intro de cámara,
+   vida ambiental y opción de velocidad. *(A)*
+3. **Estilo PS1:** biblia de arte y prueba técnica en la mesa real. *(B)*
+4. **Personajes fijos** con cara, ropa y estilo de juego propios. *(B, E)*
+5. **El edificio del parlor:** calle, salón y trastienda recorribles. *(E)*
+6. **Persistir partidas completas** (registro mjai más semilla) y
    **repeticiones**. *(C)*
-2. **Cuentas con Discord**, historial y **ranking**. *(C, D)*
-3. **App de mesa presencial**: marcador, calculadora y cierre confirmado por
-   los cuatro. La comunidad la usa de inmediato. *(D)*
-4. **Estadísticas por jugador** y tarjetas. *(C)*
-5. **Modo comentarista**: cámara libre, análisis de yaku y de Mortal. *(C)*
-6. **Comentarista automático** con líneas propias. *(C)*
-7. **Animaciones de vida**: ron con física, palitos arrojados, intro de
-   cámara, opción de velocidad. *(A)*
-8. **Estilo PS1 y avatares**: biblia de arte, prueba técnica y luego el editor.
-   *(B)*
-9. **Gráficas de transmisión** y modo director con retraso. *(C)*
-10. **Corte vertical del modo historia** y, si funciona, el resto del mundo.
-    *(E)*
 
-Los pasos 7 y 8 pueden avanzar en paralelo con los demás, porque son trabajo
-visual independiente de la plataforma.
+**En paralelo desde la Edición 1:** recolección de partidas y primeros
+experimentos de [bots propios](#bots-propios).
+
+**Edición 2: Liga** (cerrada, sin bots)
+
+1. **Reglas WRC** configurables. *(C)*
+2. **Cuentas con Discord**, historial y **ranking**. *(C)*
+3. **Avatares personalizados**: el editor y los avatares hechos a mano para
+   cada jugador. *(B)*
+4. **Perfiles con estadísticas** y tarjetas de jugador. *(C)*
+5. **Modo comentarista:** cámara libre, repeticiones y análisis de yaku. *(C)*
+6. **Comentarista automático** con líneas propias. *(C)*
+7. **Gráficas de transmisión** y modo director con retraso. *(C)*
+8. **Gestión de torneos** y bot de Discord. *(C, D)*
+9. **App de mesa presencial**, cuando la plataforma ya tenga uso. *(D)*
+
+**Edición 3: Definitiva** (cerrada)
+
+1. **Bots propios** en el juego, con personalidades por personaje.
+2. **Corte vertical del modo historia:** una calle, el parlor y una mesa, con
+   una historia corta. *(E)*
+3. Si funciona: la ciudad, los ambientes distintos, reglas por escenario y la
+   comunidad dentro de la historia. *(E)*
 
 ## Riesgos y pendientes
 
@@ -384,25 +487,38 @@ visual independiente de la plataforma.
   conectarla antes de empezar la siguiente.
 - **Ritmo de partida.** Cada animación suma segundos. Opción de velocidad desde
   el primer día.
-- **AGPL-3.0.** El juego ya es AGPL por Mortal. Eso no impide cerrarlo para la
-  liga ni venderlo, pero **quien juegue por red tiene derecho a recibir el
-  código fuente** de la versión que usa. Un "cerrado" en sentido estricto, o
-  una versión comercial con código privado, exigiría sacar Mortal o
-  reemplazarlo. Hay que decidirlo antes de invertir mucho en algo que se quiera
-  privado.
+- **Licencias entre ediciones.** La Edición 1 es AGPL por Mortal. Las
+  Ediciones 2 y 3 pueden ser cerradas siempre que no incluyan código de Mortal
+  ni código de terceros aportado bajo AGPL. Mantener el núcleo separado y, si
+  entran colaboradores, que acepten que su código se use en las versiones
+  cerradas. Si la Edición 3 se vende, confirmarlo con alguien que sepa de
+  licencias.
+- **Tres productos a mantener.** El núcleo compartido evita duplicar trabajo,
+  pero hay que decidir cómo convive: un repo público para la Edición 1 y otro
+  privado para las cerradas que importe el núcleo.
 - **Homenaje sí, copia no.** Inspirarse en el ambiente de *Saki*, *Tetsuya* o
   *Sega Network Mahjong MJ*, sin usar nombres, personajes, logos ni escenas
   reconocibles de esas obras.
 - **Permisos.** El dueño del local tiene que autorizar que se use su espacio, y
   cada persona de la comunidad tiene que aceptar aparecer como personaje.
+- **Datos de entrenamiento.** Avisar que las partidas se usan para entrenar
+  los bots.
 - **Transmisión en vivo.** La vista con manos abiertas necesita retraso para no
   filtrar información a los jugadores.
 - **Partidas oficiales presenciales.** La confirmación de los cuatro jugadores
   es el mínimo. Hay que definir qué pasa con las disputas.
 
+## Decisiones tomadas
+
+- **Referencia de la mano rota tras el ron:** los juegos *Tetsuya*.
+- **Reglas de la Edición 2:** las de la liga A de Mahjong Chile, lo más
+  parecidas posible a las WRC actualizadas.
+- **Edición 2:** código cerrado y sin bots.
+- **Edición 3:** bots propios entrenados desde cero.
+- **App de mesa:** al final de la Edición 2, no antes.
+
 ## Preguntas abiertas
 
-- ¿Cuál es la referencia "suya" de la mano rota tras el ron?
-- ¿Qué reglas usa hoy la liga de Mahjong Chile (duración, uma, oka, aka dora)?
-- ¿La edición liga va pública con código abierto (AGPL tal cual) o se quiere
-  privada? Eso define qué hacer con Mortal.
+- ¿En qué puntos se aparta la liga A de las reglas WRC, si es que se aparta?
+- ¿Cómo se organizan los repos: uno público para la Edición 1 y uno privado
+  para las cerradas, o de otra forma?
