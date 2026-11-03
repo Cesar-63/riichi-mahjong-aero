@@ -490,8 +490,12 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   palitos.
 - **Rivales en la mesa** (prueba, solo en el laboratorio): tres hombres
   low-poly estilo PS1 sentados en las sillas de los rivales, respirando y de
-  vez en cuando hablando (`public/js/three3d/characters.js`). Comparten un
-  solo esqueleto, así que cualquier animación sirve para todos. Con ellos
+  vez en cuando hablando (`public/js/three3d/characters.js`). Cada uno tiene
+  su temperamento: cuánto gesticula (la animación de hablar se mezcla con la
+  de estar sentado en su propia medida), a qué ritmo y cada cuánto habla. El
+  de la derecha habla con las manos, el oficinista se mide y el señor mayor
+  casi no se mueve. Comparten un solo esqueleto, así que cualquier animación
+  sirve para todos. Con ellos
   las sillas se corren detrás de sus espaldas. Las cámaras **Rivales desde
   tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
   las animaciones son CC0, de Mesh2Motion: ver

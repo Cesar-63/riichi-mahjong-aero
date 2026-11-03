@@ -9,8 +9,17 @@ import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { TABLE } from './world.js';
 
 const DIR = 'models/personajes/';
-// relative seat (1 = right, 2 = across, 3 = left) → model
-const CAST = { 1: 'psx-10', 2: 'psx-32', 3: 'psx-05' };
+// relative seat (1 = right, 2 = across, 3 = left) → model and temperament:
+// gesture, how much of the talking animation shows over the sitting one
+// (1 = all of it, waving his hands; less = the same words, more contained);
+// pace, the speed of both animations; first and every, when he first speaks
+// and how long he keeps quiet after that (seconds; fixed, so every run of a
+// scene is the same)
+const CAST = {
+  1: { model: 'psx-10', gesture: 1, pace: 1.05, first: 2.5, every: 9 }, // talkative, all hands
+  2: { model: 'psx-32', gesture: 0.35, pace: 0.8, first: 7, every: 16 }, // the old regular: few words, barely moves
+  3: { model: 'psx-05', gesture: 0.6, pace: 0.95, first: 4.5, every: 12 }, // the office worker: measured
+};
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 // 1 world unit is about 3.5 cm (the table top is 20 units over the floor, 70 cm)
 const SCALE = 1 / 0.035;
@@ -30,7 +39,7 @@ export function createCharacters(world) {
   const loader = new GLTFLoader();
   const load = (name) => loader.loadAsync(`${DIR}${name}.glb`);
 
-  const ready = Promise.all([load('sitting-idle'), load('sitting-talking'), ...Object.values(CAST).map(load)]).then(([idleFile, talkFile, ...models]) => {
+  const ready = Promise.all([load('sitting-idle'), load('sitting-talking'), ...Object.values(CAST).map((c) => load(c.model))]).then(([idleFile, talkFile, ...models]) => {
     const idle = idleFile.animations[0];
     const talk = talkFile.animations[0];
     Object.keys(CAST).forEach((seat, i) => {
@@ -54,28 +63,32 @@ export function createCharacters(world) {
       group.add(body);
 
       // breathing all the time, each one out of step with the others; now and
-      // then a few words (a fixed rhythm per seat, so every run is the same)
+      // then a few words. While he talks both animations play, mixed by his
+      // gesture: the weights always add up to 1, so what is left over is the
+      // sitting pose, never the model's rest pose
+      const { gesture, pace, first, every } = CAST[seat];
       const mixer = new THREE.AnimationMixer(body);
       const rest = mixer.clipAction(idle);
       const words = mixer.clipAction(talk);
       words.setLoop(THREE.LoopOnce, 1);
       words.clampWhenFinished = true;
+      rest.timeScale = words.timeScale = pace;
       rest.play();
       rest.time = seat * 0.6;
-      let wait = 4 + seat * 3.5;
+      let wait = first;
+      const length = talk.duration;
       mixers.push((dt) => {
-        mixer.update(dt);
         wait -= dt;
-        if (wait > 0) return;
-        wait = Infinity;
-        words.reset().fadeIn(0.4).play();
-        rest.fadeOut(0.4);
-      });
-      mixer.addEventListener('finished', (e) => {
-        if (e.action !== words) return;
-        rest.reset().fadeIn(0.5).play();
-        words.fadeOut(0.5);
-        wait = 9 + seat * 2.5;
+        if (wait <= 0) {
+          wait = every;
+          words.reset().play();
+        }
+        // in and out of the words softly (0.4 s at each end)
+        const t = words.isRunning() ? words.time : length;
+        const mix = gesture * Math.min(1, t / 0.4, (length - t) / 0.4);
+        words.setEffectiveWeight(Math.max(0, mix));
+        rest.setEffectiveWeight(1 - Math.max(0, mix));
+        mixer.update(dt);
       });
     });
   });
