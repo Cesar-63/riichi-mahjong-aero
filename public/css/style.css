@@ -1587,7 +1587,6 @@ body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { vis
 .r-yaku li { white-space: nowrap; }
 .r-yaku em { font-style: normal; color: var(--gold); }
 .r-yaku small.jp { font-size: max(10px, calc(13 * var(--px))); color: var(--cream); opacity: .6; }
-.r-yaku small.note { font-family: var(--f-body); font-size: max(10px, calc(13 * var(--px))); color: var(--cream); opacity: .8; }
 .r-hand { position: absolute; left: calc(96 * var(--px)); top: calc(280 * var(--px)); display: flex; }
 .r-hand .tile { --w: max(24px, calc(40 * var(--px))); }
 .r-bottom {
