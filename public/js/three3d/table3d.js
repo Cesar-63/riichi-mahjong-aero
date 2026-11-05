@@ -31,6 +31,7 @@ const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 // the lab also calls destroy() to free the renderer
 export function createTable3D(container, { onPick, signal } = {}) {
   const world = createWorld(container, { signal });
+  let characters = null; // lab: rivals at the table (characters.js)
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -1424,9 +1425,22 @@ export function createTable3D(container, { onPick, signal } = {}) {
     },
     resize: world.fit,
     // animation lab: a free camera ({ pos, target } of plain {x, y, z},
-    // null to give the camera back) and teardown
+    // null to give the camera back), render passes for video capture and
+    // teardown
     lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
     showHand: world.showOverlays,
+    setPass: world.setPass,
+    // lab: the rivals sitting at the table (characters.js and the models
+    // load the first time they are shown, so the game never downloads them);
+    // returns a promise that settles once they are in place
+    showCharacters(on) {
+      if (on && !characters) characters = import('./characters.js').then((m) => m.createCharacters(world));
+      if (!characters) return Promise.resolve();
+      return characters.then((c) => {
+        c.setVisible(on);
+        return c.ready;
+      });
+    },
     destroy: world.destroy,
   };
 }

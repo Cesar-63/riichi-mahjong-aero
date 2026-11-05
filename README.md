@@ -488,11 +488,34 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   Se puede ocultar tu mano de frente.
 - **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
   palitos.
+- **Rivales en la mesa** (prueba, solo en el laboratorio): tres hombres
+  low-poly estilo PS1 sentados en las sillas de los rivales, respirando y de
+  vez en cuando hablando (`public/js/three3d/characters.js`). Cada uno tiene
+  su temperamento: cuánto gesticula (la animación de hablar se mezcla con la
+  de estar sentado en su propia medida), a qué ritmo y cada cuánto habla. El
+  de la derecha habla con las manos, el oficinista se mide y el señor mayor
+  casi no se mueve. Comparten un solo esqueleto, así que cualquier animación
+  sirve para todos. Con ellos
+  las sillas se corren detrás de sus espaldas. Las cámaras **Rivales desde
+  tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
+  las animaciones son CC0, de Mesh2Motion: ver
+  [public/models/personajes/README.md](public/models/personajes/README.md).
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
   con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
   de una animación ya empezada) se ven al volver al comienzo.
+- **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
+  graba una escena cuadro a cuadro con el reloj del laboratorio, así cada
+  toma sale igual, con cualquier cámara de la lista y en cualquier tamaño
+  (también vertical, para redes). Además del juego tal cual (`color`) graba
+  dos guías para modelos de IA de video a video:
+  `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
+  sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
+  llamada. `--rivales` graba con los rivales en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  opciones están al principio de `scripts/lab-capture.mjs` y el plan en
+  [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
+  `capturas/` (fuera del repositorio).
 
 ## Fichas
 
@@ -517,11 +540,13 @@ server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-
 server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
 mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas
 public/                  Cliente (index.html, css/, js/)
+public/models/personajes/  Rivales de prueba para el laboratorio (glTF, CC0)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
+scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
 dev-server.js            Servidor local
 test/                    node:test
 ```
@@ -564,8 +589,9 @@ Componentes de terceros:
 | Pesos Mortal-S42 (`server/engine/mortal/mortal-s42.onnx`) | Apache-2.0 |
 | majiang-ai y majiang-core | MIT |
 | onnxruntime-web | MIT |
-| three.js (`public/vendor/three/`) | MIT |
+| three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
 | Fichas FluffyStuff | CC0 |
+| Personajes y animaciones de Mesh2Motion (`public/models/personajes/`) | CC0 |
 
 **Contribuciones.** Para poder reutilizar el código propio en otros proyectos
 (incluso con otra licencia), las contribuciones externas se aceptan solo si su

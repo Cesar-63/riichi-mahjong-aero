@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node dev-server.js",
     "test": "node --test test/*.test.js",
-    "lab:scenarios": "node scripts/lab-scenarios.mjs"
+    "lab:scenarios": "node scripts/lab-scenarios.mjs",
+    "lab:capture": "node scripts/lab-capture.mjs"
   },
   "dependencies": {
     "@kobalab/majiang-ai": "1.3.0",

@@ -123,16 +123,71 @@ export function createWorld(container, { signal } = {}) {
     for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
     renderer.clear();
-    renderer.render(scene, camera);
+    draw(scene, camera, false);
     // overlays (the player's hand) are drawn on top with their own depth
     for (const [s2, c2] of overlaysOn ? overlays : []) {
       renderer.clearDepth();
-      renderer.render(s2, c2);
+      draw(s2, c2, true);
     }
   });
 
+  // Render passes for the lab's video capture, as guides for video-to-video
+  // models: 'color' (the game as it is), 'arcilla' (every surface in one
+  // matte clay, no textures: shapes, light and shadows only) and
+  // 'profundidad' (white near the camera, black far). Transparent things
+  // (contact shadows, labels, the band behind the hand) are left out of the
+  // guides, and the overlay hand counts as the nearest thing on screen.
+  let pass = 'color';
+  const clay = new THREE.MeshStandardMaterial({ color: 0xb4ada2, roughness: 0.92 });
+  const depth = new THREE.ShaderMaterial({
+    uniforms: { near: { value: 1 }, far: { value: 100 } },
+    // with three's skinning chunks, so the rivals at the table keep their pose
+    vertexShader: `#include <common>
+      #include <skinning_pars_vertex>
+      varying float vz;
+      void main() {
+        #include <skinbase_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        #include <project_vertex>
+        vz = -mvPosition.z;
+      }`,
+    fragmentShader: 'uniform float near; uniform float far; varying float vz; void main() { float d = 1.0 - smoothstep(near, far, vz); gl_FragColor = vec4(vec3(d), 1.0); }',
+  });
+  const nearest = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const black = new THREE.Color(0x000000);
+  const grey = new THREE.Color(0x3a3834);
+  function draw(s, c, overlay) {
+    if (pass === 'color') return renderer.render(s, c);
+    const mat = pass === 'arcilla' ? clay : overlay ? nearest : depth;
+    if (mat === depth) {
+      // the depth range follows the camera: from a bit before what it looks at to well past it
+      const d = c.position.distanceTo(look);
+      depth.uniforms.near.value = Math.max(0.5, d * 0.6);
+      depth.uniforms.far.value = d * 1.45;
+    }
+    const swapped = [];
+    s.traverse((o) => {
+      if (!o.material || !o.visible) return;
+      swapped.push([o, o.material]);
+      if ([o.material].flat().some((m) => m.transparent)) o.visible = false;
+      else o.material = mat;
+    });
+    const keep = [s.background, s.fog];
+    if (!overlay) {
+      s.background = pass === 'arcilla' ? grey : black;
+      s.fog = null;
+    }
+    renderer.render(s, c);
+    [s.background, s.fog] = keep;
+    for (const [o, m] of swapped) {
+      o.material = m;
+      o.visible = true;
+    }
+  }
+
   return {
-    THREE, scene, camera, renderer, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
+    THREE, scene, camera, renderer, chairs: lights.chairs, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
     setView: (m) => { mode = m; announce(); },
     forceView: (m) => { forced = m; announce(); },
     onView: (f) => { viewListeners.push(f); f(announced || mode); },
@@ -141,6 +196,8 @@ export function createWorld(container, { signal } = {}) {
     lockView: (v) => { locked = v; },
     // lab: hide the overlays (the player's hand facing the screen)
     showOverlays: (on) => { overlaysOn = on; },
+    // lab: 'color', 'arcilla' or 'profundidad' (see draw above)
+    setPass: (p) => { pass = p; },
     destroy() {
       renderer.setAnimationLoop(null);
       renderer.dispose();
@@ -327,6 +384,7 @@ function addParlour(group) {
   }
   // chairs around the table, only their backs catch the lamp light
   const chairMat = new THREE.MeshStandardMaterial({ color: 0x55504a, roughness: 0.6 });
+  const chairs = [];
   for (let i = 0; i < 4; i++) {
     const chair = new THREE.Group();
     for (let k = -1.5; k <= 1.5; k++) {
@@ -342,6 +400,7 @@ function addParlour(group) {
     chair.rotation.y = a;
     if (i === 0) chair.visible = false; // the player's own chair would block the view
     group.add(chair);
+    chairs.push(chair);
   }
   // floor and a far wall to swallow the light
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x1a140f, roughness: 0.9 }));
@@ -365,5 +424,5 @@ function addParlour(group) {
   lamp.shadow.camera.near = 12;
   lamp.shadow.camera.far = 60;
   group.add(lamp, lamp.target);
-  return { lamp, hemi, ambient };
+  return { lamp, hemi, ambient, chairs };
 }
