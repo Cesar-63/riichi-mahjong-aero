@@ -88,6 +88,64 @@
     .lab-param.changed label::after { content: " ●"; }
     #lab-out { width: 100%; min-height: 90px; margin-top: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
     #lab-cam { font-family: ui-monospace, monospace; font-size: 11px; color: var(--navy-text); word-break: break-all; }
+    /* episodes (js/lab-episode.js): texts and a panel over the table, sized
+       to the stage (cqw = 1% of its width), whatever the video size */
+    .ep { position: absolute; inset: 0; z-index: 6; pointer-events: none; container-type: size; overflow: hidden; }
+    .ep-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 75% 60% at 50% 48%, transparent 55%, rgba(0, 0, 0, .6)); }
+    .ep-fade { position: absolute; inset: 0; background: #000; }
+    .ep-layer > div { position: absolute; left: 6cqw; right: 6cqw; text-align: center; will-change: opacity, transform; }
+    .ep-titulo, .ep-cierre { top: 9cqh; color: var(--cream); }
+    .ep-cierre { top: 36cqh; }
+    :is(.ep-titulo, .ep-cierre) small { display: block; font-family: var(--f-hand); font-size: 5cqw; color: var(--gold); letter-spacing: .1em; }
+    :is(.ep-titulo, .ep-cierre) h1 {
+      margin: .5cqw 0 0;
+      font-family: var(--f-title);
+      font-weight: 400;
+      font-size: 17cqw;
+      line-height: 1.1;
+      text-shadow: 0 0 4cqw rgba(255, 210, 120, .35), 0 .6cqw 0 rgba(0, 0, 0, .7);
+    }
+    :is(.ep-titulo, .ep-cierre) p { margin: 1cqw 0 0; font-family: var(--f-hand); font-size: 5.5cqw; color: var(--cream); opacity: .85; }
+    .ep-narra { top: 7cqh; }
+    .ep-narra p {
+      display: inline-block;
+      margin: 0;
+      padding: 2.2cqw 4cqw 2.6cqw;
+      font-family: var(--f-hand);
+      font-size: 6.2cqw;
+      line-height: 1.15;
+      color: var(--ink);
+      background: var(--paper-grain, none), var(--paper-sheet);
+      box-shadow: 0 1cqw 3cqw rgba(0, 0, 0, .6);
+      transform: rotate(-1.2deg);
+    }
+    .ep-grande { top: 30cqh; }
+    .ep-grande p {
+      margin: 0;
+      font-family: "Shippori Mincho B1", serif;
+      font-weight: 800;
+      font-size: 11cqw;
+      line-height: 1.15;
+      color: #fff6e0;
+      text-shadow: 0 0 3cqw rgba(255, 190, 90, .55), 0 0 8cqw rgba(255, 140, 40, .35), 0 .5cqw 0 rgba(0, 0, 0, .8);
+    }
+    .ep-pie { bottom: 30cqh; }
+    .ep-pie p { margin: 0; font-family: var(--f-hand); font-size: 5.6cqw; color: var(--cream); text-shadow: 0 .4cqw 1.5cqw #000, 0 0 3cqw #000; }
+    .ep-panel {
+      bottom: 4cqh;
+      padding: 2.4cqw 3cqw 2.8cqw;
+      color: var(--ink);
+      background: var(--paper-grain, none), var(--paper-sheet);
+      box-shadow: 0 1.2cqw 4cqw rgba(0, 0, 0, .7);
+      transform-origin: 50% 100%;
+    }
+    .ep-panel h2 { margin: 0 0 1.6cqw; font-family: var(--f-title); font-weight: 400; font-size: 5.6cqw; color: var(--red-ink); }
+    .ep-panel .tile { --w: 5.5cqw; }
+    .ep-tiles { display: flex; justify-content: center; gap: .35cqw; }
+    .ep-drawn { display: flex; margin-left: 2.2cqw; }
+    .ep-wait { display: flex; justify-content: center; align-items: center; gap: 2cqw; margin: 2cqw 0 0; font-family: var(--f-hand); font-size: 5cqw; }
+    .ep-wait .tile { --w: 7cqw; filter: drop-shadow(0 0 1.4cqw rgba(226, 194, 106, .95)); }
+    .ep-note { margin: 1.6cqw 0 0; font-family: var(--f-hand); font-size: 4.6cqw; color: var(--ink-soft); }
     /* video capture (scripts/lab-capture.mjs): the stage alone, full screen */
     body.capture #lab-panel { display: none; }
     body.capture #lab-stage { right: 0; bottom: 0; }

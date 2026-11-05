@@ -209,10 +209,11 @@ Detalles:
 ## 8. Hoja de ruta
 
 1. ✅ **Grabar escenas del laboratorio** en video (`npm run lab:capture`).
-2. **Episodio piloto en vertical**, sin personajes: "Ep. 01: Riichi", con un
-   panel de tutorial y textos sobre la mesa. Define el formato de episodio:
-   un archivo con la mano, los textos, las cámaras y sus tiempos, que el
-   agente pueda escribir rápido.
+2. **Episodio piloto en vertical**: "Ep. 01: Riichi", con un panel de
+   tutorial y textos sobre la mesa. Define el formato de episodio: un
+   archivo con la mano, los textos, las cámaras y sus tiempos, que el
+   agente pueda escribir rápido. *Hecho:* `public/lab/episodios/ep01-riichi.json`
+   (ver [§10](#10-el-formato-de-episodio)).
 3. **Cámaras en movimiento** con puntos clave (travelling, giro alrededor de
    la mesa): sirven para el tráiler y para la cámara de cine del bloque A.
 4. **Escenas desde un registro mjai**, además de las manos armadas en
@@ -239,3 +240,30 @@ Detalles:
   escrito con Claude. Es razonable como práctica, pero el estatus legal del
   código generado con IA no está del todo resuelto: sumarlo a lo que hay que
   confirmar con alguien que sepa de licencias si la Edición 3 se vende.
+
+## 10. El formato de episodio
+
+Un episodio es un archivo JSON en `public/lab/episodios/` que dirige una
+escena del laboratorio. Lo reproduce `public/js/lab-episode.js`, en su
+propio tiempo, así que se graba cuadro a cuadro y sale igual cada vez.
+
+| Campo | Qué es |
+| --- | --- |
+| `escena` | La escena del laboratorio (`scripts/lab-scenarios.mjs`), jugada por el motor real. |
+| `duracion`, `ancho`, `alto` | Largo (ms) y tamaño del video (1080×1920, vertical). |
+| `personas`, `yo`, `miManoEnLaMesa` | Rivales sentados; tu propio personaje en tu silla; tu mano parada sobre la mesa frente a él. |
+| `tomas` | Cámara: desde cada `en` (ms) hasta la toma siguiente, de `desde` a `a` (`pos` y `mira`), suave o `lineal`; `orbita` gira alrededor de lo que mira. Cada toma corta a la siguiente. |
+| `lento` | Cámara lenta: entre `en` y `hasta` la mesa avanza a `velocidad` (los textos no). |
+| `textos` | Estilos: `titulo`, `narra` (papel arriba), `grande`, `pie` y `cierre`. |
+| `panel` | Abajo: `fichas` (notación `123m 68s`), `robada`, `espera` (resaltada) y una `nota`. |
+| `acciones` | Qué hace quién (0 = tú, 1 = derecha, 2 = enfrente, 3 = izquierda): `talk` o una reacción (`victory`, `yes`, `clapping`, `reject`, `angry`, `confused`, `head-nod`, `idle-foldarms`), con `intensidad`, `ritmo` y `mantener`. |
+
+Todos los tiempos son del episodio: la cámara lenta alarga la escena, así
+que lo que pasa en la mesa después de una cámara lenta llega más tarde que
+en la escena sola.
+
+Para un episodio nuevo: una escena en `scripts/lab-scenarios.mjs` (la mano
+y las jugadas, con pausas para la historia) y un archivo de episodio. Se
+mira en `/lab.html?episodio=<id>` y se graba con
+`npm run lab:capture -- --episodio <id>`.
+

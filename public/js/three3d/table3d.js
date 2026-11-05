@@ -32,6 +32,13 @@ const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 export function createTable3D(container, { onPick, signal } = {}) {
   const world = createWorld(container, { signal });
   let characters = null; // lab: rivals at the table (characters.js)
+  // lab: my hand standing on the table in front of my seat, like the
+  // rivals' (in the game it is the overlay facing the screen)
+  let myHandOnTable = false;
+  // a hand laid down for a win or a draw starts where the hand stood: mine
+  // from the overlay (dropped onto the table a bit nearer), the others' (and
+  // mine when it is on the table) from their row
+  const fromOverlay = (r) => r === 0 && !myHandOnTable;
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
 
   // ---------------------------------------------------------------- assets
@@ -379,7 +386,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const mesh = makeTile(id);
     mesh.visible = false;
     scene.add(mesh);
-    return { mesh, id, standAt, fallAt, tip: tipOver(r, x, faceUp), placed: r === 0 };
+    return { mesh, id, standAt, fallAt, tip: tipOver(r, x, faceUp), placed: fromOverlay(r) };
   }
   const revealZ = (faceUp) => (faceUp ? fzo(95) - H / 2 - D / 2 : fzo(95) + H / 2 + D / 2);
 
@@ -475,12 +482,12 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const rows = res.wins.map((w) => {
       const r = rel(w.seat);
       const ids = [...w.hand, w.winTile];
-      const x0 = r === 0 ? 10 : 12;
+      const x0 = fromOverlay(r) ? 10 : 12;
       // a ron tile comes from the pond (it was never in the hand)
       const pond = !w.tsumo ? objects.get(`t${w.winTile}`) : null;
       const hand = ids.map((id, i) => {
         const last = i === ids.length - 1;
-        const it = revealTile(r, id, rowX(x0, i) + (last ? 0.35 : 0), true, r === 0 ? i * WIN.placeGap : 0, t + i * WIN.tileMs);
+        const it = revealTile(r, id, rowX(x0, i) + (last ? 0.35 : 0), true, fromOverlay(r) ? i * WIN.placeGap : 0, t + i * WIN.tileMs);
         it.win = last;
         if (last && pond) {
           it.fly = { path: makePath({ p: pond.obj.position.clone(), q: pond.obj.quaternion.clone() }, it.tip.target), hide: `t${w.winTile}` };
@@ -567,9 +574,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
       const r = rel(abs);
       const up = tenpai.has(abs);
       const ids = up ? res.hands[abs] || [] : abs === v.seat ? v.hand : Array.from({ length: p.handCount }, () => null);
-      const x0 = r === 0 ? 10 : 12;
+      const x0 = fromOverlay(r) ? 10 : 12;
       ids.forEach((id, i) => {
-        items.push(revealTile(r, id, rowX(x0, i), up, r === 0 ? i * WIN.placeGap : 0, DRAW.startMs + i * DRAW.tileMs));
+        items.push(revealTile(r, id, rowX(x0, i), up, fromOverlay(r) ? i * WIN.placeGap : 0, DRAW.startMs + i * DRAW.tileMs));
       });
       const z = up ? revealZ(true) + H / 2 + 0.6 : revealZ(false) - H / 2 - 0.55;
       addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs + WIN.dropMs);
@@ -899,6 +906,14 @@ export function createTable3D(container, { onPick, signal } = {}) {
         if (p.hasDrawn) {
           put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw');
           if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
+        }
+      } else if (r === 0 && myHandOnTable && !laid.has(abs)) {
+        // lab: my tiles stand in the same row, faces towards me; the draw
+        // flies in from the wall and a discard leaves from its place in the hand
+        v.hand.forEach((id, i) => put(`t${id}`, id, place(0, rowX(12, i), H / 2, fzo(95), 'stand')));
+        if (v.drawn !== null) {
+          put(`t${v.drawn}`, v.drawn, place(0, rowX(12, v.hand.length) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw');
+          if (drawSlot && drawSlot.seat === abs) spawns.set(`t${v.drawn}`, slotPose(v, drawSlot.slot, rel));
         }
       }
       // pond (called tiles leave it; the tile after a called riichi tile goes sideways)
@@ -1433,6 +1448,12 @@ export function createTable3D(container, { onPick, signal } = {}) {
     // lab: the rivals sitting at the table (characters.js and the models
     // load the first time they are shown, so the game never downloads them);
     // returns a promise that settles once they are in place
+    // lab: the people at the table (characters.js), once loaded: setMe,
+    // setAuto, act… (null while they were never shown)
+    characters: () => (characters ? characters.then(async (c) => (await c.ready, c)) : Promise.resolve(null)),
+    showMyHandOnTable(on) {
+      myHandOnTable = !!on;
+    },
     showCharacters(on) {
       if (on && !characters) characters = import('./characters.js').then((m) => m.createCharacters(world));
       if (!characters) return Promise.resolve();

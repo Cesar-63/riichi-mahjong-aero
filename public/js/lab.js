@@ -3,7 +3,8 @@
 // clock (lab.html), with a free camera and the animation settings of
 // three3d/tuning.js changing live.
 import { createTable3D } from './three3d/table3d.js';
-import { showCallouts } from './render.js';
+import { showCallouts, detectTileset } from './render.js';
+import { createEpisode } from './lab-episode.js';
 import { TUNING, TUNING_INFO, TUNING_DEFAULTS } from './three3d/tuning.js';
 
 const $ = (s) => document.querySelector(s);
@@ -30,6 +31,8 @@ let lastView = null;
 let seeking = false;
 let pass = 'color';
 let peopleReady = Promise.resolve();
+let myHandOnTable = false; // an episode stands my hand on the table, in front of my man
+let episode = null;
 
 // a fresh table for every run, so each run starts from nothing
 function start() {
@@ -42,6 +45,7 @@ function start() {
   table.setCallouts([...stage.querySelectorAll('.callout')]);
   table.showHand($('#lab-hand').checked);
   table.setPass(pass);
+  table.showMyHandOnTable(myHandOnTable);
   peopleReady = table.showCharacters($('#lab-people').checked);
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
@@ -328,5 +332,49 @@ if (new URLSearchParams(location.search).has('captura')) {
   };
 }
 
+// Episodes (lab-episode.js): lab.html?episodio=<id> plays one on screen;
+// with captura, scripts/lab-capture.mjs --episodio steps and records it.
+async function loadEpisode(id) {
+  const res = await fetch(`lab/episodios/${id}.json`);
+  if (!res.ok) throw new Error(`no hay episodio "${id}"`);
+  const ep = await res.json();
+  await detectTileset();
+  if (episode) episode.destroy();
+  setPaused(true);
+  cam = null;
+  pass = 'color';
+  myHandOnTable = !!ep.miManoEnLaMesa;
+  $('#lab-hand').checked = false;
+  $('#lab-people').checked = ep.personas !== false;
+  chooseScene(ep.escena);
+  await peopleReady;
+  const people = await table.characters();
+  if (people) {
+    people.setMe(!!ep.yo);
+    people.setAuto(false);
+  }
+  episode = createEpisode(ep, { root: stage, table, people, clock });
+  return { duracion: ep.duracion, ancho: ep.ancho || 1080, alto: ep.alto || 1920 };
+}
+if (window.labCapture) {
+  window.labCapture.loadEpisode = loadEpisode;
+  window.labCapture.advance = (ms) => episode.advance(ms);
+}
+
 chooseScene(store.get('lab.scene'));
 requestAnimationFrame(frame);
+
+const wanted = new URLSearchParams(location.search).get('episodio');
+if (wanted && !window.labCapture) {
+  // on screen: the episode's time follows the real one
+  await loadEpisode(wanted);
+  // (the clock keeps the real time of its last tick; performance.now is the lab's)
+  let last = clock.last;
+  const play = () => {
+    const now = clock.last;
+    if (episode.time < episode.duration) episode.advance(Math.min(100, now - last));
+    last = now;
+    requestAnimationFrame(play);
+  };
+  requestAnimationFrame(play);
+}

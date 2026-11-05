@@ -1,0 +1,565 @@
+{
+ "titulo": "Mahjong · Ep. 01 · Riichi",
+ "nota": "Tú (oya) declaras riichi y ganas por tsumo… la mano más barata posible. Escena my-riichi; los tiempos son del episodio (la cámara lenta alarga la escena).",
+ "escena": "my-riichi",
+ "ancho": 1080,
+ "alto": 1920,
+ "duracion": 46000,
+ "personas": true,
+ "yo": true,
+ "miManoEnLaMesa": true,
+ "fundido": 700,
+ "lento": [
+  {
+   "en": 8700,
+   "hasta": 14400,
+   "velocidad": 0.35
+  },
+  {
+   "en": 26700,
+   "hasta": 30700,
+   "velocidad": 0.4
+  }
+ ],
+ "tomas": [
+  {
+   "en": 0,
+   "desde": {
+    "pos": [
+     30,
+     34,
+     40
+    ],
+    "mira": [
+     0,
+     2,
+     0
+    ]
+   },
+   "orbita": -50
+  },
+  {
+   "en": 3000,
+   "desde": {
+    "pos": [
+     9,
+     30,
+     44
+    ],
+    "mira": [
+     0,
+     1,
+     10
+    ]
+   },
+   "a": {
+    "pos": [
+     6,
+     24,
+     38
+    ],
+    "mira": [
+     0,
+     1,
+     12
+    ]
+   }
+  },
+  {
+   "en": 5600,
+   "desde": {
+    "pos": [
+     0,
+     7,
+     10
+    ],
+    "mira": [
+     0,
+     14.5,
+     27
+    ]
+   },
+   "a": {
+    "pos": [
+     0,
+     8,
+     13
+    ],
+    "mira": [
+     0,
+     14.5,
+     27
+    ]
+   }
+  },
+  {
+   "en": 8600,
+   "desde": {
+    "pos": [
+     9,
+     5,
+     17
+    ],
+    "mira": [
+     0,
+     0.5,
+     6
+    ]
+   },
+   "a": {
+    "pos": [
+     5,
+     3.2,
+     13
+    ],
+    "mira": [
+     -0.5,
+     0.3,
+     6.5
+    ]
+   }
+  },
+  {
+   "en": 14400,
+   "desde": {
+    "pos": [
+     0,
+     16,
+     30
+    ],
+    "mira": [
+     26,
+     12,
+     2
+    ]
+   },
+   "a": {
+    "pos": [
+     0,
+     16,
+     30
+    ],
+    "mira": [
+     -26,
+     12,
+     2
+    ]
+   },
+   "curva": "lineal"
+  },
+  {
+   "en": 19000,
+   "desde": {
+    "pos": [
+     0,
+     34,
+     20
+    ],
+    "mira": [
+     0,
+     0,
+     9
+    ]
+   },
+   "a": {
+    "pos": [
+     0,
+     26,
+     18
+    ],
+    "mira": [
+     0,
+     0,
+     10
+    ]
+   }
+  },
+  {
+   "en": 22300,
+   "desde": {
+    "pos": [
+     2,
+     13,
+     3
+    ],
+    "mira": [
+     0,
+     12,
+     -24
+    ]
+   },
+   "a": {
+    "pos": [
+     1,
+     12.8,
+     -6
+    ],
+    "mira": [
+     0,
+     12.3,
+     -24
+    ]
+   }
+  },
+  {
+   "en": 24000,
+   "desde": {
+    "pos": [
+     9,
+     4.5,
+     21
+    ],
+    "mira": [
+     3,
+     1.5,
+     13
+    ]
+   },
+   "a": {
+    "pos": [
+     7,
+     4,
+     19
+    ],
+    "mira": [
+     4,
+     1.5,
+     13
+    ]
+   }
+  },
+  {
+   "en": 26700,
+   "desde": {
+    "pos": [
+     0,
+     6,
+     9
+    ],
+    "mira": [
+     0,
+     15,
+     27
+    ]
+   },
+   "a": {
+    "pos": [
+     0,
+     7,
+     12
+    ],
+    "mira": [
+     0,
+     15,
+     27
+    ]
+   }
+  },
+  {
+   "en": 30700,
+   "desde": {
+    "pos": [
+     5,
+     26,
+     -38
+    ],
+    "mira": [
+     0,
+     4,
+     12
+    ]
+   },
+   "a": {
+    "pos": [
+     -3,
+     22,
+     -34
+    ],
+    "mira": [
+     0,
+     4,
+     12
+    ]
+   }
+  },
+  {
+   "en": 35500,
+   "desde": {
+    "pos": [
+     0,
+     22,
+     22
+    ],
+    "mira": [
+     0,
+     0,
+     9
+    ]
+   },
+   "a": {
+    "pos": [
+     0,
+     18,
+     20
+    ],
+    "mira": [
+     0,
+     0,
+     9
+    ]
+   }
+  },
+  {
+   "en": 39000,
+   "desde": {
+    "pos": [
+     2,
+     13,
+     2
+    ],
+    "mira": [
+     0,
+     11.5,
+     -24
+    ]
+   },
+   "a": {
+    "pos": [
+     1,
+     12.6,
+     -5
+    ],
+    "mira": [
+     0,
+     11.8,
+     -24
+    ]
+   }
+  },
+  {
+   "en": 42300,
+   "desde": {
+    "pos": [
+     22,
+     24,
+     30
+    ],
+    "mira": [
+     0,
+     6,
+     0
+    ]
+   },
+   "orbita": 40
+  }
+ ],
+ "textos": [
+  {
+   "en": 400,
+   "hasta": 2900,
+   "estilo": "titulo",
+   "serie": "Mahjong · Ep. 01",
+   "texto": "Riichi",
+   "sub": "la apuesta del que no se arrepiente"
+  },
+  {
+   "en": 3200,
+   "hasta": 5500,
+   "estilo": "narra",
+   "texto": "Este eres tú.\nTe falta una ficha para estar listo."
+  },
+  {
+   "en": 6000,
+   "hasta": 8500,
+   "estilo": "narra",
+   "texto": "Robas el 8 de bambú…\n¡tenpai!"
+  },
+  {
+   "en": 9900,
+   "hasta": 14200,
+   "estilo": "narra",
+   "texto": "Riichi: apuestas 1.000 puntos\ny tu mano queda sellada."
+  },
+  {
+   "en": 14700,
+   "hasta": 18800,
+   "estilo": "pie",
+   "texto": "Ahora todos saben que estás listo."
+  },
+  {
+   "en": 19300,
+   "hasta": 22200,
+   "estilo": "narra",
+   "texto": "Robas algo que no sirve.\nCon riichi, sale directo."
+  },
+  {
+   "en": 22500,
+   "hasta": 23900,
+   "estilo": "pie",
+   "texto": "Una vuelta. Nadie te regala nada."
+  },
+  {
+   "en": 24500,
+   "hasta": 26600,
+   "estilo": "pie",
+   "texto": "Y entonces…"
+  },
+  {
+   "en": 31200,
+   "hasta": 35300,
+   "estilo": "narra",
+   "texto": "Riichi y tsumo.\n¿Cuánto ganaste?"
+  },
+  {
+   "en": 35800,
+   "hasta": 38900,
+   "estilo": "grande",
+   "texto": "1.000 puntos\nde cada uno."
+  },
+  {
+   "en": 36600,
+   "hasta": 38900,
+   "estilo": "pie",
+   "texto": "Sin dora. Sin ura. Nada."
+  },
+  {
+   "en": 39300,
+   "hasta": 42200,
+   "estilo": "narra",
+   "texto": "Lo celebraste\ncomo un yakuman."
+  },
+  {
+   "en": 43000,
+   "hasta": 45800,
+   "estilo": "cierre",
+   "serie": "Mahjong · Ep. 01",
+   "texto": "Riichi",
+   "sub": "Próximo: el furiten"
+  }
+ ],
+ "panel": [
+  {
+   "en": 3200,
+   "hasta": 5500,
+   "titulo": "Tu mano",
+   "fichas": "123m789p234s6s99s3z",
+   "nota": "Te falta el 8 de bambú."
+  },
+  {
+   "en": 6000,
+   "hasta": 8500,
+   "titulo": "¡Tenpai!",
+   "fichas": "123m789p234s68s99s",
+   "robada": "3z",
+   "espera": "7s",
+   "esperaTexto": "Botas el Oeste y esperas",
+   "nota": "Solo te sirve el 7: la del medio."
+  },
+  {
+   "en": 9900,
+   "hasta": 14200,
+   "titulo": "Riichi",
+   "fichas": "123m789p234s68s99s",
+   "espera": "7s",
+   "nota": "+1 han si ganas · si no, pierdes la apuesta"
+  },
+  {
+   "en": 19300,
+   "hasta": 22200,
+   "titulo": "Mano sellada",
+   "fichas": "123m789p234s68s99s",
+   "robada": "1p",
+   "nota": "No te sirve: sale sola."
+  },
+  {
+   "en": 31200,
+   "hasta": 35300,
+   "titulo": "Tsumo",
+   "fichas": "123m789p234s678s99s",
+   "nota": "Riichi 1 han + tsumo 1 han · 30 fu"
+  }
+ ],
+ "acciones": [
+  {
+   "en": 6400,
+   "quien": 0,
+   "hace": "yes",
+   "intensidad": 0.45
+  },
+  {
+   "en": 14600,
+   "quien": 1,
+   "hace": "reject"
+  },
+  {
+   "en": 16300,
+   "quien": 2,
+   "hace": "head-nod",
+   "intensidad": 0.6,
+   "ritmo": 0.7
+  },
+  {
+   "en": 17600,
+   "quien": 3,
+   "hace": "confused",
+   "intensidad": 0.8
+  },
+  {
+   "en": 19500,
+   "quien": 2,
+   "hace": "idle-foldarms",
+   "mantener": true
+  },
+  {
+   "en": 20500,
+   "quien": 1,
+   "hace": "talk"
+  },
+  {
+   "en": 27500,
+   "quien": 0,
+   "hace": "victory"
+  },
+  {
+   "en": 31000,
+   "quien": 0,
+   "hace": "yes"
+  },
+  {
+   "en": 31000,
+   "quien": 2,
+   "hace": null
+  },
+  {
+   "en": 32500,
+   "quien": 1,
+   "hace": "angry",
+   "intensidad": 0.9
+  },
+  {
+   "en": 33500,
+   "quien": 3,
+   "hace": "talk",
+   "intensidad": 0.5
+  },
+  {
+   "en": 39200,
+   "quien": 2,
+   "hace": "clapping",
+   "intensidad": 0.55,
+   "ritmo": 0.55
+  },
+  {
+   "en": 42400,
+   "quien": 0,
+   "hace": "victory",
+   "intensidad": 0.8
+  },
+  {
+   "en": 43500,
+   "quien": 1,
+   "hace": "reject",
+   "intensidad": 0.7
+  }
+ ]
+}

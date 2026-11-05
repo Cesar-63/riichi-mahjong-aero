@@ -475,7 +475,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
   descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
-  tsumo, tu tsumo con tres kan y empate. Salen de
+  tsumo, tu tsumo con tres kan, empate, y tu riichi con un tsumo barato (la
+  del episodio 1). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
@@ -500,6 +501,15 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
   las animaciones son CC0, de Mesh2Motion: ver
   [public/models/personajes/README.md](public/models/personajes/README.md).
+- **Episodios** (`public/lab/episodios/`, `public/js/lab-episode.js`):
+  videos cortos hechos con una escena del laboratorio y un archivo que la
+  dirige: tomas de cámara que cortan o se mueven, cámara lenta, textos, un
+  panel con fichas y lo que hace cada personaje (celebrar, aplaudir, negar…).
+  Con un episodio, tu propio personaje se sienta en tu silla y tu mano queda
+  parada sobre la mesa frente a él, como la de los rivales. Se ve en
+  `/lab.html?episodio=ep01-riichi` y se graba en vertical con
+  `npm run lab:capture -- --episodio ep01-riichi` (`--escala 0.5` para
+  grabar más chico).
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto

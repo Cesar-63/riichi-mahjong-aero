@@ -16,6 +16,10 @@
 //                             guides never have them
 //   --desde 0 --hasta <ms>    a part of the scene
 //   --salida capturas         folder for the videos (and --cuadros to keep the PNGs)
+//   --episodio ep01-riichi    an episode (public/lab/episodios/), at its own
+//                             size (vertical, 1080×1920) unless --ancho/--alto
+//                             or --escala 0.5 say otherwise; --desde/--hasta
+//                             are then episode time
 import http from 'node:http';
 import { readFile, mkdir, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
@@ -47,7 +51,17 @@ const o = {
   to: opt('hasta', null),
   out: resolve(opt('salida', 'capturas')),
   frames: flag('cuadros'),
+  episode: opt('episodio', null),
 };
+// an episode sets its own size (and the camera, the people and the rest)
+let epInfo = null;
+if (o.episode) {
+  epInfo = JSON.parse(await readFile(join(fileURLToPath(new URL('..', import.meta.url)), 'public/lab/episodios', `${o.episode}.json`), 'utf8'));
+  const k = Number(opt('escala', 1));
+  if (!args.includes('--ancho')) o.width = Math.round((epInfo.ancho || 1080) * k);
+  if (!args.includes('--alto')) o.height = Math.round((epInfo.alto || 1920) * k);
+  o.passes = ['color'];
+}
 for (const p of o.passes) {
   if (!['color', 'arcilla', 'profundidad'].includes(p)) throw new Error(`pasada desconocida: ${p} (color, arcilla o profundidad)`);
 }
@@ -68,6 +82,25 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
 // ------------------------------------------------------------- recording
+// count frames: draw, take, move on (forward runs in the page with ms)
+async function record(page, name, count, forward, ms) {
+  const dir = join(o.out, `${name}-cuadros`);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  for (let i = 0; i < count; i++) {
+    // one frame applies the step and draws it (the stage fills the page)
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+    await page.screenshot({ path: join(dir, `${String(i).padStart(5, '0')}.png`) });
+    await page.evaluate(forward, ms);
+    if (i % o.fps === 0) process.stdout.write(`\r${name}: ${i}/${count} cuadros`);
+  }
+  const file = join(o.out, `${name}.mp4`);
+  const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(o.fps), '-i', join(dir, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', file], { stdio: 'inherit' });
+  if (ff.status !== 0) throw new Error('ffmpeg falló (¿está instalado?)');
+  if (!o.frames) await rm(dir, { recursive: true, force: true });
+  console.log(`\r${name}: ${count} cuadros → ${file}`);
+}
+
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
@@ -82,6 +115,13 @@ try {
     for (const s of scenes) console.log(`  ${s.id.padEnd(12)} ${s.name} (${(s.length / 1000).toFixed(1)} s)`);
     console.log('Cámaras:');
     for (const c of await page.evaluate(() => window.labCapture.cameras())) console.log(`  ${c}`);
+  } else if (o.episode) {
+    await mkdir(o.out, { recursive: true });
+    const { duracion } = await page.evaluate((id) => window.labCapture.loadEpisode(id), o.episode);
+    const end = Math.min(duracion, o.to === null ? duracion : Number(o.to));
+    const step = 1000 / o.fps;
+    if (o.from > 0) await page.evaluate((ms) => window.labCapture.advance(ms), o.from);
+    await record(page, o.episode, Math.max(1, Math.round((end - o.from) / step)), (ms) => window.labCapture.advance(ms), step);
   } else {
     await mkdir(o.out, { recursive: true });
     const cam = o.camera.replace(/[^\p{L}\d]+/gu, '-').toLowerCase();
@@ -89,25 +129,9 @@ try {
       const length = await page.evaluate((x) => window.labCapture.load(x), { scene: o.scene, camera: o.camera, hand: o.hand, people: o.people, callouts: o.callouts, pass });
       const end = Math.min(length, o.to === null ? length : Number(o.to));
       const step = 1000 / o.fps;
-      const name = `${o.scene}-${cam}-${pass}`;
-      const dir = join(o.out, `${name}-cuadros`);
-      await rm(dir, { recursive: true, force: true });
-      await mkdir(dir, { recursive: true });
       // straight to the part asked for, then one step per frame
       await page.evaluate((ms) => { window.labClock.step += ms; }, o.from);
-      const count = Math.max(1, Math.round((end - o.from) / step));
-      for (let i = 0; i < count; i++) {
-        // one frame applies the step and draws it (the stage fills the page)
-        await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
-        await page.screenshot({ path: join(dir, `${String(i).padStart(5, '0')}.png`) });
-        await page.evaluate((ms) => { window.labClock.step += ms; }, step);
-        if (i % o.fps === 0) process.stdout.write(`\r${name}: ${i}/${count} cuadros`);
-      }
-      const file = join(o.out, `${name}.mp4`);
-      const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(o.fps), '-i', join(dir, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', file], { stdio: 'inherit' });
-      if (ff.status !== 0) throw new Error('ffmpeg falló (¿está instalado?)');
-      if (!o.frames) await rm(dir, { recursive: true, force: true });
-      console.log(`\r${name}: ${count} cuadros → ${file}`);
+      await record(page, `${o.scene}-${cam}-${pass}`, Math.max(1, Math.round((end - o.from) / step)), (ms) => { window.labClock.step += ms; }, step);
     }
   }
 } finally {

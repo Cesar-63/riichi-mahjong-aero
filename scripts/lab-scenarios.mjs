@@ -271,6 +271,47 @@ function myTsumo() {
   scenes.push({ id: 'exhaustive', name: 'Empate', note: 'Se acaba la pared: las manos quedan paradas y caen, tenpai boca arriba y noten boca abajo.', steps: rec.steps, length: rec.end });
 }
 
+// ------------------------- my riichi and a cheap tsumo (episode 1)
+// I am the dealer, one tile away from tenpai. I draw the 8s, declare riichi
+// (kanchan wait on the 7s), the next draw is forced out (tsumogiri) and the
+// one after is the 7s: riichi + tsumo, 30 fu, 1,000 from each player. No
+// ippatsu (a whole go-around passes), no double riichi, no dora or ura: the
+// winning hand is as cheap as a win can be. Slow, to leave room for the
+// story (public/lab/episodios/ep01-riichi.json).
+{
+  const g = scripted(['123m789p234s6s99s4z', '258m258p258s1357z', '369m369p369s2466z', '147m147p147s23z67z'], '3z9m1s2p8s6m4p9p1p2m8m3p7s');
+  const rec = recorder();
+  const rivals = (gap) => {
+    for (const seat of [1, 2, 3]) {
+      tsumogiri(g, seat);
+      passAll(g);
+      rec.add(g, gap);
+    }
+  };
+  rec.add(g, 3200);
+  g.act(0, { type: 'discard', tile: idOf(g, 0, T('4z')) });
+  passAll(g);
+  rec.add(g, 900);
+  rivals(800);
+  // the 8s: tenpai; a long look before the riichi
+  rec.add(g, 2400);
+  g.act(0, { type: 'riichi', tile: idOf(g, 0, T('3z')) });
+  passAll(g);
+  rec.add(g, 3400);
+  rivals(1300);
+  // a useless draw: after riichi it goes straight out
+  rec.add(g, 1500);
+  tsumogiri(g, 0);
+  passAll(g);
+  rec.add(g, 1000);
+  rivals(900);
+  // the 7s
+  rec.add(g, 1800);
+  g.act(0, { type: 'tsumo' });
+  rec.add(g, 12000);
+  scenes.push({ id: 'my-riichi', name: 'Tu riichi y un tsumo barato', note: 'Eres oya: robas el 8s y declaras riichi (espera cerrada al 7s), un robo inútil sale directo y después llega el 7s. Riichi y tsumo, 1.000 de cada uno, sin dora ni ura.', steps: rec.steps, length: rec.end });
+}
+
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });
 const out = new URL('../public/lab/scenarios.json', import.meta.url);
 writeFileSync(out, JSON.stringify({ scenes }));
