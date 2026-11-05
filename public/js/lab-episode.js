@@ -33,6 +33,9 @@ export function createEpisode(ep, { root, table, people, clock }) {
   box.className = 'ep';
   box.innerHTML = '<div class="ep-vignette"></div><div class="ep-layer"></div><div class="ep-fade"></div>';
   root.append(box);
+  // the game's own calls (¡Riichi!…) sit by each seat's place on screen,
+  // which a close camera can push off it: an episode can shout them itself
+  if (ep.avisos === false) root.classList.add('ep-quiet');
   const layer = box.querySelector('.ep-layer');
   const fade = box.querySelector('.ep-fade');
   const items = [
@@ -53,6 +56,7 @@ export function createEpisode(ep, { root, table, people, clock }) {
         + (o.espera ? `<p class="ep-wait"><span>${esc(o.esperaTexto || 'Esperas')}</span>${tiles(o.espera)}</p>` : '')
         + (o.nota ? `<p class="ep-note">${esc(o.nota)}</p>` : '');
     }
+    if (o.kind === 'grito') return `<p>${esc(o.texto)}</p>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}`;
     if (o.kind === 'titulo' || o.kind === 'cierre') {
       return `<small>${esc(o.serie || '')}</small><h1>${esc(o.texto)}</h1>${o.sub ? `<p>${esc(o.sub)}</p>` : ''}`;
     }
@@ -123,6 +127,7 @@ export function createEpisode(ep, { root, table, people, clock }) {
     },
     destroy() {
       box.remove();
+      root.classList.remove('ep-quiet');
     },
   };
 }

@@ -82,16 +82,29 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
 // ------------------------------------------------------------- recording
-// count frames: draw, take, move on (forward runs in the page with ms)
+// The table moves at most 0.1 s per drawn frame (world.js), so time goes
+// forward in steps of 0.1 s or less, each one drawn (forward runs in the
+// page with ms): a low fps or a jump with --desde moves everything as far
+// as the real time would.
+const frame = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+async function go(page, forward, ms) {
+  for (let left = ms; left > 1e-6;) {
+    const d = Math.min(100, left);
+    await page.evaluate(forward, d);
+    left -= d;
+    if (left > 1e-6) await frame(page);
+  }
+}
+// count frames: draw, take, move on
 async function record(page, name, count, forward, ms) {
   const dir = join(o.out, `${name}-cuadros`);
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   for (let i = 0; i < count; i++) {
     // one frame applies the step and draws it (the stage fills the page)
-    await page.evaluate(() => new Promise((r) => requestAnimationFrame(r)));
+    await frame(page);
     await page.screenshot({ path: join(dir, `${String(i).padStart(5, '0')}.png`) });
-    await page.evaluate(forward, ms);
+    await go(page, forward, ms);
     if (i % o.fps === 0) process.stdout.write(`\r${name}: ${i}/${count} cuadros`);
   }
   const file = join(o.out, `${name}.mp4`);
@@ -120,7 +133,7 @@ try {
     const { duracion } = await page.evaluate((id) => window.labCapture.loadEpisode(id), o.episode);
     const end = Math.min(duracion, o.to === null ? duracion : Number(o.to));
     const step = 1000 / o.fps;
-    if (o.from > 0) await page.evaluate((ms) => window.labCapture.advance(ms), o.from);
+    if (o.from > 0) await go(page, (ms) => window.labCapture.advance(ms), o.from);
     await record(page, o.episode, Math.max(1, Math.round((end - o.from) / step)), (ms) => window.labCapture.advance(ms), step);
   } else {
     await mkdir(o.out, { recursive: true });
@@ -130,7 +143,7 @@ try {
       const end = Math.min(length, o.to === null ? length : Number(o.to));
       const step = 1000 / o.fps;
       // straight to the part asked for, then one step per frame
-      await page.evaluate((ms) => { window.labClock.step += ms; }, o.from);
+      await go(page, (ms) => { window.labClock.step += ms; }, o.from);
       await record(page, `${o.scene}-${cam}-${pass}`, Math.max(1, Math.round((end - o.from) / step)), (ms) => { window.labClock.step += ms; }, step);
     }
   }

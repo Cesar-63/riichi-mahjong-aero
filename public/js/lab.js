@@ -310,7 +310,7 @@ if (new URLSearchParams(location.search).has('captura')) {
   window.labCapture = {
     scenes: () => scenes.map((s) => ({ id: s.id, name: s.name, length: s.length })),
     cameras: () => PRESETS.map(([name]) => name),
-    // { scene, camera (a preset's name or { pos, target }), hand, people,
+    // { scene, camera (a preset's name or { pos, target }), hand, people, myHand,
     // callouts, pass }; resolves with the scene's length once all is loaded
     async load(o) {
       setPaused(true);
@@ -320,6 +320,7 @@ if (new URLSearchParams(location.search).has('captura')) {
       else if (o.camera) throw new Error(`no hay cámara "${o.camera}"`);
       $('#lab-hand').checked = o.hand !== false;
       $('#lab-people').checked = !!o.people;
+      myHandOnTable = !!o.myHand;
       pass = o.pass || 'color';
       // the guides go without the calls: they are added later from the color take
       document.body.classList.toggle('no-callouts', o.callouts === false || pass !== 'color');

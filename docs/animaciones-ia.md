@@ -254,7 +254,8 @@ propio tiempo, así que se graba cuadro a cuadro y sale igual cada vez.
 | `personas`, `yo`, `miManoEnLaMesa` | Rivales sentados; tu propio personaje en tu silla; tu mano parada sobre la mesa frente a él. |
 | `tomas` | Cámara: desde cada `en` (ms) hasta la toma siguiente, de `desde` a `a` (`pos` y `mira`), suave o `lineal`; `orbita` gira alrededor de lo que mira. Cada toma corta a la siguiente. |
 | `lento` | Cámara lenta: entre `en` y `hasta` la mesa avanza a `velocidad` (los textos no). |
-| `textos` | Estilos: `titulo`, `narra` (papel arriba), `grande`, `pie` y `cierre`. |
+| `textos` | Estilos: `titulo`, `narra` (papel arriba), `grande`, `grito` (¡Riichi!, con su `sub` en japonés), `pie` y `cierre`. |
+| `avisos` | `false` quita los avisos del juego (¡Riichi!, ¡Tsumo!…), que se ubican junto a cada asiento y una cámara cercana puede dejar fuera de cuadro; el episodio los grita con `grito`. |
 | `panel` | Abajo: `fichas` (notación `123m 68s`), `robada`, `espera` (resaltada) y una `nota`. |
 | `acciones` | Qué hace quién (0 = tú, 1 = derecha, 2 = enfrente, 3 = izquierda): `talk` o una reacción (`victory`, `yes`, `clapping`, `reject`, `angry`, `confused`, `head-nod`, `idle-foldarms`), con `intensidad`, `ritmo` y `mantener`. |
 
