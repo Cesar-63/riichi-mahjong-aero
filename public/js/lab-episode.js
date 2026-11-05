@@ -36,6 +36,8 @@ export function createEpisode(ep, { root, table, people, clock }) {
   // the game's own calls (¡Riichi!…) sit by each seat's place on screen,
   // which a close camera can push off it: an episode can shout them itself
   if (ep.avisos === false) root.classList.add('ep-quiet');
+  // faces at the table in the dim parlour: a fill light with the camera
+  table.setFill(ep.relleno || 0);
   const layer = box.querySelector('.ep-layer');
   const fade = box.querySelector('.ep-fade');
   const items = [
@@ -128,6 +130,7 @@ export function createEpisode(ep, { root, table, people, clock }) {
     destroy() {
       box.remove();
       root.classList.remove('ep-quiet');
+      table.setFill(0);
     },
   };
 }

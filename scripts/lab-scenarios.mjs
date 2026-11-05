@@ -288,27 +288,27 @@ function myTsumo() {
       rec.add(g, gap);
     }
   };
-  rec.add(g, 3200);
+  rec.add(g, 4700);
   g.act(0, { type: 'discard', tile: idOf(g, 0, T('4z')) });
   passAll(g);
-  rec.add(g, 900);
-  rivals(800);
+  rec.add(g, 1800);
+  rivals(1000);
   // the 8s: tenpai; a long look before the riichi
-  rec.add(g, 2400);
+  rec.add(g, 3800);
   g.act(0, { type: 'riichi', tile: idOf(g, 0, T('3z')) });
   passAll(g);
-  rec.add(g, 3400);
-  rivals(1300);
+  rec.add(g, 4400);
+  rivals(1700);
   // a useless draw: after riichi it goes straight out
-  rec.add(g, 1500);
+  rec.add(g, 2600);
   tsumogiri(g, 0);
   passAll(g);
-  rec.add(g, 1000);
-  rivals(900);
+  rec.add(g, 1200);
+  rivals(1300);
   // the 7s
-  rec.add(g, 1800);
+  rec.add(g, 3200);
   g.act(0, { type: 'tsumo' });
-  rec.add(g, 12000);
+  rec.add(g, 13500);
   scenes.push({ id: 'my-riichi', name: 'Tu riichi y un tsumo barato', note: 'Eres oya: robas el 8s y declaras riichi (espera cerrada al 7s), un robo inútil sale directo y después llega el 7s. Riichi y tsumo, 1.000 de cada uno, sin dora ni ura.', steps: rec.steps, length: rec.end });
 }
 

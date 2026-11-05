@@ -1445,6 +1445,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
     showHand: world.showOverlays,
     setPass: world.setPass,
+    setFill: world.setFill,
     // lab: the rivals sitting at the table (characters.js and the models
     // load the first time they are shown, so the game never downloads them);
     // returns a promise that settles once they are in place

@@ -252,6 +252,7 @@ propio tiempo, así que se graba cuadro a cuadro y sale igual cada vez.
 | `escena` | La escena del laboratorio (`scripts/lab-scenarios.mjs`), jugada por el motor real. |
 | `duracion`, `ancho`, `alto` | Largo (ms) y tamaño del video (1080×1920, vertical). |
 | `personas`, `yo`, `miManoEnLaMesa` | Rivales sentados; tu propio personaje en tu silla; tu mano parada sobre la mesa frente a él. |
+| `relleno` | Una luz suave que acompaña a la cámara, para que las caras se lean en el salón en penumbra (0,6 en el Ep. 01; el juego no la usa). |
 | `tomas` | Cámara: desde cada `en` (ms) hasta la toma siguiente, de `desde` a `a` (`pos` y `mira`), suave o `lineal`; `orbita` gira alrededor de lo que mira. Cada toma corta a la siguiente. |
 | `lento` | Cámara lenta: entre `en` y `hasta` la mesa avanza a `velocidad` (los textos no). |
 | `textos` | Estilos: `titulo`, `narra` (papel arriba), `grande`, `grito` (¡Riichi!, con su `sub` en japonés), `pie` y `cierre`. |

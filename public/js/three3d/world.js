@@ -137,6 +137,12 @@ export function createWorld(container, { signal } = {}) {
   // 'profundidad' (white near the camera, black far). Transparent things
   // (contact shadows, labels, the band behind the hand) are left out of the
   // guides, and the overlay hand counts as the nearest thing on screen.
+  // lab: a soft fill light that goes with the camera (episodes light the
+  // faces of the people at the table with it; 0 = off, the game's look)
+  const fill = new THREE.PointLight(0xffe2c4, 0, 0, 0);
+  scene.add(fill);
+  tickers.push(() => fill.position.copy(camera.position));
+
   let pass = 'color';
   const clay = new THREE.MeshStandardMaterial({ color: 0xb4ada2, roughness: 0.92 });
   const depth = new THREE.ShaderMaterial({
@@ -198,6 +204,7 @@ export function createWorld(container, { signal } = {}) {
     showOverlays: (on) => { overlaysOn = on; },
     // lab: 'color', 'arcilla' or 'profundidad' (see draw above)
     setPass: (p) => { pass = p; },
+    setFill: (i) => { fill.intensity = i; },
     destroy() {
       renderer.setAnimationLoop(null);
       renderer.dispose();

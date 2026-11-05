@@ -4,20 +4,22 @@
  "escena": "my-riichi",
  "ancho": 1080,
  "alto": 1920,
- "duracion": 46000,
+ "duracion": 61000,
  "personas": true,
  "yo": true,
  "miManoEnLaMesa": true,
+ "avisos": false,
+ "relleno": 0.6,
  "fundido": 700,
  "lento": [
   {
-   "en": 8700,
-   "hasta": 14400,
+   "en": 13100,
+   "hasta": 18800,
    "velocidad": 0.35
   },
   {
-   "en": 26700,
-   "hasta": 30700,
+   "en": 37200,
+   "hasta": 41200,
    "velocidad": 0.4
   }
  ],
@@ -39,7 +41,7 @@
    "orbita": -50
   },
   {
-   "en": 3000,
+   "en": 4600,
    "desde": {
     "pos": [
      9,
@@ -66,34 +68,34 @@
    }
   },
   {
-   "en": 5600,
+   "en": 8300,
    "desde": {
     "pos": [
      0,
-     7,
-     10
+     8,
+     6
     ],
     "mira": [
      0,
-     14.5,
+     16.5,
      27
     ]
    },
    "a": {
     "pos": [
      0,
-     8,
-     13
+     9,
+     9
     ],
     "mira": [
      0,
-     14.5,
+     16.5,
      27
     ]
    }
   },
   {
-   "en": 8600,
+   "en": 13000,
    "desde": {
     "pos": [
      4,
@@ -120,7 +122,7 @@
    }
   },
   {
-   "en": 14400,
+   "en": 18800,
    "desde": {
     "pos": [
      0,
@@ -135,6 +137,48 @@
    },
    "a": {
     "pos": [
+     2,
+     16,
+     13
+    ],
+    "mira": [
+     26,
+     12.5,
+     1
+    ]
+   }
+  },
+  {
+   "en": 21000,
+   "desde": {
+    "pos": [
+     2,
+     13,
+     4
+    ],
+    "mira": [
+     0,
+     11.5,
+     -24
+    ]
+   },
+   "a": {
+    "pos": [
+     1,
+     12.5,
+     0
+    ],
+    "mira": [
+     0,
+     11.8,
+     -24
+    ]
+   }
+  },
+  {
+   "en": 23200,
+   "desde": {
+    "pos": [
      0,
      17,
      15
@@ -145,10 +189,21 @@
      2
     ]
    },
-   "curva": "lineal"
+   "a": {
+    "pos": [
+     -2,
+     16,
+     13
+    ],
+    "mira": [
+     -26,
+     12.5,
+     1
+    ]
+   }
   },
   {
-   "en": 19000,
+   "en": 25400,
    "desde": {
     "pos": [
      0,
@@ -175,7 +230,7 @@
    }
   },
   {
-   "en": 22300,
+   "en": 30000,
    "desde": {
     "pos": [
      2,
@@ -202,7 +257,7 @@
    }
   },
   {
-   "en": 24000,
+   "en": 32600,
    "desde": {
     "pos": [
      9,
@@ -229,7 +284,7 @@
    }
   },
   {
-   "en": 26700,
+   "en": 37200,
    "desde": {
     "pos": [
      0,
@@ -256,7 +311,7 @@
    }
   },
   {
-   "en": 30700,
+   "en": 41200,
    "desde": {
     "pos": [
      9,
@@ -283,7 +338,7 @@
    }
   },
   {
-   "en": 35500,
+   "en": 47000,
    "desde": {
     "pos": [
      0,
@@ -310,7 +365,7 @@
    }
   },
   {
-   "en": 39000,
+   "en": 51500,
    "desde": {
     "pos": [
      3,
@@ -337,7 +392,7 @@
    }
   },
   {
-   "en": 42300,
+   "en": 56000,
    "desde": {
     "pos": [
      22,
@@ -356,95 +411,95 @@
  "textos": [
   {
    "en": 400,
-   "hasta": 2900,
+   "hasta": 4300,
    "estilo": "titulo",
    "serie": "Mahjong · Ep. 01",
    "texto": "Riichi",
    "sub": "la apuesta del que no se arrepiente"
   },
   {
-   "en": 3200,
-   "hasta": 5500,
+   "en": 4900,
+   "hasta": 8100,
    "estilo": "narra",
    "texto": "Este eres tú.\nTe falta una ficha para estar listo."
   },
   {
-   "en": 6000,
-   "hasta": 8500,
+   "en": 8900,
+   "hasta": 12800,
    "estilo": "narra",
    "texto": "Robas el 8 de bambú…\n¡tenpai!"
   },
   {
-   "en": 9300,
-   "hasta": 11600,
+   "en": 13600,
+   "hasta": 16200,
    "estilo": "grito",
    "texto": "¡Riichi!",
    "sub": "リーチ"
   },
   {
-   "en": 11400,
-   "hasta": 14200,
+   "en": 16000,
+   "hasta": 18700,
    "estilo": "narra",
    "texto": "Riichi: apuestas 1.000 puntos\ny tu mano queda sellada."
   },
   {
-   "en": 14700,
-   "hasta": 18800,
+   "en": 18900,
+   "hasta": 25200,
    "estilo": "pie",
    "texto": "Ahora todos saben que estás listo."
   },
   {
-   "en": 19300,
-   "hasta": 22200,
+   "en": 25600,
+   "hasta": 29900,
    "estilo": "narra",
    "texto": "Robas algo que no sirve.\nCon riichi, sale directo."
   },
   {
-   "en": 22500,
-   "hasta": 23900,
+   "en": 30200,
+   "hasta": 32500,
    "estilo": "pie",
    "texto": "Una vuelta. Nadie te regala nada."
   },
   {
-   "en": 24500,
-   "hasta": 26600,
+   "en": 34000,
+   "hasta": 37000,
    "estilo": "pie",
    "texto": "Y entonces…"
   },
   {
-   "en": 27300,
-   "hasta": 29800,
+   "en": 37800,
+   "hasta": 40600,
    "estilo": "grito",
    "texto": "¡Tsumo!",
    "sub": "ツモ"
   },
   {
-   "en": 31200,
-   "hasta": 35300,
+   "en": 41700,
+   "hasta": 46800,
    "estilo": "narra",
    "texto": "Riichi y tsumo.\n¿Cuánto ganaste?"
   },
   {
-   "en": 35800,
-   "hasta": 38900,
+   "en": 47300,
+   "hasta": 51300,
    "estilo": "grande",
    "texto": "1.000 puntos\nde cada uno."
   },
   {
-   "en": 36600,
-   "hasta": 38900,
+   "en": 48300,
+   "hasta": 51300,
    "estilo": "pie",
    "texto": "Sin dora. Sin ura. Nada."
   },
   {
-   "en": 39300,
-   "hasta": 42200,
+   "en": 51900,
+   "hasta": 55800,
    "estilo": "narra",
    "texto": "Lo celebraste\ncomo un yakuman."
   },
   {
-   "en": 43000,
-   "hasta": 45800,
+   "en": 57000,
+   "hasta": 60700,
    "estilo": "cierre",
    "serie": "Mahjong · Ep. 01",
    "texto": "Riichi",
@@ -453,15 +508,15 @@
  ],
  "panel": [
   {
-   "en": 3200,
-   "hasta": 5500,
+   "en": 4900,
+   "hasta": 8100,
    "titulo": "Tu mano",
    "fichas": "123m789p234s6s99s3z",
    "nota": "Te falta el 8 de bambú."
   },
   {
-   "en": 6000,
-   "hasta": 8500,
+   "en": 8900,
+   "hasta": 12800,
    "titulo": "¡Tenpai!",
    "fichas": "123m789p234s68s99s",
    "robada": "3z",
@@ -470,24 +525,24 @@
    "nota": "Solo te sirve el 7: la del medio."
   },
   {
-   "en": 9900,
-   "hasta": 14200,
+   "en": 16000,
+   "hasta": 18700,
    "titulo": "Riichi",
    "fichas": "123m789p234s68s99s",
    "espera": "7s",
    "nota": "+1 han si ganas · si no, pierdes la apuesta"
   },
   {
-   "en": 19300,
-   "hasta": 22200,
+   "en": 25600,
+   "hasta": 29900,
    "titulo": "Mano sellada",
    "fichas": "123m789p234s68s99s",
    "robada": "1p",
    "nota": "No te sirve: sale sola."
   },
   {
-   "en": 31200,
-   "hasta": 35300,
+   "en": 41700,
+   "hasta": 46800,
    "titulo": "Tsumo",
    "fichas": "123m789p234s678s99s",
    "nota": "Riichi 1 han + tsumo 1 han · 30 fu"
@@ -495,86 +550,85 @@
  ],
  "acciones": [
   {
-   "en": 6400,
+   "en": 9800,
    "quien": 0,
    "hace": "yes",
    "intensidad": 0.45
   },
   {
-   "en": 14600,
+   "en": 19000,
    "quien": 1,
    "hace": "reject"
   },
   {
-   "en": 16300,
+   "en": 21200,
    "quien": 2,
    "hace": "head-nod",
    "intensidad": 0.6,
    "ritmo": 0.7
   },
   {
-   "en": 17600,
+   "en": 23400,
    "quien": 3,
    "hace": "confused",
    "intensidad": 0.8
   },
   {
-   "en": 19500,
+   "en": 25800,
    "quien": 2,
    "hace": "idle-foldarms",
    "mantener": true
   },
   {
-   "en": 20500,
+   "en": 27000,
    "quien": 1,
    "hace": "talk"
   },
   {
-   "en": 27500,
+   "en": 38000,
    "quien": 0,
    "hace": "victory"
   },
   {
-   "en": 31000,
+   "en": 41500,
    "quien": 0,
    "hace": "yes"
   },
   {
-   "en": 31000,
+   "en": 41500,
    "quien": 2,
    "hace": null
   },
   {
-   "en": 32500,
+   "en": 43000,
    "quien": 1,
    "hace": "angry",
    "intensidad": 0.9
   },
   {
-   "en": 33500,
+   "en": 44500,
    "quien": 3,
    "hace": "talk",
    "intensidad": 0.5
   },
   {
-   "en": 39200,
+   "en": 51700,
    "quien": 2,
    "hace": "clapping",
    "intensidad": 0.55,
    "ritmo": 0.55
   },
   {
-   "en": 42400,
+   "en": 56200,
    "quien": 0,
    "hace": "victory",
    "intensidad": 0.8
   },
   {
-   "en": 43500,
+   "en": 57300,
    "quien": 1,
    "hace": "reject",
    "intensidad": 0.7
   }
- ],
- "avisos": false
+ ]
 }
