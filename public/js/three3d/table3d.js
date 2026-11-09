@@ -1111,9 +1111,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
   function honbaRest(v, k) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
     const row = Math.floor(k / 5); // five to a row, a second row on top
-    // pulled towards the dealer: the inner end stays clear of the first
-    // tiles of the right-hand neighbour's second and third pond rows
-    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 5.35);
+    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 4.6);
     const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
     return { p: local.applyQuaternion(qSeat[dealerRel]), q };
   }
