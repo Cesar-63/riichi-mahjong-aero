@@ -427,5 +427,6 @@ export function createCharacters(world) {
     // how fast this seat's tiles travel, against the table's speed
     pace: (rel) => (group.visible && rigs[rel] ? rigs[rel].style.carry : 1),
     seated: (rel) => group.visible && !!rigs[rel],
+    visible: () => group.visible,
   };
 }

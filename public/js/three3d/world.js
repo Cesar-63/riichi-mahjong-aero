@@ -8,7 +8,7 @@ import { TUNING } from './tuning.js';
 export const TABLE = 30; // table side in world units (1 unit = one tile width)
 export const FOV = 40; // the camera's field of view, unless a view sets its own
 
-// the player's view (see fit below): how high and how far behind the
+// the player's view with characters at the table (see fit below): how high and how far behind the
 // table's edge the camera is, where it looks and how wide
 const PLAYER_VIEW = { height: 15.5, back: 16.5, lookY: 6.6, lookZ: 2.8, fov: 48 };
 
@@ -52,8 +52,8 @@ export function createWorld(container, { signal } = {}) {
   const overlays = [];
   let overlaysOn = true;
   renderer.autoClear = false;
-  // Camera views: 'player' (low, from behind the player's seat, the three
-  // rivals in sight across the table, Tetsuya style),
+  // Camera views: 'player' (low, close to the player's side, Tetsuya style;
+  // with characters, from behind the seat with the rivals in sight),
   // 'overview' (the whole table) and 'drawer' (looking down at the point
   // stick drawer at the player's edge). Portrait screens use the overview
   // instead of the player view, since the low view would cut the table's
@@ -61,6 +61,7 @@ export function createWorld(container, { signal } = {}) {
   // screen framing a winning hand).
   const views = { player: null, overview: null, drawer: null };
   let mode = 'player';
+  let seated = false; // characters at the table: the player view that shows them
   let forced = null;
   let locked = null; // the lab's free camera, over everything else
   const current = () => locked || (forced && typeof forced === 'object' ? forced : views[forced || mode]);
@@ -90,13 +91,21 @@ export function createWorld(container, { signal } = {}) {
       pos: new THREE.Vector3(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72)),
       target: new THREE.Vector3(0, -2.2 * k, (portrait ? 1.2 : 1.6) * k),
     };
-    // low and wide, from over the player's own (unseen) shoulders: the
-    // rivals' faces at the top of the screen, the player's edge of the
-    // table at the bottom, under the hand
-    views.player = portrait ? views.overview : {
+    // Without characters: aimed nearer than the scaled view, so the
+    // player's own wall (further out on the larger table) shows above the
+    // hand and the calls against the player's edge show in the right-hand
+    // corner; close enough that the felt runs on behind the hand, so it
+    // never floats over the floor. With characters (seated): low and wide,
+    // from over the player's own (unseen) shoulders, the rivals' faces at
+    // the top of the screen and the player's edge of the table at the
+    // bottom, under the hand.
+    views.player = portrait ? views.overview : seated ? {
       pos: new THREE.Vector3(0, PLAYER_VIEW.height, TABLE / 2 + PLAYER_VIEW.back),
       target: new THREE.Vector3(0, PLAYER_VIEW.lookY, PLAYER_VIEW.lookZ),
       fov: PLAYER_VIEW.fov,
+    } : {
+      pos: new THREE.Vector3(0, 13 * k + 3.5, 21 * k + 3.8),
+      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 5.4),
     };
     // the drawer comes out of the player's edge of the table
     views.drawer = {
@@ -201,6 +210,11 @@ export function createWorld(container, { signal } = {}) {
   return {
     THREE, scene, camera, renderer, chairs: lights.chairs, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
     setView: (m) => { mode = m; announce(); },
+    setSeated: (on) => {
+      if (seated === !!on) return;
+      seated = !!on;
+      fit();
+    },
     forceView: (m) => { forced = m; announce(); },
     onView: (f) => { viewListeners.push(f); f(announced || mode); },
     addOverlay: (s2, c2) => overlays.push([s2, c2]),

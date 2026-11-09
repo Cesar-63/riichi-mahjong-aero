@@ -39,9 +39,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      límite; queda guardado en el navegador): vale al abrir una sala o una
      práctica. En la sala de espera todos ven el tiempo y el anfitrión puede
      cambiarlo; por equipos, cambiarlo quita el "listo" de todos.
-   - **Tu personaje**: con quién te sientas a la mesa (ver
-     [Personajes](#personajes)); también se puede cambiar en la sala de
-     espera.
+   - **Jugar con personajes** (opcional, en cualquier modo): los jugadores
+     se sientan a la mesa en 3D y eliges **tu personaje** (ver
+     [Personajes](#personajes)).
    - **Configuración** (abajo, junto a *Reglas del salón*): la misma hoja de
      ajustes que se abre desde el ☰ en partida (ver el punto 3), para dejarlo
      todo listo antes de jugar.
@@ -187,15 +187,22 @@ Pantallas:
   tablillas de madera (los libres, marcados con tiza)
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
-- **En partida**: los cuatro jugadores están **sentados a la mesa** como
-  personajes 3D low-poly (ver [Personajes](#personajes)); no hay marcos ni
-  retratos. Arriba queda solo una tablilla de madera por rival (izquierda =
-  kamicha, centro = toimen, derecha = shimocha) con viento, nombre, puntos y
-  avisos (bot, riichi, compañero, desconectado, su turno). Debajo de la
-  tablilla izquierda, el botón de menú y la ficha de papel con la ronda,
-  honba, depósitos, fichas que quedan y tus puntos. Abajo a la izquierda
-  **Puntos** y el reloj; a la derecha los botones de llamada (Ron y Tsumo con
-  un sello 和).
+- **En partida**: una franja oscura arriba con un marco por rival (izquierda =
+  kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
+  tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
+  no hay retratos: cada marco (de madera abollada, con clavos) muestra al
+  rival como una silueta en penumbra contra papel tapiz sucio, con la luz de
+  la lámpara apenas en el borde de la cabeza, y un papelito "bot" pegado si
+  es un bot. Con la cámara en la mesa
+  entera (cursor en la mitad superior) la franja se pliega hacia arriba y
+  quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
+  ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
+  puntos. Estos dos no se mueven cuando la franja se pliega, así el menú
+  no se escapa al ir a hacerle clic. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
+  botones de llamada (Ron y Tsumo con un sello 和).
+  Jugando **con personajes** (ver [Personajes](#personajes)) no hay franja
+  ni marcos: los rivales están sentados a la mesa y arriba quedan solo las
+  tablillas, con el aviso de bot dentro.
 - **Resultado de la mano**: una hoja oscura cubre la parte de arriba con la
   ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
   sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
@@ -320,7 +327,8 @@ primera partida.
   "cada uno" si gana el oya. Si hay honba, va al lado y aparte
   (`+ 600 honba`, o `+ 200 honba cada uno` en tsumo); en un doble ron, igual
   en la línea del segundo ganador. Con pao se muestra el valor de la mano.
-- **Empate por agotamiento**: la cámara pasa a la mesa entera, todas las manos quedan paradas sobre la mesa y luego se
+- **Empate por agotamiento**: la cámara pasa a la mesa entera (la franja de
+  arriba se pliega), todas las manos quedan paradas sobre la mesa y luego se
   tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
   resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
@@ -398,9 +406,17 @@ con **Empezar y rellenar con bots**.
 
 ### Personajes
 
-Al entrar eliges **tu personaje** en el lobby (queda guardado en el
-navegador) y puedes cambiarlo en la sala de espera, donde cada asiento
-muestra el retrato del que eligió cada uno. Dos jugadores pueden elegir el
+Jugar con personajes es **opcional** y vale para cualquier modo (clásico,
+por equipos y práctica): marca **Jugar con personajes** en el lobby, o en
+**Configuración** (también en medio de una partida). Es una preferencia de
+cada jugador y queda guardada en el navegador: sin marcarla, la mesa se ve
+como siempre (sillas vacías, marcos de los rivales arriba, la vista baja de
+antes), aunque otros en la misma sala jueguen con personajes y te vean a ti
+como el tuyo.
+
+Con la opción marcada eliges **tu personaje** en el lobby y puedes
+cambiarlo en la sala de espera, donde cada asiento muestra el retrato del
+que eligió cada uno. Dos jugadores pueden elegir el
 mismo. Los bots se sientan con personajes que nadie eligió.
 
 | Personaje | Quién es | Cómo juega |
@@ -414,10 +430,11 @@ mismo. Los bots se sientan con personajes que nadie eligió.
 
 En la mesa:
 
-- **La vista baja** (la de siempre para jugar; no la de la mesa entera) mira
+- **La vista baja** (la de jugar; no la de la mesa entera) pasa a mirar
   desde detrás de tu asiento: se ve a los tres rivales sentados, de la mesa
   para arriba, con las manos apoyadas en el borde.
-- **Robar y descartar**: la mano derecha del rival va hasta la ficha, viaja
+- **Robar y descartar** (las fichas van algo más lento que sin personajes,
+  para que se vea): la mano derecha del rival va hasta la ficha, viaja
   con ella (del muro a su mano, o de su mano a su río), la suelta y vuelve a
   su lugar. El cuerpo se inclina si la ficha queda lejos y los demás siguen
   el descarte con la mirada. Cada uno lo hace a su manera y a su ritmo.
@@ -438,8 +455,8 @@ se calculan cuadro a cuadro. Cómo están hechos los modelos:
 Cada bot es **normal** o **difícil**, y en una misma mesa puede haber de los
 dos. En el menú, **Nivel de los bots** tiene Bot 1, Bot 2 y Bot 3: un clic
 cambia el nivel de cada uno (queda guardado en el navegador). Vale para la
-práctica y para **Empezar y rellenar con bots**. En la mesa, la tablilla del
-rival dice "bot" o "bot difícil".
+práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
+"bot" o "bot difícil" (con personajes, la tablilla).
 
 - **Normal:** majiang-ai (abajo). Unos 40 ms por decisión.
 - **Difícil:** [Mortal](https://github.com/Equim-chan/Mortal), una red neuronal

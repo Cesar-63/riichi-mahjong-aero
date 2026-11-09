@@ -55,6 +55,7 @@
             <button type="button" class="bot-level" data-bot="3" aria-pressed="false">Bot 3 · <b>normal</b></button>
           </div>
         </div>
+        <label class="chars-toggle check"><input type="checkbox" id="with-chars"><span class="chalk">Jugar con personajes <small>(sentados a la mesa, en 3D)</small></span></label>
         <div class="char-field" role="group" aria-labelledby="char-label">
           <span class="chalk" id="char-label">Tu personaje <small id="char-about"></small></span>
           <div class="char-picker" id="char-opts"></div>
@@ -145,6 +146,7 @@
   <div id="game" class="screen hidden">
     <div id="stage3d"></div>
     <div id="hud3d">
+      <div class="band" aria-hidden="true"></div>
       <div class="portraits"></div>
       <div class="roundinfo paper-chit"></div>
       <div class="bottom-left">
@@ -201,6 +203,7 @@
     </fieldset>
     <fieldset>
       <legend>Vista</legend>
+      <label class="check"><input type="checkbox" id="s-chars"> Jugar con personajes (sentados a la mesa)</label>
       <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
       <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
     </fieldset>

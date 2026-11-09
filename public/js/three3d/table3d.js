@@ -37,6 +37,13 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // (the lab's scenes) gets the fallback cast, if there is one
   const characters = createCharacters(world);
   let fallbackCast = null;
+  // playing with characters is optional (setCharacters): without them the
+  // table is as it always was, empty chairs and the classic player view
+  function showPeople(on) {
+    characters.setVisible(on);
+    world.setSeated(on);
+  }
+  showPeople(false);
 
   // ---------------------------------------------------------------- assets
   const kit = createTileKit(renderer);
@@ -200,7 +207,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   const CARRIED = { discard: 'discard', mine: 'discard', draw: 'draw' };
   function startMove(o, d, moves) {
     const carried = d.who !== undefined && CARRIED[d.lane] && characters.seated(d.who);
-    o.path.speed = laneSpeed(d.lane) * (carried ? characters.pace(d.who) : 1);
+    // (slower than a tile moving by itself, so the hand can be seen)
+    o.path.speed = carried ? (d.lane === 'mine' ? M.carryMine : M.carry) * characters.pace(d.who) : laneSpeed(d.lane);
     o.dist = 0;
     o.wait = 0;
     if (!d.lane) return;
@@ -1043,7 +1051,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
       const r = (abs - v.seat + 4) % 4;
       cast[r] = p.character || (fallbackCast && fallbackCast[r]) || null;
     });
-    characters.setCast(cast);
+    // (not even downloaded unless they are shown)
+    if (characters.visible()) characters.setCast(cast);
   }
 
   // ------------------------------------------------------------ callouts
@@ -1484,12 +1493,16 @@ export function createTable3D(container, { onPick, signal } = {}) {
     // promise that settles once they are in place.
     showCharacters(on, cast = null) {
       fallbackCast = on ? cast : null;
-      characters.setVisible(on);
+      showPeople(on);
       if (lastView) seatCharacters(lastView[0]);
       else characters.setCast(fallbackCast || [null, null, null, null]);
       return characters.ready;
     },
-    charactersReady: () => characters.ready,
+    // play with the characters sitting at the table, or without them
+    setCharacters(on) {
+      showPeople(!!on);
+      if (lastView) seatCharacters(lastView[0]);
+    },
     destroy: world.destroy,
   };
 }
