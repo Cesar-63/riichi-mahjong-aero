@@ -296,6 +296,10 @@ export function renderPartner(v, ui) {
   const hand = document.getElementById('partner-hand');
   reconcile(hand, items);
   for (const el of hand.querySelectorAll('.tile')) el.classList.toggle('asked', Number(el.dataset.id) === p.myRequest);
+  // "no riichi" for my teammate, this hand (a bot obeys, a person is told)
+  const nr = document.getElementById('partner-noriichi');
+  nr.setAttribute('aria-pressed', String(!!p.myNoRiichi));
+  nr.classList.toggle('on', !!p.myNoRiichi);
 }
 
 // Paper score sheet at the end of the game.

@@ -223,6 +223,25 @@ test('discard request: shown to the teammate, validated, cleared when the tile l
   assert.equal((await call({ op: 'poll', token: tokens[1] })).game.partnerRequest, null);
 });
 
+test('"no riichi" for the teammate: shown to them only, kept apart from the tile request', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 45_000_000;
+  const call = async (body) => (await handle({ room: 'w3', ...body }, store, now)).body;
+  await startTeams(store, 'w3', now);
+  const wanted = (await call({ op: 'poll', token: tokens[0] })).game.partner.hand[0];
+  await call({ op: 'request', token: tokens[0], tile: wanted });
+  const after = (await call({ op: 'request', token: tokens[0], noRiichi: true })).game;
+  assert.equal(after.partner.myNoRiichi, true);
+  assert.equal(after.partner.myRequest, wanted, 'the tile request stays');
+  const mate = (await call({ op: 'poll', token: tokens[1] })).game;
+  assert.equal(mate.partnerNoRiichi, true);
+  assert.equal(mate.partner.myNoRiichi, false);
+  assert.equal((await call({ op: 'poll', token: tokens[2] })).game.partnerNoRiichi, false, 'opponents do not see it');
+  await call({ op: 'request', token: tokens[0], noRiichi: false });
+  assert.equal((await call({ op: 'poll', token: tokens[1] })).game.partnerNoRiichi, false);
+});
+
 test('bot partner honours a discard request', async () => {
   globalThis.__mjStore = new Map();
   const store = createStore({});

@@ -458,8 +458,11 @@ function renderHud(v, ui) {
   setIfChanged(hud.querySelector('.roundinfo'), roundInfoHTML(v));
   setIfChanged(hud.querySelector('.actions'), actionsHTML(v, ui));
   setIfChanged(hud.querySelector('.furiten-slot'), v.furiten ? '<span class="furiten">Furiten <i class="jp">振聴</i></span>' : '');
-  const askedBy = v.partner && v.partnerRequest !== null ? v.players[v.partner.seat].name : null;
-  setIfChanged(hud.querySelector('.ask'), askedBy ? `<span>${escapeHTML(askedBy)} te pide</span>${tile(v.partnerRequest)}` : '');
+  const mate = v.partner ? escapeHTML(v.players[v.partner.seat].name) : '';
+  const asks = [];
+  if (v.partner && v.partnerRequest !== null) asks.push(`<span>${mate} te pide</span>${tile(v.partnerRequest)}`);
+  if (v.partner && v.partnerNoRiichi && !v.players[v.seat].riichi) asks.push(`<span class="no-riichi">Compañero: no riichi <i class="jp">立直禁止</i></span>`);
+  setIfChanged(hud.querySelector('.ask'), asks.join(''));
 }
 
 // kind: 'result' (sheet over the 3D table) or 'final' (the score sheet)
@@ -633,6 +636,11 @@ $('#partner-hand').addEventListener('click', (e) => {
   if (!t || !v || !v.partner) return;
   const id = Number(t.dataset.id);
   api('request', { tile: v.partner.myRequest === id ? null : id });
+});
+$('#partner-noriichi').addEventListener('click', () => {
+  const v = state.view;
+  if (!v || !v.partner) return;
+  api('request', { noRiichi: !v.partner.myNoRiichi });
 });
 $('#partner-toggle').addEventListener('click', () => {
   state.ui.partnerOpen = !state.ui.partnerOpen;

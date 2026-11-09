@@ -95,3 +95,11 @@ test('four bots play a whole game, always answering a legal move', () => {
   assert.ok(seen.discard > 0 && seen.pass > 0);
   assert.ok(seen.ron || seen.tsumo, 'somebody won a hand');
 });
+
+test('told "no riichi" by its teammate, the bot discards the same tile quietly', async () => {
+  const hands = ['123m456p789s11p23s', '19m19p19s1234z56z7z', '258m258p258s1357z', '4m11z22z33z44z55z6z'];
+  const free = await botAction(scripted(hands, '6z'), 0);
+  assert.equal(free.type, 'riichi', 'a closed tenpai hand declares riichi on its own');
+  const quiet = await botAction(scripted(hands, '6z'), 0, null, 'normal', true);
+  assert.deepEqual(quiet, { type: 'discard', tile: free.tile });
+});

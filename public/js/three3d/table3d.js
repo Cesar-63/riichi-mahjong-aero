@@ -471,28 +471,36 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const labels = [];
     const doraTypes = new Set(res.dora.map((d) => doraFromIndicator(tileType(d))));
     let t = WIN.fallAt;
-    // first every winner's hand stands and falls over, then each one gets its dora row
-    const rows = res.wins.map((w) => {
+    // first every winner's hand stands and falls over, then each one gets its dora row.
+    // A double ron has a single ron tile: it flies from the pond into the
+    // second winner's hand, which is shown first, and then on into the
+    // first winner's (the one the score sheet is about), leaving a gap behind.
+    let held = null; // the ron tile as it lies in the hand shown last
+    const rows = [...res.wins].reverse().map((w) => {
       const r = rel(w.seat);
       const ids = [...w.hand, w.winTile];
       const x0 = r === 0 ? 10 : 12;
       // a ron tile comes from the pond (it was never in the hand)
-      const pond = !w.tsumo ? objects.get(`t${w.winTile}`) : null;
+      const pond = !w.tsumo && !held ? objects.get(`t${w.winTile}`) : null;
       const hand = ids.map((id, i) => {
         const last = i === ids.length - 1;
         const it = revealTile(r, id, rowX(x0, i) + (last ? 0.35 : 0), true, r === 0 ? i * WIN.placeGap : 0, t + i * WIN.tileMs);
         it.win = last;
-        if (last && pond) {
-          it.fly = { path: makePath({ p: pond.obj.position.clone(), q: pond.obj.quaternion.clone() }, it.tip.target), hide: `t${w.winTile}` };
+        if (last && !w.tsumo && (pond || held)) {
+          const from = held ? { p: held.tip.target.p.clone(), q: held.tip.target.q.clone() } : { p: pond.obj.position.clone(), q: pond.obj.quaternion.clone() };
+          it.fly = { path: makePath(from, it.tip.target), hide: `t${w.winTile}` };
           // it lands as the tile before it falls
           it.fallAt = t + (i - 1) * WIN.tileMs + WIN.dropMs * 0.5;
+          // the hand it was in gives it up as it sets off
+          if (held) held.leaveAt = it.fallAt;
         }
+        if (last && !w.tsumo) held = it;
         items.push(it);
         return it;
       });
       t += ids.length * WIN.tileMs + WIN.dropMs + 300;
       return { w, r, x0, hand };
-    });
+    }).reverse();
     const doraAt = t;
     for (const { w, r, x0, hand } of rows) {
       // the row lies just in front of the revealed hand and its calls
@@ -585,8 +593,14 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const e = performance.now() - win.t0;
     for (const it of win.items) {
       let done;
+      // a double ron's tile, passed on to the other winner
+      if (it.leaveAt !== undefined && e >= it.leaveAt) {
+        it.mesh.visible = false;
+        continue;
+      }
       if (it.fly) {
-        // the ron tile: out of the pond, over everything, down in its place
+        // the ron tile: out of the pond (or the other winner's hand), over
+        // everything, down in its place
         if (e < it.fallAt) continue;
         const pond = objects.get(it.fly.hide);
         if (pond) pond.obj.visible = false;
@@ -869,7 +883,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
       const dora = new Map();
       for (let i = 0; i < w.doraCount; i++) dora.set(deadSlot(4 + i), v.dora[i]);
       for (let slot = 0; slot < 136; slot++) {
-        if (slot < w.liveTaken || (slot >= 122 - w.pops && slot < 122) || rinshan.has(slot)) continue;
+        // a kan's rinshan tile leaves the far end of the dead wall; the last
+        // live tile only joins the dead wall on paper (it stays in its place)
+        if (slot < w.liveTaken || rinshan.has(slot)) continue;
         const pose = slotPose(v, slot, rel);
         if (dora.has(slot)) {
           const flipped = { p: pose.p.clone().setY(D * 1.5), q: pose.q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI)) };
@@ -1095,7 +1111,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
   function honbaRest(v, k) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
     const row = Math.floor(k / 5); // five to a row, a second row on top
-    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 4.6);
+    // pulled towards the dealer: the inner end stays clear of the first
+    // tiles of the right-hand neighbour's second and third pond rows
+    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 5.35);
     const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
     return { p: local.applyQuaternion(qSeat[dealerRel]), q };
   }
