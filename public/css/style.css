@@ -1283,6 +1283,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   box-shadow: inset 0 -3px 0 #c98a1e, 0 4px 6px rgba(0, 0, 0, .45);
 }
 #hud3d .ask .tile { --w: 26px; }
+#hud3d .ask .no-riichi { color: var(--red); }
+#hud3d .ask .no-riichi .jp { font-size: 11px; margin-left: 4px; }
 #hud3d.intro :is(.actions, .status3d) { visibility: hidden; }
 /* the drawer has the screen to itself */
 #hud3d.points :is(.band, .portraits, .roundinfo, .actions, .status3d, .autobar) { visibility: hidden; }
@@ -1449,6 +1451,22 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #partner-hand .tile:hover { transform: translateY(-4px); filter: drop-shadow(0 0 6px var(--gold)); }
 #partner-hand .gap { width: calc(var(--pt) * .45); }
 #partner-hand .slot { visibility: hidden; cursor: default; }
+/* "no riichi" for the teammate: a paper slip, stamped red while it holds */
+#partner-noriichi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  padding: 3px 8px;
+  color: var(--ink);
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#partner-noriichi .es { font-family: var(--f-title); font-size: 14px; line-height: 1.1; }
+#partner-noriichi .jp { font-family: var(--f-mincho); font-size: 10px; letter-spacing: 2px; opacity: .7; }
+#partner-noriichi.on .jp { color: #fff; }
+#partner-noriichi.on { color: #fff; background: var(--red); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .3), 0 0 8px rgba(255, 80, 60, .6); }
 /* the calls, Puntos and requests move up above the row */
 #game.with-partner { --partner-h: calc(var(--pt) * 1.5 + 10px); }
 @media (max-width: 760px) {

@@ -271,6 +271,40 @@ function myTsumo() {
   scenes.push({ id: 'exhaustive', name: 'Empate', note: 'Se acaba la pared: las manos quedan paradas y caen, tenpai boca arriba y noten boca abajo.', steps: rec.steps, length: rec.end });
 }
 
+// ------------------------------------------------- a kan and the dead wall
+{
+  const g = scripted(['1111z22z33z44z55z6z', '23m456p789s11p678s', '19m19p19s567z2358m', '258p258s1346789m'], '7z9p9m8p');
+  const rec = recorder();
+  rec.add(g, 900);
+  g.act(0, { type: 'ankan', t: T('1z') });
+  passAll(g);
+  rec.add(g, 1200);
+  tsumogiri(g, 0);
+  passAll(g);
+  rec.add(g);
+  for (const seat of [1, 2, 3]) {
+    tsumogiri(g, seat);
+    passAll(g);
+    rec.add(g);
+  }
+  rec.add(g, 1500);
+  scenes.push({ id: 'kan', name: 'Kan y muro muerto', note: 'Haces kan cerrado: la ficha de reposición sale del extremo del muro muerto, se da vuelta un nuevo dora y la última ficha de la pared viva se queda en su sitio.', steps: rec.steps, length: rec.end });
+}
+
+// ------------------------------------------------------------- double ron
+{
+  const g = scripted(['4m7z11z22z33z44z55z6z', '23m456p789s11p678s', '23m456p345s22p678p', '258m258p258s1357z'], '9p');
+  const rec = recorder();
+  rec.add(g, 900);
+  g.act(0, { type: 'discard', tile: idOf(g, 0, 3) });
+  rec.add(g, 500);
+  g.act(1, { type: 'ron' });
+  g.act(2, { type: 'ron' });
+  passAll(g);
+  rec.add(g, 11000);
+  scenes.push({ id: 'double-ron', name: 'Doble ron', note: 'Dos rivales te hacen ron a la vez: la única ficha del ron vuela a una mano y después pasa a la otra (no se duplica).', steps: rec.steps, length: rec.end });
+}
+
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });
 const out = new URL('../public/lab/scenarios.json', import.meta.url);
 writeFileSync(out, JSON.stringify({ scenes }));

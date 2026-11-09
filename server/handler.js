@@ -217,11 +217,19 @@ function apply(room, op, token, body, now, seen) {
     return true;
   }
   if (op === 'request') {
-    // Ask the teammate to discard one of their tiles (a hint, not enforced).
+    // Instructions for the teammate: discard one of their tiles (a hint,
+    // not enforced) and/or "no riichi" for the rest of the hand (a bot obeys,
+    // a person sees a notice). { tile } and { noRiichi } can come apart.
     if (room.status !== 'playing') return false;
     const seat = room.seats.findIndex((x) => x.token === token);
     const mate = partnerOf(room, seat);
     if (seat < 0 || mate < 0) throw new Error('No tienes compañero en esta partida');
+    if (typeof body.noRiichi === 'boolean') {
+      room.noRiichi = room.noRiichi || {};
+      if (body.noRiichi) room.noRiichi[seat] = true;
+      else delete room.noRiichi[seat];
+      if (!('tile' in body)) return true;
+    }
     room.requests = room.requests || {};
     const tile = Number.isInteger(body.tile) ? body.tile : null;
     if (tile === null) delete room.requests[seat];
@@ -283,6 +291,7 @@ function startGame(room, now, seen) {
     : shuffled(room.queue).map(({ team, ready, ...p }) => p);
   room.seats = players;
   room.requests = {};
+  room.noRiichi = {};
   room.queue = [];
   room.status = 'playing';
   room.game = Game.create(players.map((p) => p.name)).s;
@@ -299,6 +308,7 @@ function afterChange(room, g, now) {
     room.clock.bank = [0, 0, 0, 0].map(() => TIMING.bankMs);
     room.clock.introUntil = now + TIMING.introMs; // nobody's clock runs during the deal animation
     room.requests = {}; // tile ids are reused every hand
+    room.noRiichi = {}; // "no riichi" is for one hand
   }
   if (s.phase === 'end') {
     room.status = 'finished';
@@ -317,6 +327,12 @@ function requestFor(room, seat) {
   const mate = partnerOf(room, seat);
   const r = mate >= 0 && room.requests && room.requests[mate];
   return r && room.game.k.hands[seat].includes(r.tile) ? r.tile : null;
+}
+
+// Whether this seat's teammate asked it not to declare riichi this hand.
+function noRiichiFor(room, seat) {
+  const mate = partnerOf(room, seat);
+  return mate >= 0 && !!(room.noRiichi && room.noRiichi[mate]);
 }
 
 // Bot n plays at the level the player chose for it: levels[n - 1].
@@ -376,7 +392,7 @@ export async function processTimeouts(room, now, seen) {
     const [seatStr, d] = due[0];
     const seat = Number(seatStr);
     if (d.bot) {
-      g.act(seat, await botAction(g, seat, requestFor(room, seat), room.seats[seat].level));
+      g.act(seat, await botAction(g, seat, requestFor(room, seat), room.seats[seat].level, noRiichiFor(room, seat)));
     } else {
       if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
       g.defaultAction(seat);
@@ -416,8 +432,12 @@ function viewFor(room, token, seen, now) {
       ...g.handOf(mate),
       // what I asked my teammate to discard / what my teammate asks of me
       myRequest: mine && room.game.k.hands[mate].includes(mine.tile) ? mine.tile : null,
+      // I told my teammate not to riichi this hand
+      myNoRiichi: !!(room.noRiichi && room.noRiichi[seat]),
     };
     view.partnerRequest = requestFor(room, seat);
+    // my teammate tells me not to riichi
+    view.partnerNoRiichi = noRiichiFor(room, seat);
   }
   const dec = room.clock && room.clock.decisions[seat];
   view.clock = dec

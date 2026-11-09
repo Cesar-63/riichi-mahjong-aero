@@ -290,8 +290,13 @@ primera partida.
   tuya, que no está en la mesa, se apoya ficha por ficha), espera un instante
   y las fichas caen boca arriba una tras otra, cada una girando sobre su
   canto trasero, así ninguna atraviesa la mesa. En un ron, la ficha ganadora
-  vuela desde los descartes hasta su lugar, separada y brillando. La cámara
-  muestra la mesa entera. Luego, justo delante de esa mano, se arma
+  vuela desde los descartes hasta su lugar, separada y brillando. En un doble
+  ron hay una sola ficha: primero cae la mano del segundo ganador y la ficha
+  va a ella; luego cae la del primero (el de la hoja de resultado) y la ficha
+  pasa de una mano a la otra, sin duplicarse. Tras un kan, la ficha de
+  reposición sale del extremo del muro muerto junto al corte y la última
+  ficha de la pared viva queda en su sitio (pasa al muro muerto solo en la
+  cuenta). La cámara muestra la mesa entera. Luego, justo delante de esa mano, se arma
   una fila con cartel **Dora**: los indicadores de dora vuelan desde el muro
   muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
@@ -356,6 +361,11 @@ Solo en el modo **Por equipos**:
   naranja en su mano con el aviso "X te pide ▢". Es una sugerencia, no
   obliga; otro clic la cancela y caduca cuando la ficha sale de su mano o
   termina la mano.
+- **Sin riichi**: el botón de papel junto a la mano del compañero le pide que
+  no declare riichi en esta mano (otro clic lo quita; se borra al empezar la
+  mano siguiente). Un compañero bot obedece: descarta la misma ficha sin
+  declarar (dama). Un compañero humano ve el aviso "Compañero: no riichi"
+  sobre su mano mientras no haya declarado.
 - El servidor solo envía la mano del compañero (nunca la de los rivales), y
   las peticiones solo las ve el equipo.
 - Los puntos y el uma siguen siendo individuales; al final se suma el
@@ -403,7 +413,8 @@ de Satoshi Kobayashi (licencia MIT, sin redes neuronales):
 - en la última mano no ganan si la victoria terminaría la partida con ellos
   en 4º lugar (*agarasu*);
 - en el modo por equipos, tu compañero bot descarta la ficha que le pidas
-  cuando le toca descartar (si es legal), salvo que prefiera ganar o hacer kan.
+  cuando le toca descartar (si es legal), salvo que prefiera ganar o hacer kan,
+  y no declara riichi si se lo pediste con **Sin riichi**.
 
 Cada decisión tarda unos 40 ms (algunas, hasta 1 s). La IA no guarda nada
 entre decisiones: en cada una reconstruye la mesa desde el registro mjai de la
@@ -475,7 +486,7 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
   descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
-  tsumo, tu tsumo con tres kan y empate. Salen de
+  tsumo, tu tsumo con tres kan, empate, kan y muro muerto, y doble ron. Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta

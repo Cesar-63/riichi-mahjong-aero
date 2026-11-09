@@ -1,8 +1,9 @@
 // Bots come in two levels. Normal ones play with majiang-ai (majiang-bot.js);
 // hard ones with Mortal (mortal/), loaded only when a hard bot plays, and
 // fall back to majiang-ai if it fails. Both honour their teammate's discard
-// request whenever they would discard anyway, and fall back to a plain safe
-// move if the AI ever answers something illegal.
+// request whenever they would discard anyway and keep quiet (no riichi, the
+// same discard) when the teammate said "no riichi", and fall back to a plain
+// safe move if the AI ever answers something illegal.
 import { majiangAction } from './majiang-bot.js';
 
 export const LEVELS = ['normal', 'hard'];
@@ -17,7 +18,7 @@ async function hardAction(game, seat) {
   }
 }
 
-export async function botAction(game, seat, requested = null, level = 'normal') {
+export async function botAction(game, seat, requested = null, level = 'normal', noRiichi = false) {
   const s = game.s;
   if (s.phase === 'result') return { type: 'ok' };
   const v = game.view(seat);
@@ -32,6 +33,8 @@ export async function botAction(game, seat, requested = null, level = 'normal') 
     }
   }
   if (o.kind === 'turn') {
+    // told not to riichi: the same tile goes out without the declaration (dama)
+    if (noRiichi && a && a.type === 'riichi') a = { type: 'discard', tile: a.tile };
     const discarding = !a || a.type === 'discard' || a.type === 'riichi';
     if (discarding && requested !== null && o.discard.includes(requested)) return { type: 'discard', tile: requested };
     return a || { type: 'discard', tile: o.discard.includes(v.drawn) ? v.drawn : o.discard[o.discard.length - 1] };
