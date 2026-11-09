@@ -924,7 +924,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
           x = fx(36.1);
         }
         const width = d.side ? H : W;
-        const z0 = fz(63.4) + row * (H + 0.16);
+        // (the first row starts past the far edge of the next pond's first
+        // tile, so a sideways tile at the end of a row clears it)
+        const z0 = fz(64) + row * (H + 0.16);
         const target = place(r, x + width / 2, D / 2, d.side ? z0 + H - W / 2 : z0 + H / 2, d.side ? 'side' : 'up');
         x += width + 0.1;
         col++;
@@ -1089,15 +1091,18 @@ export function createTable3D(container, { onPick, signal } = {}) {
   }
   // Honba counters: one 100 stick per honba, which the dealer takes from
   // their tray and lays on the felt at their right, just past the dice,
-  // side by side and pointing to the centre. They stay out while the hand's
-  // dice do (the same key).
+  // side by side and lying across in front of them (the dealer sees them
+  // level, like a riichi stick), each row centred on the dice. They stay
+  // out while the hand's dice do (the same key). The row stops short of the
+  // first tiles of the next player's pond (which reach z = 3.39), so the
+  // sticks never slip under them.
   const honbaOnTable = (v) => (v.wall && v.phase !== 'end' ? v.honba : 0);
   function honbaRest(v, k) {
     const dealerRel = (v.dealer - v.seat + 4) % 4;
     const row = Math.floor(k / 5); // five to a row, a second row on top
-    const local = new THREE.Vector3(6.1 + (k % 5) * 0.46 + row * 0.23, 0.05 + row * 0.1, 4.6);
-    const q = qSeat[dealerRel].clone().multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI / 2));
-    return { p: local.applyQuaternion(qSeat[dealerRel]), q };
+    const inRow = Math.min(5, honbaOnTable(v) - row * 5);
+    const local = new THREE.Vector3(7.25, 0.05 + row * 0.1, 4.6 + ((k % 5) - (inRow - 1) / 2) * 0.46 + row * 0.23);
+    return { p: local.applyQuaternion(qSeat[dealerRel]), q: qSeat[dealerRel].clone() };
   }
   // Riichi deposits left from earlier hands (kyoutaku that nobody has won
   // yet): their 1000 sticks wait in the middle of the table, side by side
