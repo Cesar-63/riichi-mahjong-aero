@@ -195,6 +195,10 @@ function makeRig(gltf, id, rel, own) {
   const gesture = { name: style.gesture[0], wait: style.gesture[1] + rel * 1.7, every: style.gesture[2], length: style.gesture[3], t: -1 };
   let time = rel * 1.3;
   let leanNow = style.lean;
+  let clear = 0; // 0: hands on the rail; 1: off the table, sitting back (hands being shown)
+  let clearGoal = 0;
+  const lapR = V(-0.11, hip.y + 0.09, 0.2);
+  const lapL = V(0.11, hip.y + 0.09, 0.2);
   let twistNow = 0;
 
   function step(dt) {
@@ -252,7 +256,8 @@ function makeRig(gltf, id, rel, own) {
     const breath = Math.sin(time * 1.9) * 0.008;
     const sway = Math.sin(time * 0.37 + rel) * 0.012 * style.sway;
     const far = w > 0 ? clamp((jointAt('armR', 'spine').distanceTo(wristFor(play.grip, gripFingers)) - (upper + fore) * 0.9) / 0.3, 0, 1) : 0;
-    leanNow += (style.lean + far * w * 0.5 - leanNow) * (1 - Math.exp(-dt * 12));
+    clear += (clearGoal - clear) * (1 - Math.exp(-dt * 6));
+    leanNow += (style.lean - clear * (0.12 + Math.max(0, style.lean)) + far * w * 0.5 - leanNow) * (1 - Math.exp(-dt * 12));
     twistNow += (far * w * 0.3 - twistNow) * (1 - Math.exp(-dt * 12));
     at.hips.copy(hip);
     bones.hips.position.copy(hip);
@@ -304,12 +309,12 @@ function makeRig(gltf, id, rel, own) {
 
     // ---- arms
     const gripWrist = wristFor(play.grip, gripFingers);
-    const wristR = restR.clone().lerp(gripWrist, w);
+    const wristR = restR.clone().lerp(lapR, clear).lerp(gripWrist, w);
     wristR.y += lift * style.lift + breath * 0.3;
     const fingersR = flatFingers.clone().lerp(gripFingers, w).add(V(0, flick * 0.9, 0)).normalize();
     arm('R', wristR, V(-0.7, -0.6, -0.3), fingersR, V(1, 0, 0).lerp(V(0.8, 0.3, -0.4), w));
     const gesturePoint = (from === 'head' ? headAt() : at.spine).clone().add(V(...offset).applyQuaternion(q[from]));
-    const wristL = restL.clone().lerp(gesturePoint, g);
+    const wristL = restL.clone().lerp(lapL, clear).lerp(gesturePoint, g);
     wristL.y += Math.sin(Math.PI * g) * 0.04 + breath * 0.3 + (g > 0.9 ? Math.sin(time * 9) * 0.004 : 0);
     const lapFingers = style.left === 'lap' ? V(-0.3, -0.2, 0.9) : V(-0.18, -0.05, 1);
     arm('L', wristL, V(0.7, -0.6, -0.3), lapFingers.normalize().lerp(V(...gFingers).normalize(), g).normalize(), V(-1, 0, 0).lerp(V(-0.4, 0, -0.9), g));
@@ -351,6 +356,14 @@ function makeRig(gltf, id, rel, own) {
       };
       if (play.w < 0.05) play.grip.copy(obj.position).applyMatrix4(toLocal);
     },
+    // hands off the table and sitting back, so nothing covers the tiles
+    // laid on it; gone altogether when the camera stands where they sit
+    setClear(on, hidden) {
+      clearGoal = on ? 1 : 0;
+      // a tile still in hand is let go at once: the arm comes back now
+      if (on && play.on) play.on.t = Math.max(play.on.t, play.on.lead + play.on.dur + play.on.hold);
+      if (!own) root.visible = !hidden;
+    },
     // something to follow with the eyes for a moment (a tile on its way)
     attend(obj, secs) {
       attention.obj = obj;
@@ -373,6 +386,7 @@ export function createCharacters(world) {
   let cast = [null, null, null, null];
   let ready = Promise.resolve();
   let generation = 0;
+  let revealing = { on: false, hide: null };
 
   world.onTick((dt) => {
     if (!group.visible) return;
@@ -404,7 +418,10 @@ export function createCharacters(world) {
         if (mine !== generation) return;
         if (rigs[rel]) rigs[rel].dispose();
         rigs[rel] = gltf ? makeRig(gltf, id, rel, rel === 0) : null;
-        if (rigs[rel]) group.add(rigs[rel].root);
+        if (rigs[rel]) {
+          group.add(rigs[rel].root);
+          rigs[rel].setClear(revealing.on, revealing.on && rel === revealing.hide);
+        }
       })).then(() => {
         if (mine === generation) moveChairs(group.visible);
       });
@@ -426,6 +443,13 @@ export function createCharacters(world) {
     },
     // how fast this seat's tiles travel, against the table's speed
     pace: (rel) => (group.visible && rigs[rel] ? rigs[rel].style.carry : 1),
+    // Hands are being shown on the table (a win, a draw): everybody takes
+    // theirs off it and sits back. hide: the relative seat the camera
+    // looks from (it would be inside that character), or null.
+    reveal(on, hide = null) {
+      revealing = { on, hide };
+      rigs.forEach((r, i) => r && r.setClear(on, on && i === hide));
+    },
     seated: (rel) => group.visible && !!rigs[rel],
     visible: () => group.visible,
   };

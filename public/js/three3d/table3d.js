@@ -375,6 +375,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     for (const o of objects.values()) o.obj.visible = true;
     win = null;
+    characters.reveal(false);
     if (!intro) world.forceView(null);
   }
 
@@ -582,7 +583,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
       ...first.w.melds.flatMap((m) => m.tiles).map((id) => objects.get(`t${id}`)).filter(Boolean).map((o) => o.target.p),
     ];
     const frame = handFrame(first.r, framed);
-    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame };
+    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame, frameSeat: first.r };
+    characters.reveal(true);
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
     world.forceView('overview');
@@ -608,6 +610,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     });
     const last = Math.max(0, ...items.map((it) => it.fallAt));
     win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
+    characters.reveal(true);
     hand.layout(v, ui, 0);
     world.forceView('overview');
   }
@@ -680,6 +683,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
       // a win: close on the hand, from behind its owner (the score sheet
       // covers the top of the screen); a draw keeps the whole table
       world.forceView(win.frame || 'overview');
+      // the camera goes behind the winner's seat: their character steps out of its way
+      if (win.frame) characters.reveal(true, win.frameSeat);
       // my own standing hand leaves the screen to the score sheet
       if (lastView) hand.layout(lastView[0], {}, 0);
       winListener({ phase: 'done' });

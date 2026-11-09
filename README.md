@@ -441,6 +441,10 @@ En la mesa:
 - **Tu propio descarte**: de tu personaje solo se ven **el antebrazo y la
   mano**, que entran desde el borde de la pantalla llevando la ficha a tu río
   y se retiran.
+- **Victoria y empate**: cuando se muestran manos sobre la mesa (ron, tsumo,
+  tenpai o noten al agotarse el muro), todos sacan las manos de la mesa y se
+  echan atrás, para no tapar las fichas; y el ganador desaparece mientras la
+  cámara mira su mano desde detrás de su asiento.
 - Entre jugadas respiran, miran su mano, levantan la vista hacia los demás y
   cada tanto hacen su gesto.
 
