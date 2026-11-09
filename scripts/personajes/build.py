@@ -285,11 +285,12 @@ def build_all(debug=False):
         if p.bone != 'head' or p.tile() == (0, 3) or (p.ntris == 4 and p.tile() == (2, 3)):
             continue  # not the cigarette, not the tufts of hair on top
         parts.append(borrow(p.copy()).move(0, 0.095, -0.018))
-    slick = tube([(1.598, 0, 0.004, 0.1, 0.118), (1.652, 0, -0.004, 0.094, 0.11), (1.69, 0, -0.016, 0.062, 0.078)], (3, 0), sides=8, caps=(False, True))
-    slick.pos[slick.pos[:, 2] < -0.02, 1] -= 0.03  # lower at the back
+    # cut short: a thin cap close to the skull
+    slick = tube([(1.602, 0, 0.004, 0.098, 0.114), (1.644, 0, -0.004, 0.09, 0.104), (1.662, 0, -0.014, 0.058, 0.07)], (3, 0), sides=8, caps=(False, True))
+    slick.pos[slick.pos[:, 2] < -0.02, 1] -= 0.02  # lower at the back
     slick.bone = 'head'
     parts += [borrow(slick).move(0, 0.095, -0.018),
-              borrow(hair_lock((-0.088, 1.475, -0.098), (0.088, 1.62, -0.052), (3, 0), 0.7)).move(0, 0.095, -0.018)]
+              borrow(hair_lock((-0.084, 1.545, -0.088), (0.084, 1.62, -0.052), (3, 0), 0.8)).move(0, 0.095, -0.018)]
     emit('tatsuo', scaled(parts, k), atlas, cuts_scaled(CUTS['terno_blanco'], k))
 
     # --- Momo: a student in a sailor uniform, long pink hair. Shiro's head,
