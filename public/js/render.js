@@ -177,12 +177,6 @@ const LIMITS = {
   'Kazoe Yakuman': '数え役満', Yakuman: '役満', '2x Yakuman': '二倍役満',
 };
 const limitName = (label) => (label === '2x Yakuman' ? 'Doble Yakuman' : label);
-// yaku whose name says nothing in Spanish get a short note instead of kanji
-const YAKU_NOTE = {
-  pinfu: 'mano sin puntos extra', tanyao: 'solo del 2 al 8', tsumo: 'robada con la mano cerrada',
-  haku: 'trío de dragón blanco', hatsu: 'trío de dragón verde', chun: 'trío de dragón rojo',
-  aka: 'cincos rojos',
-};
 
 // The four seats in wind order on wooden plaques, with what each one got.
 function plaquesHTML(v, r, winners) {
@@ -223,9 +217,8 @@ export function resultHTML(v) {
     const shown = w.yaku.filter(([, han]) => han || w.yakuman);
     const yaku = shown.map(([k, han]) => {
       const n = YAKU_NAMES[k] || [k, k];
-      const note = YAKU_NOTE[k] ? `<small class="note">${YAKU_NOTE[k]}</small>` : `<small class="jp">${n[0]}</small>`;
       const count = w.yakuman ? '' : ` <em>${han}</em>`;
-      return `<li>${n[1]}${count} ${note}</li>`;
+      return `<li>${n[1]}${count} <small class="jp">${n[0]}</small></li>`;
     }).join('');
     const label = LIMITS[w.label] ? stampHTML(limitName(w.label), LIMITS[w.label], w.yakuman || w.label === 'Kazoe Yakuman' ? 'yakuman' : '') : '';
     body = `<div class="r-head">

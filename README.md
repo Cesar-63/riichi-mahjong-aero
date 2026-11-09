@@ -188,7 +188,7 @@ Pantallas:
   ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
   sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
   三倍満, Yakuman 役満) cruzado por un trazo de luz, y los yaku escritos a
-  mano. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada, sus
+  mano, cada uno con su nombre japonés en kanji. Debajo, la cámara enfoca desde atrás del ganador su mano tumbada, sus
   fichas llamadas (que se corren a la misma línea de la mano) y la fila de
   dora y ura dora, alejándose lo necesario para que todo quepa a lo ancho. Al pie, una tablilla por jugador con su puntaje y
   lo que ganó o perdió, y **Aceptar**. Los empates usan la misma hoja
