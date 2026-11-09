@@ -204,6 +204,20 @@ function stampHTML(name, kanji, cls = '') {
   return `<div class="stamp-big ${cls}"><span class="bgk" aria-hidden="true">${kanji}</span><span class="name">${name}</span></div>`;
 }
 
+// What a win is worth, honba apart. Ron (and pao): the hand's value. Self
+// draw: what each one pays, "non-dealers/dealer" ("each" for a dealer).
+// Results saved before handPoints existed show the old total.
+function handValue(w) {
+  const s = w.tsumoSplit;
+  if (!s) return { big: `${w.handPoints ?? w.points}`, plain: `${w.handPoints ?? w.points}` };
+  if (!s.dealer) return { big: `${s.other} <small>cada uno</small>`, plain: `${s.other} cada uno` };
+  return { big: `${s.other}/${s.dealer}`, plain: `${s.other}/${s.dealer}` };
+}
+function honbaText(w) {
+  if (!w.honbaPoints) return '';
+  return w.tsumoSplit ? `+ ${w.honbaPoints / 3} honba cada uno` : `+ ${w.honbaPoints} honba`;
+}
+
 // Score sheet over the top of the screen; the 3D camera frames the winning
 // hand and its dora underneath (see table3d.js).
 export function resultHTML(v) {
@@ -217,7 +231,6 @@ export function resultHTML(v) {
     const p = v.players[w.seat];
     const how = w.tsumo ? 'Tsumo' : 'Ron';
     const extra = [w.tsumo ? 'pagan todos' : `Ron a ${esc(v.players[w.from].name)}`];
-    if (v.honba) extra.push(`incluye ${v.honba} honba`);
     if (w.pao !== null) extra.push(`pao: paga ${esc(v.players[w.pao].name)}`);
     // (ura dora is listed even when it adds nothing)
     const shown = w.yaku.filter(([, han]) => han || w.yakuman);
@@ -231,9 +244,9 @@ export function resultHTML(v) {
     body = `<div class="r-head">
         <div class="r-round">${round} · gana ${esc(p.name)} (${WIND_ES[p.wind]})</div>
         <div class="r-hanfu">${w.yakuman ? '' : `<span>${w.han} han</span><span>${w.fu} fu</span>`}<span>${how}</span></div>
-        <div class="r-points">${w.points}</div>
+        <div class="r-points">${handValue(w).big}${honbaText(w) ? `<span class="r-honba">${honbaText(w)}</span>` : ''}</div>
         <div class="r-sub">${extra.join(' · ')}</div>
-        ${more.map((m) => `<div class="r-sub also">También gana ${esc(v.players[m.seat].name)}: ${m.points}${m.label ? ` · ${limitName(m.label)}` : ''}</div>`).join('')}
+        ${more.map((m) => `<div class="r-sub also">También gana ${esc(v.players[m.seat].name)}: ${handValue(m).plain}${honbaText(m) ? ` ${honbaText(m)}` : ''}${m.label ? ` · ${limitName(m.label)}` : ''}</div>`).join('')}
       </div>
       ${label ? `<div class="streak" aria-hidden="true"></div>${label}` : ''}
       <ul class="r-yaku${shown.length > 4 ? ' many' : ''}">${yaku}</ul>`;

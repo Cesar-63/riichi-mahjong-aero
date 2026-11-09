@@ -216,6 +216,69 @@ test('double ron: both winners paid by the discarder', () => {
   assert.equal(r.deltas[0], -(r.wins[0].points + r.wins[1].points));
 });
 
+test('a win carries its value without honba, and the honba apart', () => {
+  // ron: seat 1 (pinfu) on seat 0's 4m, with 2 honba on the table
+  let g = scripted(
+    ['4m11z22z33z44z55z66z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'],
+    '9p',
+  );
+  g.s.honba = 2;
+  g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
+  g.act(1, { type: 'ron' });
+  let w = g.s.result.wins[0];
+  assert.equal(w.honbaPoints, 600);
+  assert.equal(w.handPoints + w.honbaPoints, w.points);
+  assert.equal(w.tsumoSplit, null);
+  assert.equal(g.s.players[0].score, 25000 - w.points, 'the discarder still pays the honba');
+  // self draw by the dealer (seat 0): each one pays the split plus 100 per honba
+  g = scripted(
+    ['23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z', '4m11z22z33z44z55z66z'],
+    '1m',
+  );
+  g.s.honba = 1;
+  g.act(0, { type: 'tsumo' });
+  w = g.s.result.wins[0];
+  assert.equal(w.tsumoSplit.dealer, 0);
+  assert.equal(w.handPoints, 3 * w.tsumoSplit.other);
+  assert.equal(w.honbaPoints, 300);
+  assert.equal(w.points, w.handPoints + 300);
+  for (const x of [1, 2, 3]) assert.equal(g.s.players[x].score, 25000 - w.tsumoSplit.other - 100);
+});
+
+test('pao: the responsible player pays the hand and the honba, shown apart', () => {
+  // the dealer draws daisangen; seat 2 is marked as having fed the last dragon
+  const g = scripted(
+    ['555z666z777z123m4m', '23m456p789s11p678s', '258m369p147s1234z', '258m258p258s1357z'],
+    '4m',
+  );
+  g.s.honba = 1;
+  g.s.k.pao[0].daisangen = 2;
+  g.s.k.callsMade = true; // not a first draw: no tenhou on top
+  g.act(0, { type: 'tsumo' });
+  const w = g.s.result.wins[0];
+  assert.equal(w.pao, 2);
+  assert.equal(w.tsumoSplit, null, 'one player pays: no split');
+  assert.equal(w.handPoints, 48000);
+  assert.equal(w.honbaPoints, 300);
+  assert.equal(g.s.players[2].score, 25000 - 48300);
+});
+
+test('double ron: each winner gets the honba apart', () => {
+  const g = scripted(
+    ['5m11z22z33z44z55z66z', '34m456p789s11p678s', '34m406p123s22p678p', '258m258p258s1357z'],
+    '9p9m',
+  );
+  g.s.honba = 1;
+  g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 4) });
+  g.act(1, { type: 'ron' });
+  g.act(2, { type: 'ron' });
+  if (g.s.phase === 'response') g.act(3, { type: 'pass' });
+  for (const w of g.s.result.wins) {
+    assert.equal(w.honbaPoints, 300);
+    assert.equal(w.handPoints + 300, w.points);
+  }
+});
+
 test('wall view: slots taken match draws, kans and dead-wall usage', async () => {
   const { deadSlot } = await import('../server/engine/game.js');
   // dead-wall slots are distinct and inside 122..135
