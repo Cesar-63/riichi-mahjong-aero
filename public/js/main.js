@@ -19,6 +19,17 @@ function newToken() {
   return [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Time per action presets (server/handler.js TIME_PRESETS)
+const TIMINGS = {
+  fast: ['Rápido', '3 s + 5 s'],
+  normal: ['Normal', '5 s + 10 s'],
+  slow: ['Lento', '10 s + 20 s'],
+  free: ['Sin límite', ''],
+};
+const timingLabel = (t) => `${TIMINGS[t][0]}${TIMINGS[t][1] ? ` · ${TIMINGS[t][1]}` : ''}`;
+const timingButtons = (current) => Object.entries(TIMINGS).map(([id, [name, secs]]) =>
+  `<button type="button" class="chalk-opt" data-timing="${id}" aria-pressed="${id === current}">${name}${secs ? ` <small>${secs}</small>` : ''}</button>`).join('');
+
 const token = store.get('mj.token') || newToken();
 store.set('mj.token', token);
 
@@ -29,6 +40,7 @@ const state = {
   practiceMate: store.get('mj.practiceMate') === '1',
   // level of Bot 1-3, for practice and for filling a room: "n" normal, "h" hard
   botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
+  timing: TIMINGS[store.get('mj.timing')] ? store.get('mj.timing') : 'normal',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -95,6 +107,14 @@ function apply(data) {
 
 const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 
+// Waiting room: the host picks the time per action, the others see it.
+function showRoomTiming(data, host) {
+  const t = TIMINGS[data.timing] ? data.timing : 'normal';
+  setIfChanged($('#w-timing'), host
+    ? `<span>Tiempo:</span>${timingButtons(t)}`
+    : `<span>Tiempo: <b>${timingLabel(t)}</b></span>`);
+}
+
 function showLobby(data) {
   state.view = null;
   // automatic play is per hand (sorting is a preference and stays)
@@ -153,6 +173,7 @@ function showLobby(data) {
       setIfChanged(el, plate(p));
     });
   }
+  showRoomTiming(data, !!(me && me.host));
   // the host can start right away, with bots in the empty seats
   $('#fill').classList.toggle('hidden', !(me && me.host && players.length < 4));
   if (!teams) {
@@ -549,8 +570,13 @@ function tick() {
     els.forEach((e) => { e.textContent = ''; });
     return;
   }
-  const now = Date.now() + state.clockOffset;
   const c = v.clock;
+  if (c.deadline === null) {
+    // no time limit in this room
+    els.forEach((e) => { e.textContent = '∞'; e.classList.remove('low'); });
+    return;
+  }
+  const now = Date.now() + state.clockOffset;
   const left = Math.max(0, c.deadline - now);
   let text;
   if (v.phase === 'result') text = `${Math.ceil(left / 1000)}s`;
@@ -621,7 +647,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode, levels: botLevels() });
+  await api('join', { name, mode, levels: botLevels(), timing: state.timing });
   pollLoop();
 });
 
@@ -733,6 +759,34 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#menu')) setMenu(false);
 });
 
+// Settings: one sheet, opened from the main menu and from ☰ in a game.
+// Every control saves itself in the browser as it changes (see above).
+function openSettings() {
+  // A and the teammate's row can also change from the game itself
+  $('#s-autosort').checked = state.ui.autoSort;
+  $('#s-partner').checked = state.ui.partnerOpen;
+  $('#settings-dialog').showModal();
+}
+$('#settings-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  openSettings();
+});
+$('#m-settings').addEventListener('click', () => {
+  setMenu(false);
+  openSettings();
+});
+$('#s-autosort').addEventListener('change', (e) => {
+  state.ui.autoSort = e.target.checked;
+  store.set('mj.autoSort', state.ui.autoSort ? '1' : '0');
+  showAutoButtons();
+  if (table3d) table3d.then((t) => t.setAutoSort(state.ui.autoSort));
+});
+$('#s-partner').addEventListener('change', (e) => {
+  state.ui.partnerOpen = e.target.checked;
+  store.set('mj.partnerOpen', state.ui.partnerOpen ? '1' : '0');
+  if (state.view) renderPartner(state.view, state.ui);
+});
+
 $('#rules-link').addEventListener('click', (e) => {
   e.preventDefault();
   $('#rules-dialog').showModal();
@@ -810,6 +864,24 @@ document.querySelectorAll('.bot-level').forEach((b) => b.addEventListener('click
   showBotLevels();
 }));
 showBotLevels();
+
+// Time per action: sent when opening a room or a practice game; in the
+// waiting room the host changes the room's.
+function showTiming() {
+  setIfChanged($('#timing-opts'), timingButtons(state.timing));
+}
+$('#timing-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-timing]');
+  if (!b) return;
+  state.timing = b.dataset.timing;
+  store.set('mj.timing', state.timing);
+  showTiming();
+});
+$('#w-timing').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-timing]');
+  if (b && b.getAttribute('aria-pressed') !== 'true') api('timing', { timing: b.dataset.timing });
+});
+showTiming();
 
 $('#practice-mate').checked = state.practiceMate;
 $('#practice-mate').addEventListener('change', (e) => {

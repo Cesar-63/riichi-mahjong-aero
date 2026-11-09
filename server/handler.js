@@ -16,6 +16,17 @@ export const TIMING = {
   offlineMs: 1500, // decision time for disconnected players
   offlineAfterMs: 10000,
 };
+// Time per action, chosen per room by whoever opens it (the host can change
+// it in the waiting room). "free": no clock for the players who are online.
+export const TIME_PRESETS = {
+  fast: { turnMs: 3000, bankMs: 5000 },
+  normal: { turnMs: TIMING.turnMs, bankMs: TIMING.bankMs },
+  slow: { turnMs: 10000, bankMs: 20000 },
+  free: null,
+};
+const timingId = (id) => (Object.hasOwn(TIME_PRESETS, id) ? id : 'normal');
+// the room's clock ({ turnMs, bankMs }), or null when there is no limit
+const clockOf = (room) => TIME_PRESETS[timingId(room.timing)];
 const ROOM_TTL = 6 * 3600 * 1000;
 const LOCK_MS = 5000;
 
@@ -30,7 +41,7 @@ const keys = (code) => ({
 
 function newRoom(code) {
   // mode: 'classic' (ranked, 4 individual players) or 'teams' (2 vs 2); set by whoever opens the room
-  return { code, version: 0, status: 'lobby', mode: null, queue: [], seats: null, game: null, clock: null, deadline: null };
+  return { code, version: 0, status: 'lobby', mode: null, timing: 'normal', queue: [], seats: null, game: null, clock: null, deadline: null };
 }
 
 function cleanName(n) {
@@ -71,7 +82,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -149,14 +160,18 @@ function apply(room, op, token, body, now, seen) {
     if (isBotRoom(room.code)) {
       // Test mode, starts right away. Teams: the player and Bot 1 against two bots.
       room.mode = mode;
+      room.timing = timingId(body.timing);
       const bots = [1, 2, 3].map((n) => newBot(n, body.levels));
       room.queue = [{ token, name }, ...bots];
       if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
       startGame(room, now, seen);
       return true;
     }
-    if (room.queue.length === 0) room.mode = mode;
-    else if (room.mode !== mode) {
+    if (room.queue.length === 0) {
+      // whoever opens the room sets its mode and its time
+      room.mode = mode;
+      room.timing = timingId(body.timing);
+    } else if (room.mode !== mode) {
       throw new Error(`La sala "${room.code}" es de modo ${MODE_NAME[room.mode]}: elige ese modo o usa otra sala`);
     }
     const existing = room.queue.find((q) => q.token === token);
@@ -193,6 +208,17 @@ function apply(room, op, token, body, now, seen) {
     if (room.queue.length !== 4 || n !== 2) throw new Error('Hacen falta 2 jugadores en cada equipo');
     if (!room.queue.every((q) => q.ready)) throw new Error('Todos tienen que estar listos');
     startGame(room, now, seen);
+    return true;
+  }
+  if (op === 'timing') {
+    // The host picks the time per action before the game starts. By teams it
+    // takes everyone's "ready" away, as changing team does.
+    if (room.status !== 'lobby') return false;
+    if (!room.queue.length || room.queue[0].token !== token) throw new Error('Solo el anfitrión puede cambiar el tiempo');
+    if (!Object.hasOwn(TIME_PRESETS, body.timing)) throw new Error('Tiempo desconocido');
+    if (room.timing === body.timing) return false;
+    room.timing = body.timing;
+    for (const q of room.queue) if ('ready' in q) q.ready = false;
     return true;
   }
   if (op === 'fill') {
@@ -265,8 +291,9 @@ function apply(room, op, token, body, now, seen) {
   if (seat < 0) throw new Error('No estás en esta partida');
   const g = new Game(room.game);
   const dec = room.clock.decisions[seat];
-  if (dec && !dec.auto && g.s.phase !== 'result') {
-    const over = now - dec.start - TIMING.turnMs - TIMING.graceMs;
+  const clk = clockOf(room);
+  if (clk && dec && !dec.auto && g.s.phase !== 'result') {
+    const over = now - dec.start - clk.turnMs - TIMING.graceMs;
     if (over > 0) room.clock.bank[seat] = Math.max(0, room.clock.bank[seat] - over);
   }
   g.act(seat, body.action || {});
@@ -305,7 +332,7 @@ function afterChange(room, g, now) {
   const key = `${s.round}-${s.kyokuNum}-${s.honba}`;
   if (room.clock.kyokuKey !== key && s.phase !== 'result') {
     room.clock.kyokuKey = key;
-    room.clock.bank = [0, 0, 0, 0].map(() => TIMING.bankMs);
+    room.clock.bank = [0, 0, 0, 0].map(() => (clockOf(room) ? clockOf(room).bankMs : 0));
     room.clock.introUntil = now + TIMING.introMs; // nobody's clock runs during the deal animation
     room.requests = {}; // tile ids are reused every hand
     room.noRiichi = {}; // "no riichi" is for one hand
@@ -374,11 +401,12 @@ function schedule(room, now, seen) {
       deadline = t0 + TIMING.autoMs;
       auto = true;
     } else if (offline) deadline = t0 + TIMING.offlineMs;
-    else deadline = t0 + TIMING.turnMs + TIMING.graceMs + room.clock.bank[seat];
+    else if (!clockOf(room)) deadline = null; // no time limit: it waits for the player
+    else deadline = t0 + clockOf(room).turnMs + TIMING.graceMs + room.clock.bank[seat];
     next[seat] = { key, start: t0, deadline, auto };
   }
   room.clock.decisions = next;
-  const dls = Object.values(next).map((d) => d.deadline);
+  const dls = Object.values(next).map((d) => d.deadline).filter((d) => d !== null);
   room.deadline = dls.length ? Math.min(...dls) : null;
 }
 
@@ -386,7 +414,7 @@ export async function processTimeouts(room, now, seen) {
   let changed = false;
   for (let guard = 0; guard < 200 && room.status === 'playing'; guard++) {
     schedule(room, now, seen);
-    const due = Object.entries(room.clock.decisions).filter(([, d]) => d.deadline <= now);
+    const due = Object.entries(room.clock.decisions).filter(([, d]) => d.deadline !== null && d.deadline <= now);
     if (!due.length) break;
     const g = new Game(room.game);
     const [seatStr, d] = due[0];
@@ -409,6 +437,7 @@ function viewFor(room, token, seen, now) {
     return {
       ...base,
       queue: room.queue.map((q, i) => ({ name: q.name, team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
+      timing: timingId(room.timing),
       inQueue: room.queue.some((q) => q.token === token),
     };
   }
@@ -440,12 +469,14 @@ function viewFor(room, token, seen, now) {
     view.partnerNoRiichi = noRiichiFor(room, seat);
   }
   const dec = room.clock && room.clock.decisions[seat];
+  const clk = clockOf(room);
+  view.timing = timingId(room.timing);
   view.clock = dec
     ? {
-      // The grace period is hidden from the displayed countdown.
-      deadline: dec.auto || room.game.phase === 'result' ? dec.deadline : dec.deadline - TIMING.graceMs,
+      // The grace period is hidden from the displayed countdown; no limit: null
+      deadline: dec.deadline === null ? null : dec.auto || room.game.phase === 'result' ? dec.deadline : dec.deadline - TIMING.graceMs,
       start: dec.start,
-      turnMs: TIMING.turnMs,
+      turnMs: clk ? clk.turnMs : null,
       bank: room.clock.bank[seat],
       auto: dec.auto,
     }

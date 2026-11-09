@@ -27,7 +27,7 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 | Furiten | Permanente por descarte propio, temporal al dejar pasar la ficha ganadora, y de riichi. Se muestra en pantalla. |
 | Empates | Ryuukyoku con pago por tenpai (3.000), nagashi mangan, kyuushu kyuuhai, suufon renda, suucha riichi, suukaikan y sanchahou (triple ron). Doble ron permitido. |
 | Pao | Daisangen y daisuushii. |
-| Tiempo | 5 s por acción + 10 s de reserva por mano. Al acabarse: tsumogiri / pasar. Un jugador desconectado juega en automático (1,5 s por acción). Tras riichi el tsumogiri es automático. |
+| Tiempo | Configurable por sala: lo elige quien la abre y el anfitrión puede cambiarlo en la sala de espera. **Normal** (por defecto): 5 s por acción + 10 s de reserva por mano; **Rápido**: 3 + 5; **Lento**: 10 + 20; **Sin límite**: sin reloj para los jugadores conectados. Al acabarse: tsumogiri / pasar. Un jugador desconectado juega en automático (1,5 s por acción). Tras riichi el tsumogiri es automático. |
 
 ## Cómo se juega
 
@@ -35,6 +35,13 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    nombre y un código de sala (por defecto `publica`) y pulsa **Entrar a la
    sala**. Cada sala queda con el modo de quien la abrió; para entrar hay que
    elegir ese mismo modo.
+   - **Tiempo por jugada** (Rápido 3 + 5, Normal 5 + 10, Lento 10 + 20 o Sin
+     límite; queda guardado en el navegador): vale al abrir una sala o una
+     práctica. En la sala de espera todos ven el tiempo y el anfitrión puede
+     cambiarlo; por equipos, cambiarlo quita el "listo" de todos.
+   - **Configuración** (abajo, junto a *Reglas del salón*): la misma hoja de
+     ajustes que se abre desde el ☰ en partida (ver el punto 3), para dejarlo
+     todo listo antes de jugar.
    - **Clásico** (ranked individual, el modo original): la partida empieza
      sola al llegar a 4 jugadores, con asientos al azar.
    - En la sala de espera, el anfitrión (el primero que entró) también puede
@@ -52,7 +59,7 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      compañero** se juega por equipos. Ver [Práctica](#práctica-contra-bots).
 2. Para descartar, un clic levanta la ficha y otro clic sobre ella la
    descarta (un clic en otra ficha levanta esa; fuera de la mano, la baja).
-   En el menú, **Descartar con un solo clic** descarta al primer clic.
+   En **Configuración**, **Descartar con un solo clic** descarta al primer clic.
    **Arrastrar**: una ficha se puede tomar (clic sostenido) y llevar con el
    mouse (sin salir de la pantalla). Soltada dentro de la mano, se encaja
    donde la dejaste; soltada arriba, sobre la mesa, se descarta (si es tu
@@ -62,15 +69,21 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    robas entra por la derecha). Los botones (Riichi, Tsumo, Ron, Pon,
    Chi, Kan, Pasar) aparecen sobre tu mano cuando aplican.
 3. **Menú** (botón ☰ arriba a la izquierda, siempre visible):
-   - **Descartar con un solo clic**, **Doble clic** (fuera de las fichas de tu
-     mano) y **Clic derecho**: estos dos descartan la ficha robada en tu turno
-     y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
-     decide con los botones). Vienen desactivados y quedan guardados en el
-     navegador entre partidas.
-   - **Cambiar la vista con una tecla**: el mouse deja de cambiar entre la
-     vista del jugador y la mesa entera, y lo hace la tecla elegida en
-     **Tecla de vista** (clic y luego la tecla; V por defecto). También queda
-     guardado.
+   - **Configuración**: la hoja *Configuración · 設定*, la misma que se abre
+     desde el menú principal. Todo lo que se cambia ahí queda guardado en el
+     navegador:
+     - **Descartar con un solo clic**, **Doble clic** (fuera de las fichas de tu
+       mano) y **Clic derecho**: estos dos descartan la ficha robada en tu turno
+       y pasan cuando te ofrecen chi, pon o kan (no cuando hay ron: ese se
+       decide con los botones). Vienen desactivados y quedan guardados en el
+       navegador entre partidas.
+     - **Cambiar la vista con una tecla**: el mouse deja de cambiar entre la
+       vista del jugador y la mesa entera, y lo hace la tecla elegida en
+       **Tecla de vista** (clic y luego la tecla; V por defecto). También queda
+       guardado.
+     - **Ordenar la mano sola** (lo mismo que la A de la barra lateral) y
+       **Mostrar la mano del compañero** (por equipos; lo mismo que el clic en
+       su aviso).
    - **Reglas del salón** y **Pantalla completa**.
    - **Abandonar partida**: tu asiento sigue en automático (tsumogiri) hasta
      el final y los demás lo ven como "(abandonó)". Puedes volver uniéndote
