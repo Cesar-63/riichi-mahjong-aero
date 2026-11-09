@@ -584,6 +584,34 @@ las manos ajenas ni la pared).
 - En pao se aplica la responsabilidad a todo el valor de la mano.
 - En móvil vertical se ve siempre la mesa entera desde arriba.
 
+## Organización del trabajo
+
+Lo pendiente se lleva en un tablero kanban de **GitHub Projects**
+([Projects de Cesar-63](https://github.com/Cesar-63?tab=projects)), hecho con
+los [issues](https://github.com/Cesar-63/riichi-mahjong-aero/issues) de este
+repo.
+
+- **Un ticket por issue.** Cada cosa por hacer (mejora, bug, documento) es un
+  issue, con qué hay hoy, qué se busca y una lista de "Hecho cuando".
+- **El estado vive solo en el tablero**, no en etiquetas. Las columnas son:
+
+  | Columna | Qué significa |
+  | --- | --- |
+  | **Todo** | Por hacer. Ordenada por prioridad: arriba lo próximo. |
+  | **En curso** | Alguien está trabajando en él. |
+  | **En revisión** | Hecho o con PR abierto, falta probarlo o confirmarlo. |
+  | **Done** | Cerrado. |
+
+- **Las etiquetas son de tipo y área**, para filtrar:
+  - tipo: `mejora`, `bug` y `docs`;
+  - área: `mesa-3d`, `partida`, `puntaje`, `por-equipos`, `sala`, `menú`,
+    `bots` y `laboratorio`.
+- **Automatizaciones del tablero:**
+  - los issues nuevos entran solos en Todo;
+  - al cerrar un issue o mergear su PR, pasa solo a Done.
+- **Cada PR cierra su issue.** El PR dice `Closes #N` en la descripción.
+  Un PR que mezcla varias cosas cierra un issue por cada una.
+
 ## Licencia
 
 El juego se publica con la **GNU Affero General Public License v3.0**
