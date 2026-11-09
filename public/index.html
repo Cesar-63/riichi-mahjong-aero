@@ -55,9 +55,14 @@
             <button type="button" class="bot-level" data-bot="3" aria-pressed="false">Bot 3 · <b>normal</b></button>
           </div>
         </div>
+        <div class="timing-field" role="group" aria-labelledby="timing-label">
+          <span class="chalk" id="timing-label">Tiempo por jugada <small>(al abrir una sala o en práctica)</small></span>
+          <div class="chalk-opts" id="timing-opts"></div>
+        </div>
       </div>
       <div class="board-foot">
         <span class="foot-links">
+          <a href="#configuracion" id="settings-link">Configuración</a>
           <a href="#reglas" id="rules-link">Reglas del salón</a>
           <a href="https://github.com/Cesar-63/riichi-mahjong-aero" target="_blank" rel="noopener">Código fuente (AGPL)</a>
         </span>
@@ -74,7 +79,7 @@
           <li>Tres cincos rojos (akadora)</li>
           <li>25.000 puntos al empezar</li>
           <li>Retorno 30.000 · uma 10/20</li>
-          <li>5 s por jugada + 10 s de reserva</li>
+          <li>5 s por jugada + 10 s de reserva, o a elección</li>
           <li>Aquí no se fía</li>
         </ul>
         <span class="sign">— La casa</span>
@@ -118,6 +123,7 @@
           </section>
         </div>
         <p id="unassigned"></p>
+        <div id="w-timing" role="group" aria-label="Tiempo por jugada"></div>
         <div class="w-actions">
           <button id="ready" class="paper" type="button">Estoy listo</button>
           <button id="start" class="paper seal hidden" type="button"><span class="es">Comenzar</span><span class="jp">開始</span></button>
@@ -170,11 +176,7 @@
       </button>
       <div id="menu-panel" class="hidden sheet crumpled">
         <h2>Menú <span class="jp">品書き</span></h2>
-        <label class="check"><input type="checkbox" id="oneclick"> Descartar con un solo clic</label>
-        <label class="check"><input type="checkbox" id="dbltsumo"> Doble clic (fuera de la mano): tsumogiri y saltar llamadas</label>
-        <label class="check"><input type="checkbox" id="righttsumo"> Clic derecho: tsumogiri y saltar llamadas</label>
-        <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
-        <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
+        <button id="m-settings" class="paper" type="button">Configuración</button>
         <button id="m-rules" class="paper" type="button">Reglas del salón</button>
         <button id="m-full" class="paper" type="button">Pantalla completa</button>
         <button id="m-abandon" class="paper danger" type="button">Abandonar partida</button>
@@ -183,6 +185,28 @@
   </div>
 
   <div id="modal" class="hidden"></div>
+  <!-- the one settings sheet: from the main menu and from ☰ in a game -->
+  <dialog id="settings-dialog" class="sheet crumpled" aria-labelledby="settings-title">
+    <h2 id="settings-title">Configuración <span class="jp">設定</span></h2>
+    <fieldset>
+      <legend>Descartar</legend>
+      <label class="check"><input type="checkbox" id="oneclick"> Descartar con un solo clic</label>
+      <label class="check"><input type="checkbox" id="dbltsumo"> Doble clic (fuera de la mano): tsumogiri y saltar llamadas</label>
+      <label class="check"><input type="checkbox" id="righttsumo"> Clic derecho: tsumogiri y saltar llamadas</label>
+      <label class="check"><input type="checkbox" id="s-autosort"> Ordenar la mano sola (la A de la barra lateral)</label>
+    </fieldset>
+    <fieldset>
+      <legend>Vista</legend>
+      <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
+      <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
+    </fieldset>
+    <fieldset>
+      <legend>Por equipos</legend>
+      <label class="check"><input type="checkbox" id="s-partner"> Mostrar la mano del compañero</label>
+    </fieldset>
+    <p class="note">Se guarda en este navegador.</p>
+    <form method="dialog"><button class="paper" type="submit">Listo</button></form>
+  </dialog>
   <dialog id="rules-dialog" class="sheet crumpled">
     <h2>Reglas del salón <span class="jp">当店規定</span></h2>
     <ul>
@@ -195,7 +219,7 @@
       <li>Empates abortivos: kyuushu kyuuhai, suufon renda, suucha riichi, suukaikan.</li>
       <li>Nagashi mangan, pao en daisangen y daisuushii, sin doble yakuman.</li>
       <li>Si nadie llega a 30.000 al final de Este 4, se juega el Sur a muerte súbita.</li>
-      <li>Tiempo: 5 s por jugada + 10 s de reserva por mano.</li>
+      <li>Tiempo: lo elige quien abre la sala (el anfitrión puede cambiarlo en la sala de espera). Normal: 5 s por jugada + 10 s de reserva por mano; Rápido: 3 + 5; Lento: 10 + 20; Sin límite: no hay reloj para los jugadores conectados.</li>
     </ul>
     <form method="dialog"><button class="paper" type="submit">Cerrar</button></form>
   </dialog>

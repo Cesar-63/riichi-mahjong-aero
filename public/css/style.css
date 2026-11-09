@@ -219,7 +219,7 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
   mix-blend-mode: multiply;
   opacity: .5;
 }
-.tack, #menu-panel::before, #rules-dialog::before {
+.tack, #menu-panel::before, #rules-dialog::before, #settings-dialog::before {
   position: absolute;
   z-index: 2;
   top: 6px;
@@ -229,7 +229,7 @@ button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
   translate: -50% 0;
   background: url(../img/tack.svg) center / contain no-repeat;
 }
-#menu-panel::before, #rules-dialog::before { content: ""; }
+#menu-panel::before, #rules-dialog::before, #settings-dialog::before { content: ""; }
 .thumb { position: absolute; width: 30px; height: 38px; background: url(../img/thumb.svg) center / contain no-repeat; mix-blend-mode: multiply; }
 
 /* a sheet of paper lying on something (rules, menu) */
@@ -455,9 +455,15 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .fields input::placeholder { color: var(--ink-soft); opacity: .45; }
 .fields .mate-field { flex-direction: row; grid-column: 1 / -1; font-size: 18px; display: none; }
 .fields .bots-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
-.fields .bots-field small { font-size: 15px; opacity: .8; }
+.fields :is(.bots-field, .timing-field) small { font-size: 15px; opacity: .8; }
+.fields .timing-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
+.chalk-opts { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.chalk-opt small { font-size: .75em; opacity: .75; }
+/* the waiting room: the host picks the time, the others read it */
+#w-timing { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
+#w-timing b { font-weight: 400; color: var(--chalk-yellow); }
 .bot-levels { display: flex; flex-wrap: wrap; gap: 6px 10px; }
-.bot-level {
+:is(.bot-level, .chalk-opt) {
   position: relative;
   padding: 4px 14px;
   font-family: var(--f-hand);
@@ -467,17 +473,17 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   border: 0;
   cursor: pointer;
 }
-.bot-level b { font-weight: 400; }
-.bot-level[aria-pressed="true"] { color: var(--chalk-yellow); }
-.bot-level[aria-pressed="true"]::before {
+:is(.bot-level, .chalk-opt) b { font-weight: 400; }
+:is(.bot-level, .chalk-opt)[aria-pressed="true"] { color: var(--chalk-yellow); }
+:is(.bot-level, .chalk-opt)[aria-pressed="true"]::before {
   content: "";
   position: absolute;
   inset: -2px -4px;
   pointer-events: none;
   background: url(../img/chalk-ring.svg) center / 100% 100% no-repeat;
 }
-.bot-level:hover { color: var(--chalk-yellow); }
-.bot-level:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+:is(.bot-level, .chalk-opt):hover { color: var(--chalk-yellow); }
+:is(.bot-level, .chalk-opt):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 #entry.practice .room-field { display: none; }
 #entry.practice .mate-field { display: flex; }
 #entry.practice .fields { grid-template-columns: minmax(0, 1fr); }
@@ -871,6 +877,23 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #rules-dialog ul { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.45; color: var(--ink); }
 #rules-dialog li { margin: 6px 0; }
 #rules-dialog form { text-align: right; margin-top: 12px; }
+#settings-dialog {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 22px 26px;
+  --ring-x: 30%;
+  --ring-y: 96%;
+  transform: rotate(.5deg);
+  /* opaque paper even while .sheet's background is broken (#57) */
+  background-color: var(--paper-sheet);
+}
+#settings-dialog::backdrop { background: radial-gradient(ellipse 70% 80% at 50% 35%, rgba(8, 7, 6, .55), rgba(8, 7, 6, .9)); }
+#settings-dialog fieldset { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 0 12px; padding: 0; border: 0; }
+#settings-dialog legend { padding: 0 0 4px; font-family: var(--f-title); font-size: 18px; color: var(--ink); }
+#settings-dialog label { font-size: 15px; color: var(--ink); padding: 2px 0; }
+#settings-dialog .paper { padding: 7px 14px; font-size: 15px; }
+#settings-dialog .note { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
+#settings-dialog form { text-align: right; margin-top: 10px; }
 #toast {
   position: fixed;
   left: 50%;

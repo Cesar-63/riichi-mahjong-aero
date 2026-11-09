@@ -343,3 +343,57 @@ test('bot levels: each bot plays at the level chosen for it, practice and fill',
   const filled = await call({ op: 'fill', token: tokens[0], levels: ['normal', 'hard'] }, 'lv2');
   assert.deepEqual(levels(filled), { 'Bot 1': 'normal', 'Bot 2': 'hard' });
 });
+
+test('time per action: the opener picks it, the host can change it, everyone sees it', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 70_000_000;
+  const call = async (body) => (await handle({ room: 'tm1', ...body }, store, now)).body;
+  assert.equal((await call({ op: 'join', token: tokens[0], name: 'P0', mode: 'teams', timing: 'slow' })).timing, 'slow');
+  // a later player's choice does not change the room
+  assert.equal((await call({ op: 'join', token: tokens[1], name: 'P1', mode: 'teams', timing: 'fast' })).timing, 'slow');
+  assert.ok((await call({ op: 'timing', token: tokens[1], timing: 'fast' })).error, 'only the host');
+  assert.ok((await call({ op: 'timing', token: tokens[0], timing: 'eternal' })).error, 'unknown preset');
+  await call({ op: 'team', token: tokens[1], team: 'S' });
+  assert.equal((await call({ op: 'ready', token: tokens[1], ready: true })).queue[1].ready, true);
+  const changed = await call({ op: 'timing', token: tokens[0], timing: 'fast' });
+  assert.equal(changed.timing, 'fast');
+  assert.equal(changed.queue[1].ready, false, 'changing the time takes "ready" away');
+  assert.equal((await call({ op: 'poll', token: tokens[1] })).timing, 'fast');
+  // an unknown preset when opening a room falls back to normal
+  const other = (await handle({ room: 'tm2', op: 'join', token: tokens[2], name: 'P2', timing: 'x' }, store, now)).body;
+  assert.equal(other.timing, 'normal');
+});
+
+test('time per action: the server uses the room\'s time, or none at all', async () => {
+  const { TIMING, TIME_PRESETS } = await import('../server/handler.js');
+  for (const timing of ['fast', 'free']) {
+    globalThis.__mjStore = new Map();
+    const store = createStore({});
+    let now = 80_000_000;
+    const call = async (body) => (await handle({ room: `tm-${timing}`, ...body }, store, now)).body;
+    await call({ op: 'join', token: tokens[0], name: 'P0', hb: true, timing });
+    for (let i = 1; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true });
+    // after the deal animation, whoever has to discard first
+    now += TIMING.introMs + 10;
+    let views = [];
+    for (let i = 0; i < 4; i++) views.push((await call({ op: 'poll', token: tokens[i], hb: true })).game);
+    const dealer = views.findIndex((v) => v.options && v.options.kind === 'turn');
+    const v = views[dealer];
+    assert.equal(v.timing, timing);
+    if (timing === 'fast') {
+      const { turnMs, bankMs } = TIME_PRESETS.fast;
+      assert.equal(v.clock.turnMs, turnMs);
+      assert.equal(v.clock.bank, bankMs);
+      assert.equal(v.clock.deadline - v.clock.start, turnMs + bankMs);
+    } else {
+      assert.equal(v.clock.deadline, null);
+      assert.equal(v.clock.turnMs, null);
+      // an hour later (everyone still online) the dealer is still to play
+      now += 3600_000;
+      for (let i = 0; i < 4; i++) views[i] = (await call({ op: 'poll', token: tokens[i], hb: true })).game;
+      assert.equal(views[dealer].options.kind, 'turn');
+      assert.equal(views[dealer].events.length, v.events.length);
+    }
+  }
+});
