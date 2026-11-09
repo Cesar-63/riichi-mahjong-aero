@@ -459,6 +459,42 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .fields .timing-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
 .chalk-opts { display: flex; flex-wrap: wrap; gap: 6px 10px; }
 .chalk-opt small { font-size: .75em; opacity: .75; }
+/* Who you sit at the table as: a row of portraits (img/personajes/, drawn
+   from the 3D models), the chosen one ringed in chalk. On the entry board
+   and again in the waiting room. */
+.fields .chars-toggle { flex-direction: row; grid-column: 1 / -1; font-size: 18px; }
+:is(.char-field, #w-char).off { display: none; }
+.fields .char-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-hand); font-size: 17px; color: var(--chalk-soft); }
+.fields .char-field small { font-size: 15px; opacity: .8; }
+.char-picker { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+#w-char { padding: 8px 18px 4px; border-top: 2px solid rgba(236, 232, 220, .14); }
+.char-opt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 74px;
+  padding: 2px 2px 3px;
+  font-family: var(--f-hand);
+  font-size: 16px;
+  color: var(--chalk);
+  background: rgba(0, 0, 0, .28);
+  border: 0;
+  cursor: pointer;
+}
+.char-opt img { width: 66px; height: 77px; object-fit: cover; image-rendering: pixelated; filter: brightness(.82); }
+.char-opt[aria-pressed="true"] { color: var(--chalk-yellow); }
+.char-opt[aria-pressed="true"] img { filter: none; }
+.char-opt[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  background: url(../img/chalk-ring.svg) center / 100% 100% no-repeat;
+}
+.char-opt:hover { color: var(--chalk-yellow); }
+.char-opt:hover img { filter: none; }
+.char-opt:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 /* the waiting room: the host picks the time, the others read it */
 #w-timing { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
 #w-timing b { font-weight: 400; color: var(--chalk-yellow); }
@@ -792,7 +828,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .w-seat[data-pos="bottom"] { grid-area: 3 / 2; }
 .w-seat[data-pos="left"] { grid-area: 2 / 1; }
 .w-seat[data-pos="right"] { grid-area: 2 / 3; }
-.w-seat .who { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.w-seat > img { width: 34px; height: 40px; flex: none; object-fit: cover; image-rendering: pixelated; margin: -4px 0 -6px -6px; }
+.w-seat .who { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
 .w-seat .who > span { max-width: 100%; font-family: var(--f-hand); font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .w-seat .who b { padding: 1px 5px; font-size: 11px; font-weight: 700; color: var(--cream); background: var(--tag-mate); }
 .w-seat.tS .who b { background: var(--red); }
@@ -1161,6 +1198,17 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #hud3d .roundinfo b { color: var(--ink); }
 #hud3d .roundinfo b.oya { color: var(--red-ink); }
 
+/* Playing with characters (#game.chars): the rivals themselves sit at the
+   table, so there are no frames and no band, only the plaques along the
+   top; "bot" moves from the frame's scrap of paper into the plaque. */
+.tag.bot { display: none; color: #4a3518; font-family: var(--f-hand); font-weight: 400; font-size: max(11px, calc(14 * var(--px))); }
+#game.chars .tag.bot { display: inline; }
+#game.chars :is(#hud3d .band, .seatcard .frame) { display: none; }
+#game.chars .seatcard, #game.chars.v-overview .seatcard { top: calc(8 * var(--px)); transform: none; }
+#game.chars .seatcard .plaque { margin: 0; }
+#game.chars #menu, #game.chars #hud3d .roundinfo { top: calc(56 * var(--px)); }
+
+
 /* Sidebar in the middle of the left edge (Mahjong Soul style): A (auto
    sort) over R, C and D (automatic ron, skipping calls, discarding the
    draw). Closed it shows just the letters, which work as they are; its
@@ -1413,17 +1461,17 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 /* narrow screens: no portrait frames, just the plaques along the top */
 @media (max-width: 760px), (max-height: 420px) {
   #hud3d .band { height: 46px; transform: none !important; background: linear-gradient(#17120c, rgba(23, 18, 12, .85)); }
+  .seatcard .frame { display: none; }
   .portraits { position: absolute; top: 6px; left: 56px; right: 6px; display: flex; gap: 4px; }
   .seatcard, .seatcard.left, .seatcard.right, .seatcard.top { position: static; flex: 1 1 0; min-width: 0; translate: none; transform: none !important; }
-  .seatcard .frame { display: none; }
   .seatcard .plaque, .seatcard.right .plaque, .seatcard.top .plaque { width: auto; margin: 0; padding: 3px 6px; flex-wrap: wrap; row-gap: 0; }
   .seatcard .plaque .tag { display: none; }
   .seatcard .plaque .tag.riichi { display: inline; }
   /* the name gets a line of its own */
   .seatcard .plaque b { order: -1; flex: 1 1 100%; }
   .seatcard .plaque .score { margin-left: auto; }
-  #menu { left: 8px; top: 8px; }
-  #hud3d .roundinfo { left: 8px; top: 56px; padding: 4px 8px; }
+  #menu, #game.chars #menu { left: 8px; top: 8px; }
+  #hud3d .roundinfo, #game.chars #hud3d .roundinfo { left: 8px; top: 56px; padding: 4px 8px; }
   #hud3d .bottom-left { left: 8px; }
   .auto { height: 30px; min-width: 30px; padding: 0 6px; }
   #hud3d .actions { right: 8px; gap: 8px; }

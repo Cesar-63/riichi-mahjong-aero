@@ -2,6 +2,7 @@
 // applies the request plus any expired timers, and saves it back.
 import { Game } from './engine/game.js';
 import { botAction, LEVELS } from './engine/bot.js';
+import { CHARACTERS, characterId, isCharacter, fillCharacters } from '../public/js/shared/characters.js';
 
 const env = (typeof process !== 'undefined' && process.env) || {};
 export const TIMING = {
@@ -82,7 +83,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'character'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -156,13 +157,15 @@ function apply(room, op, token, body, now, seen) {
     if (room.status === 'finished') Object.assign(room, newRoom(room.code), { version: room.version });
     if (room.status === 'playing') throw new Error('Hay una partida en curso en esta sala');
     const name = cleanName(body.name);
+    // the character they sit at the table as (several players may share one)
+    const character = characterId(body.character);
     const mode = body.mode === 'teams' ? 'teams' : 'classic';
     if (isBotRoom(room.code)) {
       // Test mode, starts right away. Teams: the player and Bot 1 against two bots.
       room.mode = mode;
       room.timing = timingId(body.timing);
       const bots = [1, 2, 3].map((n) => newBot(n, body.levels));
-      room.queue = [{ token, name }, ...bots];
+      room.queue = [{ token, name, character }, ...bots];
       if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
       startGame(room, now, seen);
       return true;
@@ -175,10 +178,10 @@ function apply(room, op, token, body, now, seen) {
       throw new Error(`La sala "${room.code}" es de modo ${MODE_NAME[room.mode]}: elige ese modo o usa otra sala`);
     }
     const existing = room.queue.find((q) => q.token === token);
-    if (existing) existing.name = name;
+    if (existing) Object.assign(existing, { name, character });
     else {
       if (room.queue.length >= 4) throw new Error('La sala está llena (4/4)');
-      room.queue.push(mode === 'teams' ? { token, name, team: null, ready: false } : { token, name });
+      room.queue.push(mode === 'teams' ? { token, name, character, team: null, ready: false } : { token, name, character });
     }
     // Classic (ranked) rooms start as soon as four players are in.
     if (mode === 'classic' && room.queue.length === 4) startGame(room, now, seen);
@@ -208,6 +211,16 @@ function apply(room, op, token, body, now, seen) {
     if (room.queue.length !== 4 || n !== 2) throw new Error('Hacen falta 2 jugadores en cada equipo');
     if (!room.queue.every((q) => q.ready)) throw new Error('Todos tienen que estar listos');
     startGame(room, now, seen);
+    return true;
+  }
+  if (op === 'character') {
+    // Changing character in the waiting room.
+    if (room.status !== 'lobby') throw new Error('La partida ya empezó');
+    const me = room.queue.find((q) => q.token === token);
+    if (!me) throw new Error('No estás en esta sala');
+    if (!isCharacter(body.character)) throw new Error('Personaje desconocido');
+    if (me.character === body.character) return false;
+    me.character = body.character;
     return true;
   }
   if (op === 'timing') {
@@ -316,6 +329,9 @@ function startGame(room, now, seen) {
   const players = room.mode === 'teams'
     ? shuffled(['N', 'S']).flatMap((t) => shuffled(room.queue.filter((q) => q.team === t))).map(({ ready, ...p }) => p)
     : shuffled(room.queue).map(({ team, ready, ...p }) => p);
+  // the bots sit as characters nobody at the table picked
+  const cast = fillCharacters(players.map((p) => (p.bot ? null : characterId(p.character))), shuffled(CHARACTERS.map((c) => c.id)));
+  players.forEach((p, i) => { p.character = cast[i]; });
   room.seats = players;
   room.requests = {};
   room.noRiichi = {};
@@ -436,7 +452,7 @@ function viewFor(room, token, seen, now) {
   if (room.status === 'lobby') {
     return {
       ...base,
-      queue: room.queue.map((q, i) => ({ name: q.name, team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
+      queue: room.queue.map((q, i) => ({ name: q.name, character: q.bot ? null : characterId(q.character), team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
       timing: timingId(room.timing),
       inQueue: room.queue.some((q) => q.token === token),
     };
@@ -452,6 +468,7 @@ function viewFor(room, token, seen, now) {
     if (p.bot) p.level = room.seats[i].level || 'normal';
     p.abandoned = !!room.seats[i].abandoned;
     p.team = room.seats[i].team || null;
+    p.character = characterId(room.seats[i].character);
   });
   const mate = partnerOf(room, seat);
   if (mate >= 0) {

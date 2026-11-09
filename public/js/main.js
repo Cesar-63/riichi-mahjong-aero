@@ -2,6 +2,7 @@ import {
   renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
 import { sortTiles } from './shared/tiles.js';
+import { CHARACTERS, characterId } from './shared/characters.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -30,6 +31,9 @@ const timingLabel = (t) => `${TIMINGS[t][0]}${TIMINGS[t][1] ? ` · ${TIMINGS[t][
 const timingButtons = (current) => Object.entries(TIMINGS).map(([id, [name, secs]]) =>
   `<button type="button" class="chalk-opt" data-timing="${id}" aria-pressed="${id === current}">${name}${secs ? ` <small>${secs}</small>` : ''}</button>`).join('');
 
+const characterButtons = (current) => CHARACTERS.map((c) =>
+  `<button type="button" class="char-opt" data-character="${c.id}" aria-pressed="${c.id === current}" title="${c.about}"><img src="img/personajes/${c.id}.png" alt=""><span>${c.name}</span></button>`).join('');
+
 const token = store.get('mj.token') || newToken();
 store.set('mj.token', token);
 
@@ -41,6 +45,8 @@ const state = {
   // level of Bot 1-3, for practice and for filling a room: "n" normal, "h" hard
   botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
   timing: TIMINGS[store.get('mj.timing')] ? store.get('mj.timing') : 'normal',
+  // who I sit at the table as (shared/characters.js)
+  character: characterId(store.get('mj.character')),
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -49,7 +55,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: null, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: null, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', characters: store.get('mj.characters') === '1', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -157,7 +163,8 @@ function showLobby(data) {
   const plate = (p, team) => {
     if (!p) return `<span class="free">Asiento libre${team ? ` · ${TEAM_NAME[team]}` : ''}</span>`;
     const status = teams ? (p.ready ? '<i class="ok">listo</i>' : '<i>esperando</i>') : '';
-    return `<span class="who">${team ? `<b>${TEAM_NAME[team]}</b>` : ''}<span>${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}</span></span>${status}`;
+    const face = p.character && state.ui.characters ? `<img src="img/personajes/${characterId(p.character)}.png" alt="">` : '';
+    return `${face}<span class="who">${team ? `<b>${TEAM_NAME[team]}</b>` : ''}<span>${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}</span></span>${status}`;
   };
   if (teams) {
     const n = players.filter((p) => p.team === 'N');
@@ -173,6 +180,10 @@ function showLobby(data) {
       setIfChanged(el, plate(p));
     });
   }
+  // the room knows my character (an old tab may have joined with another)
+  if (me && me.character) state.character = me.character;
+  setIfChanged($('#w-char'), characterButtons(state.character));
+  $('#w-char').classList.toggle('off', !state.ui.characters);
   showRoomTiming(data, !!(me && me.host));
   // the host can start right away, with bots in the empty seats
   $('#fill').classList.toggle('hidden', !(me && me.host && players.length < 4));
@@ -361,6 +372,7 @@ function ensure3d() {
       t.onView((name) => {
         $('#game').classList.toggle('v-overview', name === 'overview' || name === 'free');
       });
+      t.setCharacters(state.ui.characters);
       t.onPoints(({ open }) => {
         if (open) return;
         $('#scores3d').classList.add('hidden');
@@ -405,8 +417,10 @@ function hideDoraBanner() {
 
 // The three opponents along the top band: a framed portrait (it hides the
 // chair) over a wooden plaque with wind, name, tags and score; left =
-// kamicha, centre = toimen, right = shimocha. No portrait art yet: a
-// silhouette on the player's own colour.
+// kamicha, centre = toimen, right = shimocha. The frame shows a silhouette
+// on the player's own colour. Playing with characters (state.ui.characters)
+// the rivals sit at the 3D table and the styles drop the frames
+// (#game.chars): only the plaques stay.
 const WIND_ES = ['Este', 'Sur', 'Oeste', 'Norte'];
 const BACKDROP = [['#7d7842', '#5f5b31'], ['#8a7a52', '#64583a'], ['#6f7a5a', '#4f573e'], ['#7a5a52', '#57403a']];
 const SILHOUETTE = '<svg viewBox="0 0 200 140" aria-hidden="true"><ellipse cx="100" cy="52" rx="30" ry="36"/><path d="M14 140 C 22 96, 60 84, 100 84 C 140 84, 178 96, 186 140 Z"/></svg>';
@@ -417,6 +431,8 @@ function portraitsHTML(v) {
     const [a, b] = BACKDROP[abs];
     const turn = v.turn === abs && v.phase === 'turn';
     const tags = [
+      // (shown in the plaque only when playing with characters: no frame then)
+      p.bot ? `<i class="tag bot">${p.level === 'hard' ? 'bot difícil' : 'bot'}</i>` : '',
       p.riichi ? '<i class="tag riichi">Riichi</i>' : '',
       v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
       p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">sin conexión</i>' : '',
@@ -647,7 +663,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode, levels: botLevels(), timing: state.timing });
+  await api('join', { name, mode, levels: botLevels(), timing: state.timing, character: state.character });
   pollLoop();
 });
 
@@ -882,6 +898,49 @@ $('#w-timing').addEventListener('click', (e) => {
   if (b && b.getAttribute('aria-pressed') !== 'true') api('timing', { timing: b.dataset.timing });
 });
 showTiming();
+
+// My character: sent when joining; in the waiting room a click changes it
+// for everyone to see.
+function showCharacter() {
+  setIfChanged($('#char-opts'), characterButtons(state.character));
+  $('#char-about').textContent = `· ${CHARACTERS.find((c) => c.id === state.character).about}`;
+}
+function pickCharacter(e) {
+  const b = e.target.closest('[data-character]');
+  if (!b || b.getAttribute('aria-pressed') === 'true') return false;
+  state.character = b.dataset.character;
+  store.set('mj.character', state.character);
+  showCharacter();
+  return true;
+}
+$('#char-opts').addEventListener('click', pickCharacter);
+$('#w-char').addEventListener('click', (e) => {
+  if (!pickCharacter(e)) return;
+  setIfChanged($('#w-char'), characterButtons(state.character));
+  api('character', { character: state.character });
+});
+showCharacter();
+
+// Playing with characters is each player's own choice, for any mode: the
+// players sit at the 3D table as characters (and the avatar frames go), or
+// the table stays as it always was. Marked in the lobby or in Configuración;
+// it can change in the middle of a game.
+function showCharactersMode() {
+  const on = state.ui.characters;
+  $('#with-chars').checked = $('#s-chars').checked = on;
+  $('.char-field').classList.toggle('off', !on);
+  $('#w-char').classList.toggle('off', !on);
+  $('#game').classList.toggle('chars', on);
+  if (table3d) table3d.then((t) => t.setCharacters(on));
+}
+for (const id of ['#with-chars', '#s-chars']) {
+  $(id).addEventListener('change', (e) => {
+    state.ui.characters = e.target.checked;
+    store.set('mj.characters', state.ui.characters ? '1' : '0');
+    showCharactersMode();
+  });
+}
+showCharactersMode();
 
 $('#practice-mate').checked = state.practiceMate;
 $('#practice-mate').addEventListener('change', (e) => {

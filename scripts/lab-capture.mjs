@@ -11,7 +11,7 @@
 //   --pasadas color,arcilla,profundidad
 //   --fps 30  --ancho 1280  --alto 720
 //   --sin-mano                without the player's hand facing the screen
-//   --rivales                 the rivals sitting at the table (characters.js)
+//   --rivales                 the characters sitting at the table (characters.js)
 //   --sin-avisos              without the big calls (¡Riichi!, ¡Ron!…); the
 //                             guides never have them
 //   --desde 0 --hasta <ms>    a part of the scene

@@ -55,6 +55,11 @@
             <button type="button" class="bot-level" data-bot="3" aria-pressed="false">Bot 3 · <b>normal</b></button>
           </div>
         </div>
+        <label class="chars-toggle check"><input type="checkbox" id="with-chars"><span class="chalk">Jugar con personajes <small>(sentados a la mesa, en 3D)</small></span></label>
+        <div class="char-field" role="group" aria-labelledby="char-label">
+          <span class="chalk" id="char-label">Tu personaje <small id="char-about"></small></span>
+          <div class="char-picker" id="char-opts"></div>
+        </div>
         <div class="timing-field" role="group" aria-labelledby="timing-label">
           <span class="chalk" id="timing-label">Tiempo por jugada <small>(al abrir una sala o en práctica)</small></span>
           <div class="chalk-opts" id="timing-opts"></div>
@@ -123,6 +128,7 @@
           </section>
         </div>
         <p id="unassigned"></p>
+        <div id="w-char" class="char-picker" role="group" aria-label="Tu personaje"></div>
         <div id="w-timing" role="group" aria-label="Tiempo por jugada"></div>
         <div class="w-actions">
           <button id="ready" class="paper" type="button">Estoy listo</button>
@@ -197,6 +203,7 @@
     </fieldset>
     <fieldset>
       <legend>Vista</legend>
+      <label class="check"><input type="checkbox" id="s-chars"> Jugar con personajes (sentados a la mesa)</label>
       <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
       <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
     </fieldset>

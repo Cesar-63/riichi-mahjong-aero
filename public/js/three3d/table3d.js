@@ -4,7 +4,8 @@
 // draws, discards and calls animate by themselves. The player's own hand is
 // not lying on the table: like Tenhou's 3D view it faces the screen, as 3D
 // tiles in an overlay scene (hand3d.js).
-import { createWorld, TABLE } from './world.js';
+import { createWorld, TABLE, FOV } from './world.js';
+import { createCharacters } from './characters.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
@@ -31,8 +32,18 @@ const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 // the lab also calls destroy() to free the renderer
 export function createTable3D(container, { onPick, signal } = {}) {
   const world = createWorld(container, { signal });
-  let characters = null; // lab: rivals at the table (characters.js)
   const { THREE, scene, camera, renderer, RoundedBoxGeometry } = world;
+  // the players at the table (characters.js); a view without characters
+  // (the lab's scenes) gets the fallback cast, if there is one
+  const characters = createCharacters(world);
+  let fallbackCast = null;
+  // playing with characters is optional (setCharacters): without them the
+  // table is as it always was, empty chairs and the classic player view
+  function showPeople(on) {
+    characters.setVisible(on);
+    world.setSeated(on);
+  }
+  showPeople(false);
 
   // ---------------------------------------------------------------- assets
   const kit = createTileKit(renderer);
@@ -138,6 +149,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
     for (const lane of LANES) {
       const group = moves.filter((m) => m.lane === lane);
       if (!group.length) continue;
+      // a hand that has to get to its tile first sets it off a moment later
+      at += Math.max(...group.map((m) => m.lead || 0));
       for (const m of group) {
         m.o.wait = at - now;
         // a waiting discard would sit inside its hand: it shows when it sets off
@@ -188,6 +201,20 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
   }
 
+  // A tile sets off on its new path. A draw or a discard is carried by its
+  // player (d.who, a relative seat): at that character's pace, and a
+  // rival's hand gets to the tile before it moves.
+  const CARRIED = { discard: 'discard', mine: 'discard', draw: 'draw' };
+  function startMove(o, d, moves) {
+    const carried = d.who !== undefined && CARRIED[d.lane] && characters.seated(d.who);
+    // (slower than a tile moving by itself, so the hand can be seen)
+    o.path.speed = carried ? (d.lane === 'mine' ? M.carryMine : M.carry) * characters.pace(d.who) : laneSpeed(d.lane);
+    o.dist = 0;
+    o.wait = 0;
+    if (!d.lane) return;
+    moves.push(carried ? { o, lane: d.lane, who: d.who, kind: CARRIED[d.lane], lead: d.who === 0 ? 0 : M.reach } : { o, lane: d.lane });
+  }
+
   function sync(desired, spawns, calls = []) {
     const moves = [];
     const fresh = new Set(); // objects given a new path now
@@ -206,19 +233,13 @@ export function createTable3D(container, { onPick, signal } = {}) {
         if (!samePose(from, d.target)) {
           o.path = via ? callPath(from, via, d.target) : makePath(from, d.target);
           fresh.add(o);
-          o.path.speed = laneSpeed(d.lane);
-          o.dist = 0;
-          o.wait = 0;
-          if (d.lane) moves.push({ o, lane: d.lane });
+          startMove(o, d, moves);
         }
       } else if (!samePose(o.target, d.target)) {
         const here = { p: o.obj.position.clone(), q: o.obj.quaternion.clone() };
         o.path = via ? callPath(here, via, d.target) : makePath(here, d.target);
         fresh.add(o);
-        o.path.speed = laneSpeed(d.lane);
-        o.dist = 0;
-        o.wait = 0;
-        if (d.lane) moves.push({ o, lane: d.lane });
+        startMove(o, d, moves);
       }
       o.target = d.target;
       o.flags = d.flags || {};
@@ -237,6 +258,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     for (const keys of calls) syncCall(keys, fresh);
     queuePlays(moves);
+    for (const m of moves) {
+      if (m.who !== undefined) characters.play(m.who, m.kind, m.o.obj, m.o.wait, (m.o.path.total / m.o.path.speed) * 1000);
+    }
   }
 
   // Contact shadows (PS2 style blob shadows): a soft dark patch on the table
@@ -413,7 +437,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     const cx = (x0 + x1) / 2;
     const cz = (z0 + z1) / 2;
-    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const tanV = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     const halfW = (x1 - x0) / 2 + 1.4;
     const dist = Math.max(FRAME.minDist, (halfW / (tanV * camera.aspect)) * 1.08);
     const pos = new THREE.Vector3(cx, dist * Math.sin(FRAME.tilt), cz + dist * Math.cos(FRAME.tilt));
@@ -865,11 +889,12 @@ export function createTable3D(container, { onPick, signal } = {}) {
   function update(v, ui) {
     me = v.seat;
     const rel = (abs) => (abs - me + 4) % 4;
+    seatCharacters(v);
     const desired = new Map();
     const spawns = new Map();
     // via: a pose it passes first (a new call, set against the edge before
     // it slides into the corner)
-    const put = (key, id, target, flags, lane, via) => desired.set(key, { id, target, flags, lane, via });
+    const put = (key, id, target, flags, lane, via, who) => desired.set(key, { id, target, flags, lane, via, who });
     const prevPos = (key) => {
       const o = objects.get(key);
       return o ? { p: o.obj.position.clone(), q: o.obj.quaternion.clone() } : null;
@@ -913,7 +938,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       if (r !== 0 && !laid.has(abs)) {
         for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fzo(95), 'stand'));
         if (p.hasDrawn) {
-          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw');
+          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw', null, r);
           if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
         }
       }
@@ -947,7 +972,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
         x += width + 0.1;
         col++;
         const key = `t${d.tile}`;
-        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : r === 0 ? 'mine' : 'discard');
+        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : r === 0 ? 'mine' : 'discard', null, r);
         // a discard lies down flat as soon as it leaves the hand (a riichi
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
@@ -1018,6 +1043,17 @@ export function createTable3D(container, { onPick, signal } = {}) {
   }
 
   let lastView = null;
+
+  // every player's character in its seat, as the view names them
+  function seatCharacters(v) {
+    const cast = [null, null, null, null];
+    v.players.forEach((p, abs) => {
+      const r = (abs - v.seat + 4) % 4;
+      cast[r] = p.character || (fallbackCast && fallbackCast[r]) || null;
+    });
+    // (not even downloaded unless they are shown)
+    if (characters.visible()) characters.setCast(cast);
+  }
 
   // ------------------------------------------------------------ callouts
   const anchors = [0, 1, 2, 3].map((r) => new THREE.Vector3(0, 2.2, fz(76)).applyQuaternion(qSeat[r]));
@@ -1400,6 +1436,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       if (v.intro && v.intro.left > 400 && v.wall && key !== introKey) {
         introKey = key;
         if (intro) endIntro();
+        seatCharacters(v);
         startIntro(v, ui);
       }
       if (intro) {
@@ -1451,16 +1488,20 @@ export function createTable3D(container, { onPick, signal } = {}) {
     lockView: (v) => world.lockView(v && { pos: new THREE.Vector3(v.pos.x, v.pos.y, v.pos.z), target: new THREE.Vector3(v.target.x, v.target.y, v.target.z) }),
     showHand: world.showOverlays,
     setPass: world.setPass,
-    // lab: the rivals sitting at the table (characters.js and the models
-    // load the first time they are shown, so the game never downloads them);
-    // returns a promise that settles once they are in place
-    showCharacters(on) {
-      if (on && !characters) characters = import('./characters.js').then((m) => m.createCharacters(world));
-      if (!characters) return Promise.resolve();
-      return characters.then((c) => {
-        c.setVisible(on);
-        return c.ready;
-      });
+    // lab: show or hide the players at the table, and who sits there when
+    // a scene does not say (ids by relative seat; null: nobody). Returns a
+    // promise that settles once they are in place.
+    showCharacters(on, cast = null) {
+      fallbackCast = on ? cast : null;
+      showPeople(on);
+      if (lastView) seatCharacters(lastView[0]);
+      else characters.setCast(fallbackCast || [null, null, null, null]);
+      return characters.ready;
+    },
+    // play with the characters sitting at the table, or without them
+    setCharacters(on) {
+      showPeople(!!on);
+      if (lastView) seatCharacters(lastView[0]);
     },
     destroy: world.destroy,
   };
