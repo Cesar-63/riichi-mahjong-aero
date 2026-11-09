@@ -16,6 +16,7 @@ const types = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.json': 'application/json',
+  '.glb': 'model/gltf-binary',
 };
 
 const server = http.createServer(async (req, res) => {

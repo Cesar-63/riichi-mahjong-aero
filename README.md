@@ -5,7 +5,11 @@ ranked de Tenhou**, jugado en 3D en un salón de mahjong clásico al estilo de
 los juegos *Tetsuya*. Las reglas, la pared y el reparto de puntos los maneja el
 servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
-- Sin build ni dependencias: HTML, CSS y JS (módulos ES) servidos estáticos.
+- Sin build: HTML, CSS y JS (módulos ES) servidos estáticos. El servidor
+  tiene dos dependencias, para las IA de los bots:
+  [majiang-ai](https://github.com/kobalab/majiang-ai) (MIT) y
+  [onnxruntime-web](https://www.npmjs.com/package/onnxruntime-web) (MIT).
+- Licencia **AGPL-3.0** (ver [Licencia](#licencia)).
 - El servidor es **una sola función de Vercel** (`api/game.js`) que guarda el
   estado de cada sala en **Upstash Redis**.
 - Funciona en cualquier navegador moderno (escritorio y móvil).
@@ -73,8 +77,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      otra vez a la misma sala. Contra bots, abandonar termina la partida; si
      todos los humanos abandonan, la sala se libera.
 4. **Barra lateral** (al centro del borde izquierdo, como en Mahjong Soul):
-   cerrada muestra solo letras, que ya funcionan con un clic (en rojo cuando
-   están activas); la flecha de su borde derecho la despliega con los
+   cerrada muestra solo letras, papelitos sobre una tabla oscura que ya
+   funcionan con un clic (apagadas quedan en penumbra; activas, a la luz y
+   con la letra sellada en rojo); la flecha de su borde derecho la despliega con los
    nombres.
    - **A · Auto ordenar** (arriba, encendida por defecto y recordada en el
      navegador): ver arriba.
@@ -84,7 +89,8 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      ofreciendo.
    - **D · Auto descarte**: descarta cada ficha que robas (sin R, un tsumo
      posible se deja para que decidas).
-   R, C y D duran la partida; los tres juntos juegan como en riichi.
+   R, C y D se apagan solos al empezar cada mano (así un D olvidado no tira
+   la primera ficha de la siguiente); los tres juntos juegan como en riichi.
 5. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
@@ -168,7 +174,10 @@ Pantallas:
 - **En partida**: una franja oscura arriba con un marco por rival (izquierda =
   kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
   tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
-  no hay retratos: cada marco muestra una silueta. Con la cámara en la mesa
+  no hay retratos: cada marco (de madera abollada, con clavos) muestra al
+  rival como una silueta en penumbra contra papel tapiz sucio, con la luz de
+  la lámpara apenas en el borde de la cabeza, y un papelito "bot" pegado si
+  es un bot. Con la cámara en la mesa
   entera (cursor en la mitad superior) la franja se pliega hacia arriba y
   quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
   ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
@@ -235,14 +244,18 @@ primera partida.
 - Como en el 3D de Tenhou, **tu mano no está sobre la mesa**: son fichas 3D en
   una escena superpuesta con cámara ortográfica, de frente a ti al pie de la
   pantalla, levemente inclinadas para que se vea el canto superior, y con el
-  tamaño ajustado al ancho y alto de la pantalla. La mano siempre deja libre
+  tamaño ajustado al ancho y alto de la pantalla. No hay recuadro detrás:
+  solo la penumbra del lado del jugador, una sombra suave sin bordes que sube
+  desde el borde de la pantalla para que las fichas se lean sobre el marco
+  de la mesa. La mano siempre deja libre
   el lugar de la ficha robada, así no se corre cada vez que robas. La ficha
   robada vuela desde su hueco del muro hasta ese lugar. Al descartar de la
   mano (tedashi), la ficha robada sube, pasa por encima de las demás y baja a
   su lugar mientras las otras le hacen espacio, como en Tetsuya; durante el reparto la mano se llena a medida
   que llegan tus fichas.
 - **Cámara de jugador y mesa completa:** por defecto la cámara está baja,
-  cerca de tu lado (estilo Tetsuya). Con el mouse en la mitad superior de la
+  cerca de tu lado (estilo Tetsuya), lo bastante cerca para que el paño siga
+  detrás de tu mano (nunca queda flotando sobre el piso). Con el mouse en la mitad superior de la
   pantalla, o tocándola en el móvil, sube y muestra la mesa entera; en la
   mitad inferior vuelve. En pantallas verticales siempre se ve la mesa entera.
 - **Cajón de puntos**: el botón **Puntos** (siempre a la izquierda, justo
@@ -353,17 +366,63 @@ Solo en el modo **Por equipos**:
 En el menú principal, el modo **Práctica** con **Empezar práctica** crea una
 sala privada (`bots-…`) y empieza al instante: tú contra 3 bots o, con **Con
 Bot 1 de compañero**, tú y **Bot 1** (Equipo Norte) contra Bot 2 y Bot 3 por
-equipos. Los bots:
+equipos. Sirve para jugar sin juntar a 4 personas. Cualquier sala cuyo código
+empiece por `bots-` funciona así, y los mismos bots ocupan los asientos libres
+con **Empezar y rellenar con bots**.
 
-- descartan siempre la ficha que acaban de robar (tras una llamada, la última
-  ficha legal de la mano);
-- hacen pon o chi siempre que pueden;
-- nunca declaran ron, tsumo, riichi ni kan;
-- en el modo por equipos, tu compañero bot descarta la ficha que le pidas (en
-  su turno, si es legal).
+### Niveles de los bots
 
-Sirve para probar la interfaz y las reglas sin juntar a 4 personas. Cualquier
-sala cuyo código empiece por `bots-` funciona así.
+Cada bot es **normal** o **difícil**, y en una misma mesa puede haber de los
+dos. En el menú, **Nivel de los bots** tiene Bot 1, Bot 2 y Bot 3: un clic
+cambia el nivel de cada uno (queda guardado en el navegador). Vale para la
+práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
+"bot" o "bot difícil".
+
+- **Normal:** majiang-ai (abajo). Unos 40 ms por decisión.
+- **Difícil:** [Mortal](https://github.com/Equim-chan/Mortal), una red neuronal
+  entrenada con partidas de jugadores fuertes de Tenhou y Mahjong Soul (pesos
+  Mortal-S42). Unos 70 ms por decisión (hasta unos 300 ms; un riichi hace dos
+  consultas) y medio segundo la primera vez que carga la red. Si algo falla,
+  decide majiang-ai. En 512 partidas de prueba contra 3 normales quedó en el
+  puesto medio 2,31 (un rival igual daría 2,5): primero el 31 % de las veces y
+  último el 19 %. Fuerza medida, verificación y licencias en
+  [mortal/README.md](mortal/README.md).
+
+### Cómo piensan los bots normales
+
+Juegan con **majiang-ai**, la IA del juego web japonés 電脳麻将 (Denno Majan),
+de Satoshi Kobayashi (licencia MIT, sin redes neuronales):
+
+- eligen el descarte que mejor deja la mano: fichas útiles, puntos probables
+  y mejoras posibles;
+- llaman (chi, pon, kan) solo cuando la llamada mejora la mano;
+- declaran riichi, ganan por ron o tsumo y declaran kyuushu kyuuhai;
+- se defienden: cuando un rival está en riichi calculan el peligro de cada
+  ficha (genbutsu, suji, fichas ya vistas) y se retiran si su mano no vale el
+  riesgo;
+- en la última mano no ganan si la victoria terminaría la partida con ellos
+  en 4º lugar (*agarasu*);
+- en el modo por equipos, tu compañero bot descarta la ficha que le pidas
+  cuando le toca descartar (si es legal), salvo que prefiera ganar o hacer kan.
+
+Cada decisión tarda unos 40 ms (algunas, hasta 1 s). La IA no guarda nada
+entre decisiones: en cada una reconstruye la mesa desde el registro mjai de la
+mano (ver [Registro mjai](#registro-mjai)), viendo solo lo que ese asiento
+puede ver. Si alguna vez respondiera algo ilegal, el bot tira la ficha robada
+(o pasa) y la partida sigue. El adaptador está en `server/engine/majiang-bot.js`.
+
+### Registro mjai
+
+El motor guarda en `k.mjai` todos los eventos de la mano en curso en formato
+**mjai**, el que usan Mortal, akochan y mjai-reviewer (`start_kyoku`, `tsumo`,
+`dahai`, `reach`, `chi`, `pon`, kanes, `dora`, `hora`, `ryukyoku`,
+`end_kyoku`), con el mismo orden de eventos que los registros de Tenhou.
+`mjaiView(log, asiento)` (en `server/engine/mjai.js`) oculta las manos y los
+robos ajenos. El registro se validó con `validate_logs` de Mortal, que
+comprueba la legalidad de cada evento y los puntos de cada agari, sobre las
+partidas aleatorias de `test/mjai.test.js` y sobre partidas entre bots. Las
+de las pruebas se guardan con `MJAI_DUMP=dir npm test`. Más contexto en
+[docs/ia-investigacion.md](docs/ia-investigacion.md).
 
 ## Desplegar en Vercel
 
@@ -397,9 +456,10 @@ a un servicio de tiempo real (ver "Limitaciones").
 
 ## Desarrollo local
 
-Requiere Node.js 20 o superior. No hay que instalar paquetes.
+Requiere Node.js 20 o superior.
 
 ```sh
+npm install      # las IA de los bots
 npm run dev      # http://localhost:3000 (store en memoria)
 npm test         # tests del motor, puntuación y salas
 ```
@@ -428,11 +488,34 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   Se puede ocultar tu mano de frente.
 - **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
   palitos.
+- **Rivales en la mesa** (prueba, solo en el laboratorio): tres hombres
+  low-poly estilo PS1 sentados en las sillas de los rivales, respirando y de
+  vez en cuando hablando (`public/js/three3d/characters.js`). Cada uno tiene
+  su temperamento: cuánto gesticula (la animación de hablar se mezcla con la
+  de estar sentado en su propia medida), a qué ritmo y cada cuánto habla. El
+  de la derecha habla con las manos, el oficinista se mide y el señor mayor
+  casi no se mueve. Comparten un solo esqueleto, así que cualquier animación
+  sirve para todos. Con ellos
+  las sillas se corren detrás de sus espaldas. Las cámaras **Rivales desde
+  tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
+  las animaciones son CC0, de Mesh2Motion: ver
+  [public/models/personajes/README.md](public/models/personajes/README.md).
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
   con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
   de una animación ya empezada) se ven al volver al comienzo.
+- **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
+  graba una escena cuadro a cuadro con el reloj del laboratorio, así cada
+  toma sale igual, con cualquier cámara de la lista y en cualquier tamaño
+  (también vertical, para redes). Además del juego tal cual (`color`) graba
+  dos guías para modelos de IA de video a video:
+  `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
+  sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
+  llamada. `--rivales` graba con los rivales en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  opciones están al principio de `scripts/lab-capture.mjs` y el plan en
+  [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
+  `capturas/` (fuera del repositorio).
 
 ## Fichas
 
@@ -451,12 +534,19 @@ server/store.js          Upstash Redis (REST) o memoria
 server/engine/game.js    Máquina de estados de la partida (reglas)
 server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
+server/engine/mjai.js    Notación y registro mjai, vista por asiento
+server/engine/bot.js     Bots: decisión, peticiones del compañero, respaldo
+server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-core)
+server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
+mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas
 public/                  Cliente (index.html, css/, js/)
+public/models/personajes/  Rivales de prueba para el laboratorio (glTF, CC0)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas compartido con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
+scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
 dev-server.js            Servidor local
 test/                    node:test
 ```
@@ -482,3 +572,28 @@ las manos ajenas ni la pared).
   primero en orden de turno desde quien descartó.
 - En pao se aplica la responsabilidad a todo el valor de la mano.
 - En móvil vertical se ve siempre la mesa entera desde arriba.
+
+## Licencia
+
+El juego se publica con la **GNU Affero General Public License v3.0**
+([LICENSE](LICENSE)), porque incluye código de Mortal, que usa esa licencia. En
+la práctica: cualquiera puede usar, modificar y hospedar el juego, siempre que
+publique su código con la misma licencia, también si solo lo ofrece por
+internet. El menú tiene el enlace **Código fuente (AGPL)**.
+
+Componentes de terceros:
+
+| | Licencia |
+| --- | --- |
+| Mortal / libriichi (`mortal/libriichi`) | AGPL-3.0-or-later |
+| Pesos Mortal-S42 (`server/engine/mortal/mortal-s42.onnx`) | Apache-2.0 |
+| majiang-ai y majiang-core | MIT |
+| onnxruntime-web | MIT |
+| three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
+| Fichas FluffyStuff | CC0 |
+| Personajes y animaciones de Mesh2Motion (`public/models/personajes/`) | CC0 |
+
+**Contribuciones.** Para poder reutilizar el código propio en otros proyectos
+(incluso con otra licencia), las contribuciones externas se aceptan solo si su
+autor acepta ceder ese permiso al dueño del repositorio.
+

@@ -27,6 +27,8 @@ const state = {
   // lobby choice: 'classic', 'teams' or 'practice' (against bots)
   mode: ['teams', 'practice'].includes(store.get('mj.mode')) ? store.get('mj.mode') : 'classic',
   practiceMate: store.get('mj.practiceMate') === '1',
+  // level of Bot 1-3, for practice and for filling a room: "n" normal, "h" hard
+  botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
   name: store.get('mj.name') || '',
   version: -1,
   view: null,
@@ -95,8 +97,8 @@ const TEAM_NAME = { N: 'Norte', S: 'Sur' };
 
 function showLobby(data) {
   state.view = null;
-  // automatic play is per game (sorting is a preference and stays)
-  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false, lastEvent: null });
+  // automatic play is per hand (sorting is a preference and stays)
+  Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false, autoHand: null, lastEvent: null });
   showAutoButtons();
   $('#game').classList.add('hidden');
   $('#lobby').classList.remove('hidden');
@@ -194,6 +196,14 @@ function showGame(v) {
   $('#lobby').classList.add('hidden');
   $('#game').classList.remove('hidden');
   const ui = state.ui;
+  // R, C and D last one hand: left on, D would throw away the first tile of
+  // the next hand before the player even looks at it
+  const handKey = `${v.round}-${v.kyokuNum}-${v.honba}`;
+  if (ui.autoHand !== handKey) {
+    if (ui.autoHand) Object.assign(ui, { autoWin: false, noCalls: false, autoTsumogiri: false });
+    ui.autoHand = handKey;
+    showAutoButtons();
+  }
   const optKey = v.options ? `${v.phase}:${v.events.length ? v.events[v.events.length - 1].id : 0}:${v.options.kind}` : '';
   if (optKey !== ui.optKey) {
     ui.optKey = optKey;
@@ -247,7 +257,8 @@ function showGame(v) {
 // Soul: R wins as soon as possible, C passes chi/pon/kan on the others'
 // discards (my own kan, riichi or tsumo are untouched), D discards every
 // drawn tile. All three together play like a riichi. Each decision is acted
-// on once. A (auto sort) is on top of them.
+// on once; the three switch off when a new hand starts. A (auto sort) is on
+// top of them and stays.
 function autoPlay(v, ui) {
   const o = v.options;
   if (!o || state.busy || ui.autoKey === ui.optKey) return;
@@ -392,7 +403,7 @@ function portraitsHTML(v) {
     ].join('');
     const pos = ['', 'right', 'top', 'left'][r];
     return `<div class="seatcard ${pos}${turn ? ' turn' : ''}">
-      <div class="frame" style="--a:${a};--b:${b}">${SILHOUETTE}${p.bot ? '<span class="bot">bot</span>' : ''}</div>
+      <div class="frame" style="--a:${a};--b:${b}">${SILHOUETTE}${p.bot ? `<span class="bot">${p.level === 'hard' ? 'bot difícil' : 'bot'}</span>` : ''}</div>
       <div class="plaque"><span class="wind${abs === v.dealer ? ' oya' : ''}">${WIND_ES[p.wind]}</span><b>${escapeHTML(p.name)}</b>${tags}<span class="score">${p.score}</span></div>
     </div>`;
   }).join('');
@@ -607,7 +618,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode });
+  await api('join', { name, mode, levels: botLevels() });
   pollLoop();
 });
 
@@ -616,7 +627,7 @@ $('#leave').addEventListener('click', () => api('leave'));
 document.querySelectorAll('[data-join-team]').forEach((b) => b.addEventListener('click', () => api('team', { team: b.dataset.joinTeam })));
 $('#ready').addEventListener('click', () => api('ready', { ready: $('#ready').textContent === 'Estoy listo' }));
 $('#start').addEventListener('click', () => api('start'));
-$('#fill').addEventListener('click', () => api('fill'));
+$('#fill').addEventListener('click', () => api('fill', { levels: botLevels() }));
 
 // Teammate's hand: click a tile to ask for it (click again to cancel).
 $('#partner-hand').addEventListener('click', (e) => {
@@ -773,6 +784,25 @@ document.querySelectorAll('input[name="mode"]').forEach((r) => {
     showMode();
   });
 });
+// Each bot is normal or hard; a click switches it.
+const botLevels = () => [...state.botLevels].map((c) => (c === 'h' ? 'hard' : 'normal'));
+function showBotLevels() {
+  document.querySelectorAll('.bot-level').forEach((b) => {
+    const hard = state.botLevels[b.dataset.bot - 1] === 'h';
+    b.setAttribute('aria-pressed', String(hard));
+    b.querySelector('b').textContent = hard ? 'difícil' : 'normal';
+  });
+}
+document.querySelectorAll('.bot-level').forEach((b) => b.addEventListener('click', () => {
+  const i = b.dataset.bot - 1;
+  const l = [...state.botLevels];
+  l[i] = l[i] === 'h' ? 'n' : 'h';
+  state.botLevels = l.join('');
+  store.set('mj.botLevels', state.botLevels);
+  showBotLevels();
+}));
+showBotLevels();
+
 $('#practice-mate').checked = state.practiceMate;
 $('#practice-mate').addEventListener('change', (e) => {
   state.practiceMate = e.target.checked;

@@ -1,7 +1,7 @@
 // Stateless request handler: every call loads the room from the store,
 // applies the request plus any expired timers, and saves it back.
 import { Game } from './engine/game.js';
-import { botAction } from './engine/bot.js';
+import { botAction, LEVELS } from './engine/bot.js';
 
 const env = (typeof process !== 'undefined' && process.env) || {};
 export const TIMING = {
@@ -116,7 +116,7 @@ async function withRoom(store, code, now, fn, { wait = true, beat = null } = {})
     const seen = got.seen;
     if (beat) seen[beat] = String(now);
     let changed = fn(room, seen);
-    if (room.status === 'playing') changed = processTimeouts(room, now, seen) || changed;
+    if (room.status === 'playing') changed = (await processTimeouts(room, now, seen)) || changed;
     if (changed) {
       room.version++;
       await store.saveUnlock([
@@ -149,7 +149,7 @@ function apply(room, op, token, body, now, seen) {
     if (isBotRoom(room.code)) {
       // Test mode, starts right away. Teams: the player and Bot 1 against two bots.
       room.mode = mode;
-      const bots = [1, 2, 3].map((n) => ({ token: `bot-${n}`, name: `Bot ${n}`, bot: true }));
+      const bots = [1, 2, 3].map((n) => newBot(n, body.levels));
       room.queue = [{ token, name }, ...bots];
       if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
       startGame(room, now, seen);
@@ -203,7 +203,7 @@ function apply(room, op, token, body, now, seen) {
     if (!room.queue.length) throw new Error('No estás en esta sala');
     const bots = [];
     for (let n = 1; room.queue.length + bots.length < 4; n++) {
-      if (!room.queue.some((q) => q.name === `Bot ${n}`)) bots.push({ token: `bot-${n}`, name: `Bot ${n}`, bot: true });
+      if (!room.queue.some((q) => q.name === `Bot ${n}`)) bots.push(newBot(n, body.levels));
     }
     room.queue.push(...bots);
     if (room.mode === 'teams') {
@@ -319,6 +319,12 @@ function requestFor(room, seat) {
   return r && room.game.k.hands[seat].includes(r.tile) ? r.tile : null;
 }
 
+// Bot n plays at the level the player chose for it: levels[n - 1].
+function newBot(n, levels) {
+  const level = Array.isArray(levels) && LEVELS.includes(levels[n - 1]) ? levels[n - 1] : 'normal';
+  return { token: `bot-${n}`, name: `Bot ${n}`, bot: true, level };
+}
+
 // Rooms named "bots-…" are single-player test rooms filled with bots.
 export const isBotRoom = (code) => code.startsWith('bots-');
 
@@ -360,7 +366,7 @@ function schedule(room, now, seen) {
   room.deadline = dls.length ? Math.min(...dls) : null;
 }
 
-export function processTimeouts(room, now, seen) {
+export async function processTimeouts(room, now, seen) {
   let changed = false;
   for (let guard = 0; guard < 200 && room.status === 'playing'; guard++) {
     schedule(room, now, seen);
@@ -370,7 +376,7 @@ export function processTimeouts(room, now, seen) {
     const [seatStr, d] = due[0];
     const seat = Number(seatStr);
     if (d.bot) {
-      g.act(seat, botAction(g, seat, requestFor(room, seat)));
+      g.act(seat, await botAction(g, seat, requestFor(room, seat), room.seats[seat].level));
     } else {
       if (!d.auto && g.s.phase !== 'result') room.clock.bank[seat] = 0;
       g.defaultAction(seat);
@@ -398,6 +404,7 @@ function viewFor(room, token, seen, now) {
   view.players.forEach((p, i) => {
     p.online = !isOffline(room, i, seen, now) || room.seats[i].token === token;
     p.bot = !!room.seats[i].bot;
+    if (p.bot) p.level = room.seats[i].level || 'normal';
     p.abandoned = !!room.seats[i].abandoned;
     p.team = room.seats[i].team || null;
   });

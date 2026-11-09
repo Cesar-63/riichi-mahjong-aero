@@ -1,0 +1,13 @@
+[package]
+name = "mortal-encoder"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+libriichi = { path = "../libriichi" }
+serde_json = "1"
+anyhow = "1"

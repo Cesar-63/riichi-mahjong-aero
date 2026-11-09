@@ -19,11 +19,12 @@ export function createHand3D({ world, kit, onPick }) {
   key.position.set(0.35, 0.9, 1);
   scene.add(ambient, key);
 
-  // dark band behind the hand, standing on the bottom edge of the screen
-  // (the texture's rim and glow go round the top and the sides only)
-  const BAND_TOP = 26 / 128; // part of the texture above the band itself
+  // No box behind the hand: only the dark of the player's side of the
+  // room, a soft shadow rising from the bottom edge of the screen (out of
+  // the lamp's reach), so the tiles read against the table frame. It has
+  // no edge, no rim and no colour.
   const bandCanvas = document.createElement('canvas');
-  bandCanvas.width = 512;
+  bandCanvas.width = 256;
   bandCanvas.height = 128;
   const bandTex = new THREE.CanvasTexture(bandCanvas);
   bandTex.colorSpace = THREE.SRGBColorSpace;
@@ -32,19 +33,15 @@ export function createHand3D({ world, kit, onPick }) {
   scene.add(band);
   (() => {
     const g = bandCanvas.getContext('2d');
-    g.shadowColor = 'rgba(50,110,255,.9)';
-    g.shadowBlur = 26;
-    g.fillStyle = '#0a0f22';
-    g.fillRect(28, 26, 456, 128);
-    g.shadowBlur = 0;
-    g.strokeStyle = '#3a4a7a';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(28, 128);
-    g.lineTo(28, 26);
-    g.lineTo(484, 26);
-    g.lineTo(484, 128);
-    g.stroke();
+    // half an ellipse standing on the bottom edge, darkest there, gone at its rim
+    g.translate(128, 128);
+    const shade = g.createRadialGradient(0, 0, 0, 0, 0, 128);
+    shade.addColorStop(0, 'rgba(8,7,6,.82)');
+    shade.addColorStop(0.45, 'rgba(8,7,6,.6)');
+    shade.addColorStop(0.75, 'rgba(8,7,6,.22)');
+    shade.addColorStop(1, 'rgba(8,7,6,0)');
+    g.fillStyle = shade;
+    g.fillRect(-128, -128, 256, 128);
     bandTex.needsUpdate = true;
   })();
 
@@ -166,9 +163,9 @@ export function createHand3D({ world, kit, onPick }) {
         tiles.delete(id);
       }
     }
-    // its top edge stays where it was, level with the tops of the tiles
-    const bandH = (y + (size * H + size * 0.9) * (0.5 - BAND_TOP)) / (1 - BAND_TOP);
-    band.scale.set(total + size * 1.6, bandH, 1);
+    // the shade fades out well above the tops of the tiles and past the ends
+    const bandH = (y + (size * H) / 2) * 1.8;
+    band.scale.set(total + size * 5, bandH, 1);
     // no band while the hand is put away (intro, reveals)
     band.visible = visible > 0;
     band.position.set(camera.right / 2, bandH / 2, -400);
