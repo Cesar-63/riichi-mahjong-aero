@@ -39,6 +39,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      límite; queda guardado en el navegador): vale al abrir una sala o una
      práctica. En la sala de espera todos ven el tiempo y el anfitrión puede
      cambiarlo; por equipos, cambiarlo quita el "listo" de todos.
+   - **Tu personaje**: con quién te sientas a la mesa (ver
+     [Personajes](#personajes)); también se puede cambiar en la sala de
+     espera.
    - **Configuración** (abajo, junto a *Reglas del salón*): la misma hoja de
      ajustes que se abre desde el ☰ en partida (ver el punto 3), para dejarlo
      todo listo antes de jugar.
@@ -184,19 +187,15 @@ Pantallas:
   tablillas de madera (los libres, marcados con tiza)
   (en el modo por equipos, Norte abajo y a la derecha, Sur arriba y a la
   izquierda) y la caja para elegir equipo, marcar listo y comenzar.
-- **En partida**: una franja oscura arriba con un marco por rival (izquierda =
-  kamicha, centro = toimen, derecha = shimocha) que tapa su silla, con la
-  tablilla de nombre debajo (riichi, compañero, desconectado, su turno). Aún
-  no hay retratos: cada marco (de madera abollada, con clavos) muestra al
-  rival como una silueta en penumbra contra papel tapiz sucio, con la luz de
-  la lámpara apenas en el borde de la cabeza, y un papelito "bot" pegado si
-  es un bot. Con la cámara en la mesa
-  entera (cursor en la mitad superior) la franja se pliega hacia arriba y
-  quedan solo las tablillas. Debajo del marco izquierdo, el botón de menú y la
-  ficha de papel con la ronda, honba, depósitos, fichas que quedan y tus
-  puntos. Estos dos no se mueven cuando la franja se pliega, así el menú
-  no se escapa al ir a hacerle clic. Abajo a la izquierda **Puntos** y el reloj; a la derecha los
-  botones de llamada (Ron y Tsumo con un sello 和).
+- **En partida**: los cuatro jugadores están **sentados a la mesa** como
+  personajes 3D low-poly (ver [Personajes](#personajes)); no hay marcos ni
+  retratos. Arriba queda solo una tablilla de madera por rival (izquierda =
+  kamicha, centro = toimen, derecha = shimocha) con viento, nombre, puntos y
+  avisos (bot, riichi, compañero, desconectado, su turno). Debajo de la
+  tablilla izquierda, el botón de menú y la ficha de papel con la ronda,
+  honba, depósitos, fichas que quedan y tus puntos. Abajo a la izquierda
+  **Puntos** y el reloj; a la derecha los botones de llamada (Ron y Tsumo con
+  un sello 和).
 - **Resultado de la mano**: una hoja oscura cubre la parte de arriba con la
   ronda y el ganador, han, fu, los puntos, el nombre del límite en grande con
   sus kanji tenues detrás (Mangan 満貫, Haneman 跳満, Baiman 倍満, Sanbaiman
@@ -321,8 +320,7 @@ primera partida.
   "cada uno" si gana el oya. Si hay honba, va al lado y aparte
   (`+ 600 honba`, o `+ 200 honba cada uno` en tsumo); en un doble ron, igual
   en la línea del segundo ganador. Con pao se muestra el valor de la mano.
-- **Empate por agotamiento**: la cámara pasa a la mesa entera (la franja de
-  arriba se pliega), todas las manos quedan paradas sobre la mesa y luego se
+- **Empate por agotamiento**: la cámara pasa a la mesa entera, todas las manos quedan paradas sobre la mesa y luego se
   tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
   resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
@@ -398,13 +396,50 @@ equipos. Sirve para jugar sin juntar a 4 personas. Cualquier sala cuyo código
 empiece por `bots-` funciona así, y los mismos bots ocupan los asientos libres
 con **Empezar y rellenar con bots**.
 
+### Personajes
+
+Al entrar eliges **tu personaje** en el lobby (queda guardado en el
+navegador) y puedes cambiarlo en la sala de espera, donde cada asiento
+muestra el retrato del que eligió cada uno. Dos jugadores pueden elegir el
+mismo. Los bots se sientan con personajes que nadie eligió.
+
+| Personaje | Quién es | Cómo juega |
+| --- | --- | --- |
+| **Genzo** | El viejo del salón: camisa gris, cigarro en la boca | Sin apuro: apoya la ficha y se toma su tiempo. Se rasca la barba |
+| **Shiro** | Pelo blanco, camisa celeste abierta | Echado atrás, un gesto seco y rápido. Apoya la cara en la mano |
+| **Ryuji** | Terno blanco, corbata a rayas, una cicatriz | El fanfarrón: planta la ficha y sacude la muñeca. Se arregla la corbata |
+| **Momo** | Estudiante de uniforme marinero, pelo rosado largo | Prolija y rápida. Se acomoda el pelo |
+| **Kaito** | Camisa verde abierta, polera negra, jeans, pelo negro más largo atrás | Inquieto, echado sobre la mesa, manos veloces. Se soba la nuca |
+| **Tatsuo** | Un señor de pelo cano peinado hacia atrás, traje negro, camisa roja y detalles dorados | Erguido, lento y exacto. Se acomoda la solapa |
+
+En la mesa:
+
+- **La vista baja** (la de siempre para jugar; no la de la mesa entera) mira
+  desde detrás de tu asiento: se ve a los tres rivales sentados, de la mesa
+  para arriba, con las manos apoyadas en el borde.
+- **Robar y descartar**: la mano derecha del rival va hasta la ficha, viaja
+  con ella (del muro a su mano, o de su mano a su río), la suelta y vuelve a
+  su lugar. El cuerpo se inclina si la ficha queda lejos y los demás siguen
+  el descarte con la mirada. Cada uno lo hace a su manera y a su ritmo.
+- **Tu propio descarte**: de tu personaje solo se ven **el antebrazo y la
+  mano**, que entran desde el borde de la pantalla llevando la ficha a tu río
+  y se retiran.
+- Entre jugadas respiran, miran su mano, levantan la vista hacia los demás y
+  cada tanto hacen su gesto.
+
+Todo el movimiento está hecho por código (`public/js/three3d/characters.js`):
+los modelos solo traen un esqueleto en reposo, y la postura, la mirada, los
+gestos y los brazos (cinemática inversa de dos huesos que sigue a la ficha)
+se calculan cuadro a cuadro. Cómo están hechos los modelos:
+[public/models/personajes/README.md](public/models/personajes/README.md).
+
 ### Niveles de los bots
 
 Cada bot es **normal** o **difícil**, y en una misma mesa puede haber de los
 dos. En el menú, **Nivel de los bots** tiene Bot 1, Bot 2 y Bot 3: un clic
 cambia el nivel de cada uno (queda guardado en el navegador). Vale para la
-práctica y para **Empezar y rellenar con bots**. En la mesa, el retrato dice
-"bot" o "bot difícil".
+práctica y para **Empezar y rellenar con bots**. En la mesa, la tablilla del
+rival dice "bot" o "bot difícil".
 
 - **Normal:** majiang-ai (abajo). Unos 40 ms por decisión.
 - **Difícil:** [Mortal](https://github.com/Equim-chan/Mortal), una red neuronal
@@ -517,18 +552,10 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   Se puede ocultar tu mano de frente.
 - **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
   palitos.
-- **Rivales en la mesa** (prueba, solo en el laboratorio): tres hombres
-  low-poly estilo PS1 sentados en las sillas de los rivales, respirando y de
-  vez en cuando hablando (`public/js/three3d/characters.js`). Cada uno tiene
-  su temperamento: cuánto gesticula (la animación de hablar se mezcla con la
-  de estar sentado en su propia medida), a qué ritmo y cada cuánto habla. El
-  de la derecha habla con las manos, el oficinista se mide y el señor mayor
-  casi no se mueve. Comparten un solo esqueleto, así que cualquier animación
-  sirve para todos. Con ellos
-  las sillas se corren detrás de sus espaldas. Las cámaras **Rivales desde
-  tu silla** y **Rival de enfrente, de cerca** los muestran. Los modelos y
-  las animaciones son CC0, de Mesh2Motion: ver
-  [public/models/personajes/README.md](public/models/personajes/README.md).
+- **Personajes en la mesa**: los mismos del juego (ver
+  [Personajes](#personajes)), con un reparto fijo, para afinar sus
+  animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
+  **Rival de enfrente, de cerca** los muestran.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
   cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
@@ -541,7 +568,7 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   dos guías para modelos de IA de video a video:
   `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
   sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
-  llamada. `--rivales` graba con los rivales en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  llamada. `--rivales` graba con los personajes en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
   opciones están al principio de `scripts/lab-capture.mjs` y el plan en
   [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
   `capturas/` (fuera del repositorio).
@@ -569,9 +596,11 @@ server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-
 server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
 mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas
 public/                  Cliente (index.html, css/, js/)
-public/models/personajes/  Rivales de prueba para el laboratorio (glTF, CC0)
+public/models/personajes/  Personajes de la mesa (glTF con esqueleto)
+public/img/personajes/   Retratos de los personajes para el lobby
+scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos.mjs)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
-public/js/shared/        Modelo de fichas compartido con el servidor
+public/js/shared/        Modelo de fichas y lista de personajes, compartidos con el servidor
 public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
@@ -648,7 +677,7 @@ Componentes de terceros:
 | onnxruntime-web | MIT |
 | three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
 | Fichas FluffyStuff | CC0 |
-| Personajes y animaciones de Mesh2Motion (`public/models/personajes/`) | CC0 |
+| Personajes (`public/models/personajes/`, fuentes en `scripts/personajes/fuentes/`) | Propios del proyecto |
 
 **Contribuciones.** Para poder reutilizar el código propio en otros proyectos
 (incluso con otra licencia), las contribuciones externas se aceptan solo si su

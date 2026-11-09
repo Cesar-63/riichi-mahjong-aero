@@ -397,3 +397,24 @@ test('time per action: the server uses the room\'s time, or none at all', async 
     }
   }
 });
+
+test('each player sits as the character they chose; bots take the ones left', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 1_000_000;
+  const call = async (body) => (await handle({ room: 'chars', ...body }, store, now)).body;
+  const first = await call({ op: 'join', token: tokens[0], name: 'P0', character: 'momo', hb: true });
+  assert.equal(first.queue[0].character, 'momo');
+  // an unknown character falls back to the first of the list
+  assert.equal((await call({ op: 'join', token: tokens[1], name: 'P1', character: 'nadie', hb: true })).queue[1].character, 'genzo');
+  // changing it in the waiting room
+  assert.ok((await call({ op: 'character', token: tokens[1], character: 'nadie' })).error);
+  assert.ok((await call({ op: 'character', token: tokens[2], character: 'kaito' })).error, 'only who is in the room');
+  assert.equal((await call({ op: 'character', token: tokens[1], character: 'tatsuo' })).queue[1].character, 'tatsuo');
+  const game = (await call({ op: 'fill', token: tokens[0] })).game;
+  const cast = game.players.map((p) => p.character);
+  assert.equal(cast[game.seat], 'momo');
+  assert.equal(new Set(cast).size, 4, 'the bots take characters nobody picked');
+  assert.ok(game.players.some((p) => !p.bot && p.character === 'tatsuo'));
+  assert.ok((await call({ op: 'character', token: tokens[0], character: 'kaito' })).error, 'not once the game started');
+});

@@ -55,6 +55,10 @@
             <button type="button" class="bot-level" data-bot="3" aria-pressed="false">Bot 3 · <b>normal</b></button>
           </div>
         </div>
+        <div class="char-field" role="group" aria-labelledby="char-label">
+          <span class="chalk" id="char-label">Tu personaje <small id="char-about"></small></span>
+          <div class="char-picker" id="char-opts"></div>
+        </div>
         <div class="timing-field" role="group" aria-labelledby="timing-label">
           <span class="chalk" id="timing-label">Tiempo por jugada <small>(al abrir una sala o en práctica)</small></span>
           <div class="chalk-opts" id="timing-opts"></div>
@@ -123,6 +127,7 @@
           </section>
         </div>
         <p id="unassigned"></p>
+        <div id="w-char" class="char-picker" role="group" aria-label="Tu personaje"></div>
         <div id="w-timing" role="group" aria-label="Tiempo por jugada"></div>
         <div class="w-actions">
           <button id="ready" class="paper" type="button">Estoy listo</button>
@@ -140,7 +145,6 @@
   <div id="game" class="screen hidden">
     <div id="stage3d"></div>
     <div id="hud3d">
-      <div class="band" aria-hidden="true"></div>
       <div class="portraits"></div>
       <div class="roundinfo paper-chit"></div>
       <div class="bottom-left">

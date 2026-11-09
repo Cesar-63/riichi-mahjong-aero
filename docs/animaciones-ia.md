@@ -142,8 +142,7 @@ choca con nada; el estilo lo pone la biblia de arte.
    Primero sin personajes, para validar el formato.
 2. **Tráiler y presentación**: planos del laboratorio (revuelto, riichi, ron,
    los tres kan) con cámaras en movimiento y los avisos del juego.
-3. **Retratos de los rivales.** Hoy los marcos muestran siluetas en
-   penumbra. Con los personajes del bloque B sentados a la mesa, siempre en
+3. **Retratos de los rivales.** Con los personajes sentados a la mesa, siempre en
    la misma pose y la misma luz, salen retratos uniformes y versiones
    animadas cortas (respirar, fumar, reaccionar a un ron).
 4. **Jugadas destacadas de la liga** (Edición 2), cuando existan las
@@ -219,10 +218,10 @@ Detalles:
    `scripts/lab-scenarios.mjs`. Es el puente con las repeticiones del
    bloque C.
 5. **Personajes a la mesa**: primero provisorios CC0 para montar el rig y
-   las animaciones, después los del bloque B. *Primera prueba hecha:* tres
-   hombres PSX de Mesh2Motion (CC0) sentados en el laboratorio, con
-   animaciones de respirar y hablar (**Rivales en la mesa**,
-   `--rivales`). Ver
+   las animaciones, después los del bloque B. *Hecho:* seis personajes propios sentados
+   a la mesa, en el juego y en el laboratorio (**Personajes en la mesa**,
+   `--rivales`), con las animaciones hechas por código: postura, mirada,
+   gestos y la mano que roba y descarta. Ver
    [public/models/personajes/README.md](../public/models/personajes/README.md).
 6. Más episodios (chi y pon, furiten, esperas, yaku) y el tráiler.
 7. Solo si hace falta, probar video a video en un tráiler.

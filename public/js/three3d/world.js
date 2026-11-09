@@ -6,6 +6,11 @@ import { RoundedBoxGeometry } from '../../vendor/three/RoundedBoxGeometry.js';
 import { TUNING } from './tuning.js';
 
 export const TABLE = 30; // table side in world units (1 unit = one tile width)
+export const FOV = 40; // the camera's field of view, unless a view sets its own
+
+// the player's view (see fit below): how high and how far behind the
+// table's edge the camera is, where it looks and how wide
+const PLAYER_VIEW = { height: 15.5, back: 16.5, lookY: 6.6, lookZ: 2.8, fov: 48 };
 
 // signal: an AbortSignal that removes the window listeners (the lab makes
 // a fresh table for every run)
@@ -19,7 +24,7 @@ export function createWorld(container, { signal } = {}) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 1400);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 1400);
 
   // the parlour; its reflections come from dark walls with one warm lamp overhead
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -47,7 +52,8 @@ export function createWorld(container, { signal } = {}) {
   const overlays = [];
   let overlaysOn = true;
   renderer.autoClear = false;
-  // Camera views: 'player' (low, close to the player's side, Tetsuya style),
+  // Camera views: 'player' (low, from behind the player's seat, the three
+  // rivals in sight across the table, Tetsuya style),
   // 'overview' (the whole table) and 'drawer' (looking down at the point
   // stick drawer at the player's edge). Portrait screens use the overview
   // instead of the player view, since the low view would cut the table's
@@ -76,7 +82,7 @@ export function createWorld(container, { signal } = {}) {
     camera.aspect = w / h;
     const portrait = camera.aspect < 1.05;
     // distance that fits the table's width (plus rim) in the horizontal field of view
-    const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+    const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * camera.aspect);
     // the views were framed for a 26-wide table: they step back to match
     const k = TABLE / 26;
     const dist = (portrait ? Math.max(36, 15.5 / Math.tan(halfH) * 0.92) : 36) * k;
@@ -84,27 +90,28 @@ export function createWorld(container, { signal } = {}) {
       pos: new THREE.Vector3(0, dist * (portrait ? 0.88 : 0.78), dist * (portrait ? 0.55 : 0.72)),
       target: new THREE.Vector3(0, -2.2 * k, (portrait ? 1.2 : 1.6) * k),
     };
-    // aimed nearer than the scaled view, so the player's own wall (further
-    // out on the larger table) shows above the hand and the calls against
-    // the player's edge show in the right-hand corner; close enough that
-    // the felt runs on behind the hand, so it never floats over the floor
+    // low and wide, from over the player's own (unseen) shoulders: the
+    // rivals' faces at the top of the screen, the player's edge of the
+    // table at the bottom, under the hand
     views.player = portrait ? views.overview : {
-      pos: new THREE.Vector3(0, 13 * k + 3.5, 21 * k + 3.8),
-      target: new THREE.Vector3(0, -0.6 * k, -2.8 * k + 5.4),
+      pos: new THREE.Vector3(0, PLAYER_VIEW.height, TABLE / 2 + PLAYER_VIEW.back),
+      target: new THREE.Vector3(0, PLAYER_VIEW.lookY, PLAYER_VIEW.lookZ),
+      fov: PLAYER_VIEW.fov,
     };
     // the drawer comes out of the player's edge of the table
     views.drawer = {
       pos: new THREE.Vector3(0, portrait ? 13 : 9.5, (portrait ? 23 : 21.5) + (TABLE - 26) / 2),
       target: new THREE.Vector3(0, -1.1, 15.3 + (TABLE - 26) / 2),
     };
-    camera.updateProjectionMatrix();
     if (!snapped) {
       snapped = true;
       const v = current();
       camera.position.copy(v.pos);
       look.copy(v.target);
       camera.lookAt(look);
+      camera.fov = v.fov || FOV;
     }
+    camera.updateProjectionMatrix();
   };
   tickersEarly.push((dt) => {
     const v = current();
@@ -112,6 +119,11 @@ export function createWorld(container, { signal } = {}) {
     camera.position.lerp(v.pos, k);
     look.lerp(v.target, k);
     camera.lookAt(look);
+    const fov = v.fov || FOV;
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov += (fov - camera.fov) * k;
+      camera.updateProjectionMatrix();
+    }
   });
   window.addEventListener('resize', fit, { signal });
   fit();
