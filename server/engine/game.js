@@ -636,6 +636,8 @@ export class Game {
       const res = evaluate(ctx);
       const isDealer = w === dealer;
       const pay = [0, 0, 0, 0];
+      // what each payer owes on a plain self draw (no pao), before honba
+      let split = null;
       let paoSeat = null;
       if (res.yakumanKeys.includes('daisangen') && k.pao[w].daisangen !== null) paoSeat = k.pao[w].daisangen;
       if (res.yakumanKeys.includes('daisuushii') && k.pao[w].daisuushii !== null) paoSeat = k.pao[w].daisuushii;
@@ -644,6 +646,7 @@ export class Game {
           pay[paoSeat] = ronValue(res.base, isDealer) + s.honba * 300;
         } else {
           const tv = tsumoValues(res.base, isDealer);
+          split = tv;
           for (const x of SEATS) {
             if (x !== w) pay[x] = (x === dealer ? tv.dealer : tv.other) + s.honba * 100;
           }
@@ -679,7 +682,12 @@ export class Game {
         han: res.han,
         fu: res.fu,
         yakuman: res.yakuman,
+        // points: all the winner collects (honba included; riichi deposits
+        // are not). handPoints: the hand's own value; honbaPoints: the rest
         points: gain,
+        handPoints: gain - s.honba * 300,
+        honbaPoints: s.honba * 300,
+        tsumoSplit: split,
         label: limitName(res),
         pao: paoSeat,
         ura: ctx.riichi ? ctx.ura : [],

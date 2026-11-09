@@ -302,7 +302,12 @@ primera partida.
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
   rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
-  baja detrás del ganador a su mano y se abre la hoja de resultado.
+  baja detrás del ganador a su mano y se abre la hoja de resultado. Su número
+  grande es el valor de la mano, sin honba: en ron lo que paga quien
+  descartó (7700), en tsumo lo que paga cada uno, "no oya/oya" (2000/3900) o
+  "cada uno" si gana el oya. Si hay honba, va al lado y aparte
+  (`+ 600 honba`, o `+ 200 honba cada uno` en tsumo); en un doble ron, igual
+  en la línea del segundo ganador. Con pao se muestra el valor de la mano.
 - **Empate por agotamiento**: la cámara pasa a la mesa entera (la franja de
   arriba se pliega), todas las manos quedan paradas sobre la mesa y luego se
   tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de

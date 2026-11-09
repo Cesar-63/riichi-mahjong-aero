@@ -1539,6 +1539,16 @@ body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { vis
   text-shadow: 0 3px 0 #3a2a08, 0 0 14px rgba(0, 0, 0, .8);
   font-variant-numeric: tabular-nums;
 }
+.r-points small { font-size: .4em; letter-spacing: 0; margin-left: .2em; }
+/* the honba, apart from the hand's value */
+.r-points .r-honba {
+  margin-left: .5em;
+  font-family: var(--f-body);
+  font-size: .32em;
+  letter-spacing: 0;
+  color: var(--cream);
+  vertical-align: middle;
+}
 .r-sub { font-family: var(--f-body); font-size: max(12px, calc(16 * var(--px))); color: var(--cream); opacity: .9; }
 .r-sub.also { color: var(--gold); }
 .streak {
