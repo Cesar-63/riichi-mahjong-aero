@@ -64,10 +64,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
   qLocal.side = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2).multiply(qLocal.up);
 
   // ----------------------------------------------------------------- streak
-  // A player on a streak (climate.js): the room turns into the climate of
-  // the longest streak at the table, and each hand on a streak glows in its
-  // own climate's colour: a light on the felt under the row, breathing
-  // slowly (my own hand, on the screen overlay, has its glow in hand3d.js).
+  // The player on a streak (one at a time; climate.js): the room turns into
+  // the streak's climate and that player's hand glows in its colour: a
+  // light on the felt under the row, breathing slowly, and the tiles lit
+  // (my own hand, on the screen overlay, has its glow in hand3d.js).
   const auraTex = (() => {
     const c = document.createElement('canvas');
     c.width = 128;

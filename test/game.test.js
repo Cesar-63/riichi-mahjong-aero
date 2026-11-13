@@ -306,7 +306,7 @@ test('wall view: slots taken match draws, kans and dead-wall usage', async () =>
   }
 });
 
-test('streak: wins and dealer tenpai add, non-dealer tenpai keeps, noten and other wins clear', () => {
+test('streak: one holder; wins and dealer tenpai add, tenpai keeps, noten and other wins end it', () => {
   const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(5));
   const end = (result, renchan) => {
     g.endKyoku({ deltas: [0, 0, 0, 0], ...result }, renchan);
@@ -319,24 +319,27 @@ test('streak: wins and dealer tenpai add, non-dealer tenpai keeps, noten and oth
 
   assert.deepEqual(g.view(0).players.map((p) => p.streak), [0, 0, 0, 0]);
   // seat 0 deals
-  assert.deepEqual(end(win(2), false), [0, 0, 1, 0], 'a win from any seat adds one');
+  assert.deepEqual(end(win(2), false), [0, 0, 1, 0], 'a win from any seat starts it');
   // seat 1 deals
   assert.deepEqual(end(win(2), false), [0, 0, 2, 0], 'a second win in a row');
-  // seat 2 deals and is tenpai at the draw; seat 3 is tenpai too, seat 0 and 1 noten
-  assert.deepEqual(end(draw(2, 3), true), [0, 0, 3, 0], 'dealer tenpai adds one, a non-dealer tenpai keeps (here: zero)');
+  // seat 2 deals and is tenpai at the draw, with seat 3
+  assert.deepEqual(end(draw(2, 3), true), [0, 0, 3, 0], 'the holder, dealer and tenpai, adds one');
   // seat 2 still deals: noten this time, seat 3 tenpai
-  assert.deepEqual(end(draw(3), false), [0, 0, 0, 0], 'dealer noten loses it');
+  assert.deepEqual(end(draw(3), false), [0, 0, 0, 0], 'noten loses it');
   // seat 3 deals
   assert.deepEqual(end(win(0), false), [1, 0, 0, 0]);
   assert.equal(g.dealer(), 0);
-  // seat 0 deals, seat 1 wins: seat 0's streak goes
-  assert.deepEqual(end(win(1), false), [0, 1, 0, 0], 'somebody else winning clears it');
+  // seat 0 deals, seat 1 wins: the streak passes to seat 1
+  assert.deepEqual(end(win(1), false), [0, 1, 0, 0], 'somebody else winning takes it');
   // seat 1 deals and is the only one tenpai
   assert.deepEqual(end(draw(1), true), [0, 2, 0, 0]);
-  // seat 1 deals again; a non-dealer with a streak keeps it by being tenpai
-  g.s.streaks = [0, 2, 0, 3];
-  assert.deepEqual(end(draw(3), false), [0, 0, 0, 3], 'non-dealer tenpai keeps, dealer noten loses');
-  g.s.streaks = [2, 0, 1, 3];
-  assert.deepEqual(end({ type: 'draw', reason: 'kyuushu', abortive: true, tenpai: [] }, true), [2, 0, 1, 3], 'an abortive draw changes nothing');
-  assert.deepEqual(end(win(0, 3), false), [3, 0, 0, 4], 'double ron: both winners add');
+  // seat 1 deals again; seat 3 holds the streak and keeps it by being tenpai
+  g.s.streaks = [0, 0, 0, 3];
+  assert.deepEqual(end(draw(1, 3), true), [0, 0, 0, 3], 'non-dealer tenpai keeps; the tenpai dealer starts none meanwhile');
+  assert.equal(g.dealer(), 1);
+  assert.deepEqual(end(draw(1), true), [0, 1, 0, 0], 'the holder noten loses it, and the tenpai dealer starts one');
+  g.s.streaks = [0, 0, 0, 3];
+  assert.deepEqual(end({ type: 'draw', reason: 'kyuushu', abortive: true, tenpai: [] }, true), [0, 0, 0, 3], 'an abortive draw changes nothing');
+  assert.deepEqual(end(win(0, 2), false), [0, 0, 0, 3], 'double ron: the streak stays as it was');
+  assert.deepEqual(end(win(0, 3), false), [0, 0, 0, 3], 'double ron with the holder winning: the same');
 });

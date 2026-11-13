@@ -40,7 +40,7 @@ export class Game {
       kyokuNum: 0,
       honba: 0,
       kyoutaku: 0,
-      // each player's streak (apart from honba): see updateStreaks
+      // the streak (apart from honba), held by one player: see updateStreaks
       streaks: [0, 0, 0, 0],
       phase: 'init',
       k: null,
@@ -742,24 +742,36 @@ export class Game {
     return SEATS.slice().sort((a, b) => this.s.players[b].score - this.s.players[a].score || a - b);
   }
 
-  // A player's streak, apart from honba. It grows by one with every win
-  // (from any seat) and with every exhaustive draw the dealer ends tenpai.
-  // A non-dealer who is tenpai at a draw keeps it. It is lost by being
-  // noten at a draw and whenever anybody else wins. An abortive draw
-  // changes nothing.
+  // The streak, apart from honba. Only one player holds it at a time
+  // (streaks: the holder's count, zero for everybody else).
+  // - A win: the holder's streak grows by one; anybody else winning takes
+  //   it, starting at one. With two winners at once (double ron) nothing
+  //   changes.
+  // - An exhaustive draw: a holder who is noten loses it; a holder who is
+  //   tenpai keeps it, and it grows by one if they are the dealer. With
+  //   nobody holding it, a tenpai dealer starts one.
+  // - An abortive draw changes nothing.
   updateStreaks(result) {
     const s = this.s;
     const dealer = this.dealer();
-    const prev = s.streaks || [0, 0, 0, 0]; // a game saved before streaks existed
+    const next = (s.streaks || [0, 0, 0, 0]).slice(); // a game saved before streaks existed
+    let holder = next.findIndex((n) => n > 0);
     if (result.type === 'agari') {
-      const winners = result.wins.map((w) => w.seat);
-      s.streaks = prev.map((n, x) => (winners.includes(x) ? n + 1 : 0));
-    } else if (result.abortive) {
-      s.streaks = prev.slice();
-    } else {
+      if (result.wins.length === 1) {
+        const w = result.wins[0].seat;
+        const n = w === holder ? next[w] + 1 : 1;
+        next.fill(0);
+        next[w] = n;
+      }
+    } else if (!result.abortive) {
       const tenpai = result.tenpai || [];
-      s.streaks = prev.map((n, x) => (!tenpai.includes(x) ? 0 : x === dealer ? n + 1 : n));
+      if (holder >= 0 && !tenpai.includes(holder)) {
+        next[holder] = 0;
+        holder = -1;
+      }
+      if (tenpai.includes(dealer) && (holder < 0 || holder === dealer)) next[dealer]++;
     }
+    s.streaks = next;
   }
 
   endKyoku(result, renchan) {

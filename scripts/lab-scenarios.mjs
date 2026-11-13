@@ -319,9 +319,9 @@ function myTsumo() {
   play([2, 0, 0, 0], 0); // me: sky
   play([3, 0, 0, 0], 1); // me: sea
   play([0, 0, 4, 0], 2); // the rival in front: fire
-  play([2, 0, 4, 0], 3); // fire stays (the longest), my hand glows in the sky's colour
+  play([0, 0, 5, 0], 3); // still fire
   play([0, 0, 0, 0], 0, 3500); // back to the parlour
-  scenes.push({ id: 'streak', name: 'Racha: cielo, mar y fuego', note: 'Vas en racha 2 (cielo) y 3 (mar); después el rival de enfrente llega a 4 (fuego) y tu mano conserva su brillo de racha 2; al final la racha se corta y vuelve el garito.', steps: rec.steps, length: rec.end });
+  scenes.push({ id: 'streak', name: 'Racha: cielo, mar y fuego', note: 'Vas en racha 2 (cielo) y 3 (mar); después la racha pasa al rival de enfrente, que llega a 4 (fuego); al final la racha se corta y vuelve el garito.', steps: rec.steps, length: rec.end });
 }
 
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });

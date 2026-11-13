@@ -69,6 +69,7 @@ export function createHand3D({ world, kit, onPick }) {
   aura.visible = false;
   scene.add(aura);
   let auraOn = false;
+  const auraTint = new THREE.Color();
   let auraShown = false; // the hand is on screen
 
   const tiles = new Map(); // id -> { mesh, target: Vector3, scale }
@@ -206,9 +207,24 @@ export function createHand3D({ world, kit, onPick }) {
   world.onTick((dt) => {
     ambient.intensity = TUNING.light.handAmbient;
     key.intensity = TUNING.light.handKey;
-    const auraGoal = auraOn && auraShown ? 0.5 + 0.12 * Math.sin(performance.now() / 520) : 0;
+    const auraGoal = auraOn && auraShown ? 0.8 + 0.15 * Math.sin(performance.now() / 520) : 0;
     aura.material.opacity += (auraGoal - aura.material.opacity) * Math.min(1, dt * 3);
     aura.visible = aura.material.opacity > 0.01;
+    // On a streak the tiles take the colour of its climate, breathing: a
+    // tint (not a light of their own), so the faces stay easy to read.
+    if (auraOn) {
+      const k = 0.78 + 0.2 * Math.sin(performance.now() / 520);
+      for (const t of tiles.values()) {
+        const [dim, glow] = String(t.mesh.userData.style).split(':');
+        if (glow !== '0') continue; // a tile with a highlight of its own keeps it
+        auraTint.setScalar(1).lerp(aura.material.color, k).multiplyScalar(Number(dim) || 1);
+        for (const m of t.mesh.userData.mats) {
+          m.color.copy(auraTint);
+          m.emissive.copy(aura.material.color);
+          m.emissiveIntensity = 0.035;
+        }
+      }
+    }
     for (const [id, t] of tiles) {
       if (drag && drag.moved && drag.id === id) {
         // held: it follows the pointer, a little larger, above the others
@@ -339,8 +355,19 @@ export function createHand3D({ world, kit, onPick }) {
     layout,
     // the glow of a streak behind the hand: a colour, or null for none
     setAura(color) {
+      const was = auraOn;
       auraOn = color !== null;
       if (auraOn) aura.material.color.setHex(color);
+      // the streak is over: the tiles get their own colour back
+      if (was && !auraOn) {
+        for (const t of tiles.values()) {
+          const dim = Number(String(t.mesh.userData.style).split(':')[0]) || 1;
+          for (const m of t.mesh.userData.mats) {
+            m.color.setScalar(dim);
+            m.emissiveIntensity = 0;
+          }
+        }
+      }
     },
     setOneClick(on) {
       oneClick = !!on;

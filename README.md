@@ -112,21 +112,21 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Racha
 
-Cada jugador lleva una **racha**, aparte del honba:
+Además del honba, la mesa lleva una **racha**, que tiene un solo jugador a la
+vez:
 
 - **Suma 1** al ganar una mano, en cualquier turno, y al quedar tenpai en un
   empate siendo oya.
-- **Se mantiene** al quedar tenpai en un empate sin ser oya, y en los empates
-  abortivos.
-- **Se borra** al quedar noten en un empate y cuando gana cualquier otro
-  jugador. En un doble ron suman los dos que ganan.
+- **Se mantiene** al quedar tenpai en un empate sin ser oya, en los empates
+  abortivos y en un doble ron (gane quien gane).
+- **Se pierde** al quedar noten en un empate y cuando gana otro jugador, que
+  empieza la suya en 1.
 
 Desde una racha de 2, el garito desaparece y la mesa queda en otro lugar, con
 la luz de ese clima: racha 2, sobre las nubes (**cielo**); racha 3, bajo el
-agua (**mar**); racha 4 o más, sobre la lava (**fuego**). El clima es el de la
-racha más larga de la mesa. La mano de cada jugador en racha brilla con el
-color de su propio clima (la tuya detrás de las fichas, las de los rivales en
-el paño y en sus fichas) y junto a su nombre aparece "Racha N". Cuando la racha
+agua (**mar**); racha 4 o más, sobre la lava (**fuego**). Las fichas de quien
+va en racha toman el color del clima y laten con un brillo, con una luz sobre
+el paño bajo su mano, y junto a su nombre aparece "Racha N". Cuando la racha
 se corta, vuelve el garito. La racha no cambia ningún puntaje.
 
 ## Muro y robos
