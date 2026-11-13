@@ -110,6 +110,25 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 5. Si recargas la página o se corta la conexión, vuelves a tu asiento (la
    sesión se guarda en el navegador).
 
+## Racha
+
+Además del honba, la mesa lleva una **racha**, que tiene un solo jugador a la
+vez:
+
+- **Suma 1** al ganar una mano, en cualquier turno, y al quedar tenpai en un
+  empate siendo oya.
+- **Se mantiene** al quedar tenpai en un empate sin ser oya, en los empates
+  abortivos y en un doble ron (gane quien gane).
+- **Se pierde** al quedar noten en un empate y cuando gana otro jugador, que
+  empieza la suya en 1.
+
+Desde una racha de 2, el garito desaparece y la mesa queda en otro lugar, con
+la luz de ese clima: racha 2, sobre las nubes (**cielo**); racha 3, bajo el
+agua (**mar**); racha 4 o más, sobre la lava (**fuego**). Las fichas de quien
+va en racha toman el color del clima y laten con un brillo, con una luz sobre
+el paño bajo su mano, y junto a su nombre aparece "Racha N". Cuando la racha
+se corta, vuelve el garito. La racha no cambia ningún puntaje.
+
 ## Muro y robos
 
 - El muro son 4 lados de 17 pilas de 2 fichas en molinete. Al empezar cada
@@ -560,7 +579,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
   descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
-  tsumo, tu tsumo con tres kan, empate, kan y muro muerto, y doble ron. Salen de
+  tsumo, tu tsumo con tres kan, empate, kan y muro muerto, doble ron, y racha
+  (cielo, mar y fuego, con el brillo de las manos). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
@@ -621,8 +641,8 @@ public/models/personajes/  Personajes de la mesa (glTF con esqueleto)
 public/img/personajes/   Retratos de los personajes para el lobby
 scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos.mjs)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
-public/js/shared/        Modelo de fichas y lista de personajes, compartidos con el servidor
-public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz
+public/js/shared/        Modelo de fichas, lista de personajes y niveles de la racha (streak.js)
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)

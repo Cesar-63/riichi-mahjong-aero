@@ -1142,6 +1142,11 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .tag.mate { color: #f6efdb; background: #2c4a7a; padding: 1px 5px; }
 .tag.off { color: #f6efdb; background: #6d665a; padding: 1px 5px; }
 .tag.turn { color: #4a3518; }
+/* a streak, in the colour of its climate (shared/streak.js) */
+.tag.streak { color: #f6efdb; padding: 1px 5px; white-space: nowrap; }
+.tag.streak.cielo { background: #2f6fb0; }
+.tag.streak.mar { background: #0e5a66; }
+.tag.streak.fuego { background: #a8340e; }
 .seatcard.turn .plaque { background-color: #c9a46a; box-shadow: 0 0 0 2px var(--gold), 0 4px 6px rgba(0, 0, 0, .5); }
 #game.v-overview .seatcard { transform: translateY(calc(-132 * var(--px))); }
 #game.v-overview .seatcard.top { transform: translateY(calc(-124 * var(--px))); }
@@ -1466,7 +1471,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   .seatcard, .seatcard.left, .seatcard.right, .seatcard.top { position: static; flex: 1 1 0; min-width: 0; translate: none; transform: none !important; }
   .seatcard .plaque, .seatcard.right .plaque, .seatcard.top .plaque { width: auto; margin: 0; padding: 3px 6px; flex-wrap: wrap; row-gap: 0; }
   .seatcard .plaque .tag { display: none; }
-  .seatcard .plaque .tag.riichi { display: inline; }
+  .seatcard .plaque .tag.riichi, .seatcard .plaque .tag.streak { display: inline; }
   /* the name gets a line of its own */
   .seatcard .plaque b { order: -1; flex: 1 1 100%; }
   .seatcard .plaque .score { margin-left: auto; }

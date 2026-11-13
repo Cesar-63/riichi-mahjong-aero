@@ -40,6 +40,8 @@ export class Game {
       kyokuNum: 0,
       honba: 0,
       kyoutaku: 0,
+      // the streak (apart from honba), held by one player: see updateStreaks
+      streaks: [0, 0, 0, 0],
       phase: 'init',
       k: null,
       result: null,
@@ -740,9 +742,42 @@ export class Game {
     return SEATS.slice().sort((a, b) => this.s.players[b].score - this.s.players[a].score || a - b);
   }
 
+  // The streak, apart from honba. Only one player holds it at a time
+  // (streaks: the holder's count, zero for everybody else).
+  // - A win: the holder's streak grows by one; anybody else winning takes
+  //   it, starting at one. With two winners at once (double ron) nothing
+  //   changes.
+  // - An exhaustive draw: a holder who is noten loses it; a holder who is
+  //   tenpai keeps it, and it grows by one if they are the dealer. With
+  //   nobody holding it, a tenpai dealer starts one.
+  // - An abortive draw changes nothing.
+  updateStreaks(result) {
+    const s = this.s;
+    const dealer = this.dealer();
+    const next = (s.streaks || [0, 0, 0, 0]).slice(); // a game saved before streaks existed
+    let holder = next.findIndex((n) => n > 0);
+    if (result.type === 'agari') {
+      if (result.wins.length === 1) {
+        const w = result.wins[0].seat;
+        const n = w === holder ? next[w] + 1 : 1;
+        next.fill(0);
+        next[w] = n;
+      }
+    } else if (!result.abortive) {
+      const tenpai = result.tenpai || [];
+      if (holder >= 0 && !tenpai.includes(holder)) {
+        next[holder] = 0;
+        holder = -1;
+      }
+      if (tenpai.includes(dealer) && (holder < 0 || holder === dealer)) next[dealer]++;
+    }
+    s.streaks = next;
+  }
+
   endKyoku(result, renchan) {
     const s = this.s;
     s.players.forEach((p, i) => { p.score += result.deltas[i]; });
+    this.updateStreaks(result);
     s.k.pending = null;
     this.log({ type: 'end_kyoku' });
     const draw = result.type === 'draw';
@@ -851,6 +886,7 @@ export class Game {
         score: p.score,
         wind: this.seatWind(i) - 27,
         riichi: !!k.riichi[i],
+        streak: (s.streaks || [])[i] || 0,
         handCount: k.hands[i].length - (k.turn === i && k.drawn !== null ? 1 : 0),
         hasDrawn: k.turn === i && k.drawn !== null,
         melds: k.melds[i],
