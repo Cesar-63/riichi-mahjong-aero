@@ -305,6 +305,25 @@ function myTsumo() {
   scenes.push({ id: 'double-ron', name: 'Doble ron', note: 'Dos rivales te hacen ron a la vez: la única ficha del ron vuela a una mano y después pasa a la otra (no se duplica).', steps: rec.steps, length: rec.end });
 }
 
+// --------------------------------------------------------------- streaks
+{
+  const g = Game.create(NAMES, {}, seeded(3));
+  const rec = recorder();
+  const play = (streaks, seat, gap = 4500) => {
+    g.s.streaks = streaks;
+    tsumogiri(g, seat);
+    passAll(g);
+    rec.add(g, gap);
+  };
+  rec.add(g, 1500);
+  play([2, 0, 0, 0], 0); // me: sky
+  play([3, 0, 0, 0], 1); // me: sea
+  play([0, 0, 4, 0], 2); // the rival in front: fire
+  play([2, 0, 4, 0], 3); // fire stays (the longest), my hand glows in the sky's colour
+  play([0, 0, 0, 0], 0, 3500); // back to the parlour
+  scenes.push({ id: 'streak', name: 'Racha: cielo, mar y fuego', note: 'Vas en racha 2 (cielo) y 3 (mar); después el rival de enfrente llega a 4 (fuego) y tu mano conserva su brillo de racha 2; al final la racha se corta y vuelve el garito.', steps: rec.steps, length: rec.end });
+}
+
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });
 const out = new URL('../public/lab/scenarios.json', import.meta.url);
 writeFileSync(out, JSON.stringify({ scenes }));

@@ -10,6 +10,8 @@ import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { TUNING } from './tuning.js';
+import { CLIMATES } from './climate.js';
+import { climateOf } from '../shared/streak.js';
 import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore, carriedDeposits } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
@@ -60,6 +62,57 @@ export function createTable3D(container, { onPick, signal } = {}) {
   };
   // lying sideways (riichi / called tile): face up, turned a quarter to the left
   qLocal.side = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2).multiply(qLocal.up);
+
+  // ----------------------------------------------------------------- streak
+  // A player on a streak (climate.js): the room turns into the climate of
+  // the longest streak at the table, and each hand on a streak glows in its
+  // own climate's colour: a light on the felt under the row, breathing
+  // slowly (my own hand, on the screen overlay, has its glow in hand3d.js).
+  const auraTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 64;
+    const g = c.getContext('2d');
+    g.scale(1, 0.5);
+    const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.45, 'rgba(255,255,255,.55)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  })();
+  const auras = [0, 1, 2, 3].map((r) => {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(13 * PITCH + 9, 8.5).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: auraTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }),
+    );
+    const at = place(r, fx(12) + 6.5 * PITCH, 0.03, fzo(95), 'stand');
+    mesh.position.copy(at.p);
+    mesh.quaternion.copy(at.q);
+    mesh.renderOrder = 2; // over the tiles' contact shadows
+    mesh.visible = false;
+    scene.add(mesh);
+    return { mesh, on: false };
+  });
+  function showStreaks(v, rel) {
+    const streaks = v.players.map((p) => p.streak || 0);
+    world.setClimate(climateOf(Math.max(...streaks)));
+    streaks.forEach((n, abs) => {
+      const kind = climateOf(n);
+      const aura = auras[rel(abs)];
+      aura.on = !!kind;
+      if (kind) aura.mesh.material.color.setHex(CLIMATES[kind].glow);
+      if (abs === v.seat) hand.setAura(kind ? CLIMATES[kind].glow : null);
+    });
+  }
+  world.onTick((dt, t) => {
+    auras.forEach((a, r) => {
+      const goal = a.on ? 0.55 + 0.15 * Math.sin(t * 2.1 + r) : 0;
+      a.mesh.material.opacity += (goal - a.mesh.material.opacity) * Math.min(1, dt * 3);
+      a.mesh.visible = a.mesh.material.opacity > 0.01;
+    });
+  });
   function place(rel, x, y, z, pose) {
     const p = new THREE.Vector3(x, y, z).applyQuaternion(qSeat[rel]);
     const q = qSeat[rel].clone().multiply(qLocal[pose]);
@@ -895,6 +948,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     me = v.seat;
     const rel = (abs) => (abs - me + 4) % 4;
     seatCharacters(v);
+    showStreaks(v, rel);
     const desired = new Map();
     const spawns = new Map();
     // via: a pose it passes first (a new call, set against the edge before
@@ -941,9 +995,12 @@ export function createTable3D(container, { onPick, signal } = {}) {
       // opponents' hands (the player's own hand is the screen overlay);
       // a winner's concealed hand is replaced by the face-up reveal
       if (r !== 0 && !laid.has(abs)) {
-        for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fzo(95), 'stand'));
+        // on a streak the tiles themselves glow too (the wall hides the felt under a far hand)
+        const kind = climateOf(p.streak);
+        const lit = kind ? { aura: CLIMATES[kind].glow } : null;
+        for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fzo(95), 'stand'), lit);
         if (p.hasDrawn) {
-          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), null, 'draw', null, r);
+          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), lit, 'draw', null, r);
           if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
         }
       }
@@ -1031,9 +1088,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
     syncDeposits(v);
     syncWin(v, ui, rel);
 
-    // highlights: tsumogiri tiles dimmer, the latest discard glowing
+    // highlights: tsumogiri tiles dimmer, the latest discard glowing, a hand on a streak lit
     for (const ob of objects.values()) {
-      kit.style(ob.obj, ob.flags.tg ? 0.8 : 1, ob.flags.last ? kit.glowColor() : 0);
+      kit.style(ob.obj, ob.flags.tg ? 0.8 : 1, ob.flags.last ? kit.glowColor() : ob.flags.aura || 0);
     }
     // my hand: a freshly drawn tile flies in from its wall slot
     let spawn = null;

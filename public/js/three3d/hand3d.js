@@ -45,6 +45,32 @@ export function createHand3D({ world, kit, onPick }) {
     bandTex.needsUpdate = true;
   })();
 
+  // On a streak the hand glows: a soft light behind the tiles, in the
+  // colour of the streak's climate (setAura), breathing slowly.
+  const auraCanvas = document.createElement('canvas');
+  auraCanvas.width = 256;
+  auraCanvas.height = 64;
+  (() => {
+    const g = auraCanvas.getContext('2d');
+    // a wide ellipse, brightest along the middle of the row
+    g.scale(1, 0.25);
+    const light = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    light.addColorStop(0, 'rgba(255,255,255,1)');
+    light.addColorStop(0.5, 'rgba(255,255,255,.5)');
+    light.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = light;
+    g.fillRect(0, 0, 256, 256);
+  })();
+  const aura = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(auraCanvas), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }),
+  );
+  aura.position.z = -390;
+  aura.visible = false;
+  scene.add(aura);
+  let auraOn = false;
+  let auraShown = false; // the hand is on screen
+
   const tiles = new Map(); // id -> { mesh, target: Vector3, scale }
   let size = 60; // px per tile width
   let legal = new Set();
@@ -169,6 +195,10 @@ export function createHand3D({ world, kit, onPick }) {
     // no band while the hand is put away (intro, reveals)
     band.visible = visible > 0;
     band.position.set(camera.right / 2, bandH / 2, -400);
+    // the glow: wider than the row and about three tiles tall, centred on it
+    aura.scale.set(total + size * 7, size * H * 3.2, 1);
+    aura.position.set(camera.right / 2, y, -390);
+    auraShown = visible > 0;
   }
 
   // tiles move at a steady speed (no easing), growing to full size as they arrive
@@ -176,6 +206,9 @@ export function createHand3D({ world, kit, onPick }) {
   world.onTick((dt) => {
     ambient.intensity = TUNING.light.handAmbient;
     key.intensity = TUNING.light.handKey;
+    const auraGoal = auraOn && auraShown ? 0.5 + 0.12 * Math.sin(performance.now() / 520) : 0;
+    aura.material.opacity += (auraGoal - aura.material.opacity) * Math.min(1, dt * 3);
+    aura.visible = aura.material.opacity > 0.01;
     for (const [id, t] of tiles) {
       if (drag && drag.moved && drag.id === id) {
         // held: it follows the pointer, a little larger, above the others
@@ -304,6 +337,11 @@ export function createHand3D({ world, kit, onPick }) {
   fit();
   return {
     layout,
+    // the glow of a streak behind the hand: a colour, or null for none
+    setAura(color) {
+      auraOn = color !== null;
+      if (auraOn) aura.material.color.setHex(color);
+    },
     setOneClick(on) {
       oneClick = !!on;
       selected = null;

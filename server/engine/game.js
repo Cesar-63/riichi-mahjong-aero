@@ -40,6 +40,8 @@ export class Game {
       kyokuNum: 0,
       honba: 0,
       kyoutaku: 0,
+      // each player's streak (apart from honba): see updateStreaks
+      streaks: [0, 0, 0, 0],
       phase: 'init',
       k: null,
       result: null,
@@ -740,9 +742,30 @@ export class Game {
     return SEATS.slice().sort((a, b) => this.s.players[b].score - this.s.players[a].score || a - b);
   }
 
+  // A player's streak, apart from honba. It grows by one with every win
+  // (from any seat) and with every exhaustive draw the dealer ends tenpai.
+  // A non-dealer who is tenpai at a draw keeps it. It is lost by being
+  // noten at a draw and whenever anybody else wins. An abortive draw
+  // changes nothing.
+  updateStreaks(result) {
+    const s = this.s;
+    const dealer = this.dealer();
+    const prev = s.streaks || [0, 0, 0, 0]; // a game saved before streaks existed
+    if (result.type === 'agari') {
+      const winners = result.wins.map((w) => w.seat);
+      s.streaks = prev.map((n, x) => (winners.includes(x) ? n + 1 : 0));
+    } else if (result.abortive) {
+      s.streaks = prev.slice();
+    } else {
+      const tenpai = result.tenpai || [];
+      s.streaks = prev.map((n, x) => (!tenpai.includes(x) ? 0 : x === dealer ? n + 1 : n));
+    }
+  }
+
   endKyoku(result, renchan) {
     const s = this.s;
     s.players.forEach((p, i) => { p.score += result.deltas[i]; });
+    this.updateStreaks(result);
     s.k.pending = null;
     this.log({ type: 'end_kyoku' });
     const draw = result.type === 'draw';
@@ -851,6 +874,7 @@ export class Game {
         score: p.score,
         wind: this.seatWind(i) - 27,
         riichi: !!k.riichi[i],
+        streak: (s.streaks || [])[i] || 0,
         handCount: k.hands[i].length - (k.turn === i && k.drawn !== null ? 1 : 0),
         hasDrawn: k.turn === i && k.drawn !== null,
         melds: k.melds[i],

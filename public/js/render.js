@@ -4,6 +4,7 @@ import {
   tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI,
   YAKU_NAMES, DRAW_NAMES,
 } from './shared/tiles.js';
+import { climateOf } from './shared/streak.js';
 
 // Tile art: FluffyStuff/riichi-mahjong-tiles layout in /tiles if present
 // (Front + face layered), a flat set via tiles/tileset.json, else CSS tiles.
@@ -185,7 +186,8 @@ function plaquesHTML(v, r, winners) {
     const p = v.players[i];
     const d = r.deltas[i];
     const delta = d ? ` <b class="${d > 0 ? 'pos' : 'neg'}">${d > 0 ? '+' : '−'}${Math.abs(d)}</b>` : '';
-    return `<div class="plaque${winners.includes(i) ? ' won' : ''}${i === v.seat ? ' me' : ''}"><span class="name">${WIND_ES[p.wind]} · ${esc(p.name)}</span><span class="score">${r.scores[i]}${delta}</span></div>`;
+    const kind = climateOf(p.streak);
+    return `<div class="plaque${winners.includes(i) ? ' won' : ''}${i === v.seat ? ' me' : ''}"><span class="name">${WIND_ES[p.wind]} · ${esc(p.name)}${kind ? ` <i class="tag streak ${kind}">Racha ${p.streak}</i>` : ''}</span><span class="score">${r.scores[i]}${delta}</span></div>`;
   }).join('');
 }
 

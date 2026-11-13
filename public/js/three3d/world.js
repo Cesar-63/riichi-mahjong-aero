@@ -4,6 +4,7 @@
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { RoundedBoxGeometry } from '../../vendor/three/RoundedBoxGeometry.js';
 import { TUNING } from './tuning.js';
+import { createClimate } from './climate.js';
 
 export const TABLE = 30; // table side in world units (1 unit = one tile width)
 export const FOV = 40; // the camera's field of view, unless a view sets its own
@@ -45,6 +46,8 @@ export function createWorld(container, { signal } = {}) {
     lights.ambient.intensity = L.ambient;
   };
   applyLight();
+  // what surrounds the table while somebody is on a streak (climate.js)
+  const climate = createClimate({ scene, lights, fog: scene.fog });
 
   const clock = new THREE.Clock();
   const tickers = [];
@@ -143,6 +146,7 @@ export function createWorld(container, { signal } = {}) {
     applyLight();
     for (const f of tickersEarly) f(dt, t);
     for (const f of tickers) f(dt, t);
+    climate.tick(dt, t);
     renderer.clear();
     draw(scene, camera, false);
     // overlays (the player's hand) are drawn on top with their own depth
@@ -216,6 +220,8 @@ export function createWorld(container, { signal } = {}) {
       fit();
     },
     forceView: (m) => { forced = m; announce(); },
+    // 'cielo', 'mar' or 'fuego' around the table (null: the parlour)
+    setClimate: climate.set,
     onView: (f) => { viewListeners.push(f); f(announced || mode); },
     addOverlay: (s2, c2) => overlays.push([s2, c2]),
     // lab: a { pos, target } that overrides every view (null: back to normal)
@@ -450,5 +456,5 @@ function addParlour(group) {
   lamp.shadow.camera.near = 12;
   lamp.shadow.camera.far = 60;
   group.add(lamp, lamp.target);
-  return { lamp, hemi, ambient, chairs };
+  return { lamp, hemi, ambient, chairs, floor };
 }

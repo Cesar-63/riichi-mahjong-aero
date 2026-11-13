@@ -2,6 +2,7 @@ import {
   renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
 import { sortTiles } from './shared/tiles.js';
+import { climateOf } from './shared/streak.js';
 import { CHARACTERS, characterId } from './shared/characters.js';
 
 const $ = (s) => document.querySelector(s);
@@ -422,6 +423,12 @@ function hideDoraBanner() {
 // the rivals sit at the 3D table and the styles drop the frames
 // (#game.chars): only the plaques stay.
 const WIND_ES = ['Este', 'Sur', 'Oeste', 'Norte'];
+// "Racha 3" in the colour of its climate, once a streak shows
+function streakTag(p) {
+  const kind = climateOf(p.streak);
+  return kind ? `<i class="tag streak ${kind}">Racha ${p.streak}</i>` : '';
+}
+
 const BACKDROP = [['#7d7842', '#5f5b31'], ['#8a7a52', '#64583a'], ['#6f7a5a', '#4f573e'], ['#7a5a52', '#57403a']];
 const SILHOUETTE = '<svg viewBox="0 0 200 140" aria-hidden="true"><ellipse cx="100" cy="52" rx="30" ry="36"/><path d="M14 140 C 22 96, 60 84, 100 84 C 140 84, 178 96, 186 140 Z"/></svg>';
 function portraitsHTML(v) {
@@ -434,6 +441,7 @@ function portraitsHTML(v) {
       // (shown in the plaque only when playing with characters: no frame then)
       p.bot ? `<i class="tag bot">${p.level === 'hard' ? 'bot difícil' : 'bot'}</i>` : '',
       p.riichi ? '<i class="tag riichi">Riichi</i>' : '',
+      streakTag(p),
       v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
       p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">sin conexión</i>' : '',
       turn ? '<i class="tag turn">su turno</i>' : '',
@@ -451,7 +459,7 @@ function roundInfoHTML(v) {
   const me = v.players[v.seat];
   return `<span class="round">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}${v.honba ? ` <small>· Honba ${v.honba}</small>` : ''}</span>
     <span>Depósitos ${v.kyoutaku} · Quedan ${v.wallLeft}</span>
-    <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}</span>`;
+    <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}${streakTag(me) ? ` ${streakTag(me)}` : ''}</span>`;
 }
 
 // The table's scores as seen from my seat: me at the bottom, the others in
