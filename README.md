@@ -39,6 +39,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
      límite; queda guardado en el navegador): vale al abrir una sala o una
      práctica. En la sala de espera todos ven el tiempo y el anfitrión puede
      cambiarlo; por equipos, cambiarlo quita el "listo" de todos.
+   - **Muro** (Normal, o **Muro fluido · siempre un yakuman**, un
+     experimento: ver [Muro fluido](#muro-fluido-experimento)): se elige igual
+     que el tiempo, y el anfitrión puede cambiarlo en la sala de espera.
    - **Jugar con personajes** (opcional, en cualquier modo): los jugadores
      se sientan a la mesa en 3D y eliges **tu personaje** (ver
      [Personajes](#personajes)).
@@ -128,6 +131,31 @@ agua (**mar**); racha 4 o más, sobre la lava (**fuego**). Las fichas de quien
 va en racha toman el color del clima y laten con un brillo, con una luz sobre
 el paño bajo su mano, y junto a su nombre aparece "Racha N". Cuando la racha
 se corta, vuelve el garito. La racha no cambia ningún puntaje.
+
+## Muro fluido (experimento)
+
+Un modo alternativo, apagado por defecto, para probar un muro que no se
+comporta de forma natural: **Muro fluido · siempre un yakuman**.
+
+- Las manos se reparten al azar, como siempre. Después el juego elige **un
+  jugador al azar** y el **yakuman más cercano a su mano** (kokushi, suuankou,
+  daisangen, tsuuiisou, shousuushii, daisuushii, chinroutou, ryuuiisou o
+  chuuren). Ese yakuman queda fijo toda la mano, aunque el jugador cante.
+- Desde ahí, **cada ficha que ese jugador roba lo acerca a su yakuman**. El
+  muro vivo cambia el orden de sus fichas en cada robo; no se crean ni se
+  quitan fichas, son las mismas 136.
+- **Tras un kan también:** la ficha de reposición del muro muerto se cambia
+  por una que le falte.
+- **Los demás** reciben una ficha que el yakuman necesita solo si sobran
+  copias. Por ejemplo, con nueve puertas en camino y faltándole dos 9, de los
+  tres 9 que quedan en el muro solo uno puede ir a otro jugador.
+- Todos lo saben: junto al nombre de ese jugador aparece **"Muro: (yakuman) ·
+  faltan N"**.
+- Un bot al que el muro alimenta le sigue la corriente: guarda lo que el
+  yakuman necesita, tira el resto, no canta y gana solo por tsumo.
+- No es una garantía: otro jugador puede ganar antes con su propia mano.
+
+Es el primer paso del modo flow; sirve solo para experimentar.
 
 ## Muro y robos
 
@@ -633,6 +661,7 @@ server/engine/score.js   Yaku, fu y puntos
 server/engine/hand.js    Descomposición de manos, esperas, shanten
 server/engine/mjai.js    Notación y registro mjai, vista por asiento
 server/engine/bot.js     Bots: decisión, peticiones del compañero, respaldo
+server/engine/fluid.js   Muro fluido (experimento): el yakuman más cercano a una mano
 server/engine/majiang-bot.js  Adaptador a majiang-ai (registro mjai → majiang-core)
 server/engine/mortal/    Bot difícil: codificador (WASM), red (ONNX) y adaptador a Mortal
 mortal/                  Fuentes del bot difícil (libriichi en Rust) y herramientas

@@ -418,3 +418,23 @@ test('each player sits as the character they chose; bots take the ones left', as
   assert.ok(game.players.some((p) => !p.bot && p.character === 'tatsuo'));
   assert.ok((await call({ op: 'character', token: tokens[0], character: 'kaito' })).error, 'not once the game started');
 });
+
+test('wall: the opener picks it, the host can change it, and the game is dealt with it', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 71_000_000;
+  const call = async (body, room = 'wl1') => (await handle({ room, ...body }, store, now)).body;
+  assert.equal((await call({ op: 'join', token: tokens[0], name: 'P0' })).wall, 'normal');
+  assert.equal((await call({ op: 'join', token: tokens[1], name: 'P1', wall: 'yakuman' })).wall, 'normal', 'a later player does not change it');
+  assert.ok((await call({ op: 'wall', token: tokens[1], wall: 'yakuman' })).error, 'only the host');
+  assert.ok((await call({ op: 'wall', token: tokens[0], wall: 'lava' })).error, 'unknown wall');
+  assert.equal((await call({ op: 'wall', token: tokens[0], wall: 'yakuman' })).wall, 'yakuman');
+  const filled = await call({ op: 'fill', token: tokens[0] });
+  assert.ok(!filled.error, filled.error);
+  const { game } = await call({ op: 'poll', token: tokens[0] });
+  assert.equal(game.wallMode, 'yakuman');
+  assert.ok(game.fluid && game.fluid.yakuman, 'somebody is being fed a yakuman, and everybody is told');
+  // a room opened without asking plays with the usual wall
+  const usual = await call({ op: 'join', token: tokens[2], name: 'P2', hb: true }, 'wl2');
+  assert.equal(usual.wall, 'normal');
+});

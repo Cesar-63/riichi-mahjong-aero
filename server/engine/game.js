@@ -7,12 +7,15 @@ import {
 import { waits, isAgari, isKokushi, decompose } from './hand.js';
 import { evaluate, ronValue, tsumoValues, limitName } from './score.js';
 import { mjaiTile, mjaiWind } from './mjai.js';
+import { nearestYakuman, yakumanPlan } from './fluid.js';
 
 export const DEFAULT_CONFIG = {
   startScore: 25000,
   targetScore: 30000, // also the "return" score for final points
   uma: [20, 10, -10, -20],
   rounds: 1, // 1 = tonpuusen (East only), 2 = hanchan (East-South)
+  // 'normal', or 'yakuman': the fluid wall that always feeds a yakuman (fluid.js)
+  wall: 'normal',
 };
 
 function cryptoRandom() {
@@ -148,9 +151,55 @@ export class Game {
       const seat = (this.dealer() + i) % 4;
       k.hands[seat] = k.wall.splice(0, 13);
     }
+    if (this.s.config.wall === 'yakuman') this.fluidStart();
     this.logStart();
     this.event({ type: 'start' });
     this.draw(this.dealer());
+  }
+
+  // Fluid wall ("always a yakuman", fluid.js): the hands are dealt as
+  // usual; then a seat is picked at random, and the yakuman nearest to its
+  // hand is the one the wall will bring it for the whole hand.
+  fluidStart() {
+    const k = this.k;
+    const seat = Math.floor(this.rng() * 4);
+    const plan = nearestYakuman(k.hands[seat], k.melds[seat], k.wall);
+    k.fluid = plan ? { seat, key: plan.key } : null;
+    if (plan) this.fluidPlan();
+  }
+
+  // what the fed seat is still missing for its yakuman (it follows what they keep and call)
+  fluidPlan() {
+    const k = this.k;
+    const f = k.fluid;
+    const plan = yakumanPlan(f.key, k.hands[f.seat], k.melds[f.seat], k.wall);
+    f.need = plan ? plan.need : [];
+    f.keep = plan ? plan.keep : null;
+  }
+
+  // Before a draw. The fed seat gets a tile it is missing, from the live
+  // wall or, after a kan, in the dead wall's replacement tile. Anybody
+  // else gets a tile the yakuman needs only when the live wall has more
+  // copies than the fed hand is still missing: otherwise the yakuman could
+  // no longer be drawn. The walls only swap tiles between their own slots.
+  fluidDraw(seat, rinshan) {
+    const k = this.k;
+    const f = k.fluid;
+    if (seat === f.seat) {
+      this.fluidPlan();
+      const i = k.wall.findIndex((id) => f.need.includes(tileType(id)));
+      if (i < 0) return;
+      const r = k.kanCount - 1;
+      if (rinshan) [k.dead[r], k.wall[i]] = [k.wall[i], k.dead[r]];
+      else [k.wall[0], k.wall[i]] = [k.wall[i], k.wall[0]];
+      return;
+    }
+    if (rinshan) return; // a dead wall tile takes nothing from the live wall
+    const left = counts34(k.wall);
+    for (const t of f.need) left[t]--; // copies to spare, by type
+    if (left[tileType(k.wall[0])] > 0) return;
+    const i = k.wall.findIndex((id) => left[tileType(id)] > 0);
+    if (i > 0) [k.wall[0], k.wall[i]] = [k.wall[i], k.wall[0]];
   }
 
   draw(seat, rinshan = false) {
@@ -158,6 +207,7 @@ export class Game {
     let tile;
     let slot;
     if (rinshan) {
+      if (k.fluid) this.fluidDraw(seat, true);
       tile = k.dead[k.kanCount - 1];
       k.wall.pop(); // keep the dead wall at 14 tiles
       k.pops++;
@@ -165,9 +215,11 @@ export class Game {
     } else {
       if (k.wall.length === 0) return this.exhaustiveDraw();
       slot = 122 - k.wall.length - k.pops;
+      if (k.fluid) this.fluidDraw(seat, false);
       tile = k.wall.shift();
     }
     k.hands[seat].push(tile);
+    if (k.fluid && k.fluid.seat === seat) this.fluidPlan();
     this.s.drawSeq = (this.s.drawSeq || 0) + 1;
     k.lastDraw = { seat, slot, n: this.s.drawSeq };
     k.drawn = tile;
@@ -895,6 +947,8 @@ export class Game {
       hand: sortTiles(mine.filter((x) => x !== drawn)),
       drawn,
       furiten: this.isFuriten(seat),
+      // fluid wall: who it feeds, towards which yakuman and how many tiles are left to come (public)
+      fluid: k.fluid && k.fluid.key ? { seat: k.fluid.seat, yakuman: k.fluid.key, left: k.fluid.need.length } : null,
       options,
       result: s.result,
       final: s.final,

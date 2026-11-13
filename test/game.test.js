@@ -343,3 +343,111 @@ test('streak: one holder; wins and dealer tenpai add, tenpai keeps, noten and ot
   assert.deepEqual(end(win(0, 2), false), [0, 0, 0, 3], 'double ron: the streak stays as it was');
   assert.deepEqual(end(win(0, 3), false), [0, 0, 0, 3], 'double ron with the holder winning: the same');
 });
+
+// a fluid-wall game with given hands; the fed seat and its yakuman as the deal would pick them
+function fluidGame(hands, seat, key) {
+  const g = Game.create(['A', 'B', 'C', 'D'], { wall: 'yakuman' }, mulberry32(9));
+  const used = new Set();
+  const k = g.s.k;
+  k.hands = hands.map((h) => parseIds(h, used));
+  const rest = Array.from({ length: 136 }, (_, i) => i).filter((i) => !used.has(i));
+  k.dead = rest.splice(0, 14); // low tiles, so the honors stay in the live wall
+  k.wall = rest;
+  k.drawn = null;
+  k.fluid = { seat, key };
+  g.fluidPlan();
+  return g;
+}
+
+test('fluid wall: a seat picked at random, and the yakuman nearest to its hand', () => {
+  const seats = new Set();
+  for (let seed = 1; seed <= 40; seed++) {
+    const g = Game.create(['A', 'B', 'C', 'D'], { wall: 'yakuman' }, mulberry32(seed));
+    const f = g.s.k.fluid;
+    seats.add(f.seat);
+    assert.ok(f.key, 'a yakuman is picked at the deal');
+    assert.deepEqual(g.view(2).fluid, { seat: f.seat, yakuman: f.key, left: f.need.length }, 'everybody is told');
+    checkInvariants(g);
+  }
+  assert.equal(seats.size, 4, 'any seat can be the one');
+});
+
+test('fluid wall: every draw of the fed seat takes it straight to its yakuman', () => {
+  // seat 0 holds eight of the thirteen orphans
+  const g = fluidGame(['19m19p19s12z258p47s', '234567m234567p2s', '345678m34567s33p', '456m456p456s2233m'], 0, 'kokushi');
+  const k = g.s.k;
+  assert.equal(k.fluid.need.length, 6, 'five orphans and the pair');
+  const orphan = (id) => [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33].includes(tileType(id));
+  g.draw(0);
+  let fed = 0;
+  let guard = 200;
+  while (g.s.phase !== 'result' && guard--) {
+    if (g.s.phase === 'response') {
+      for (const s of g.pendingSeats()) g.act(s, { type: 'pass' });
+      continue;
+    }
+    const seat = k.turn;
+    if (seat !== 0) {
+      g.act(seat, { type: 'discard', tile: k.drawn });
+      continue;
+    }
+    assert.ok(orphan(k.drawn), 'every draw of the fed seat is a tile it needs');
+    fed++;
+    if (g.view(0).options.tsumo) {
+      g.act(0, { type: 'tsumo' });
+      break;
+    }
+    g.act(0, { type: 'discard', tile: k.hands[0].find((id) => !orphan(id)) });
+  }
+  assert.equal(fed, 6, 'the yakuman comes in as many draws as tiles were missing');
+  assert.equal(g.s.result.type, 'agari');
+  assert.ok(g.s.result.wins[0].yakuman, 'and it is a yakuman');
+  checkInvariants(g);
+});
+
+test('fluid wall: the others get a tile the yakuman needs only while there are copies to spare', () => {
+  // seat 0 goes for chuuren in bamboo: it holds one 1s and one 9s, so it
+  // still needs two of each; the wall has three of each, one to spare
+  const g = fluidGame(['123456789s11p22p', '234567p234567m5z', '345678p345678m6z', '456p456m11223z7z'], 0, 'chuuren');
+  const k = g.s.k;
+  const count = (t) => k.wall.filter((id) => tileType(id) === t).length;
+  assert.equal(k.fluid.need.filter((t) => t === 26).length, 2);
+  assert.equal(count(26), 3);
+  // a 9s on top of the wall: seat 1 may take the spare one
+  const top = (t) => {
+    const i = k.wall.findIndex((id) => tileType(id) === t);
+    [k.wall[0], k.wall[i]] = [k.wall[i], k.wall[0]];
+  };
+  top(26);
+  g.fluidDraw(1, false);
+  assert.equal(tileType(k.wall[0]), 26, 'the fourth copy is free');
+  k.wall.shift();
+  // now the two left are both needed: the next 9s is moved out of the way
+  top(26);
+  g.fluidDraw(2, false);
+  assert.notEqual(tileType(k.wall[0]), 26, 'the last copies are kept for the yakuman');
+  assert.equal(count(26), 2);
+});
+
+test('fluid wall: after a kan the replacement tile takes the fed seat to its yakuman too, and a call does not change the yakuman', () => {
+  // seat 0 goes for daisangen with three whites already
+  const g = fluidGame(['5555z66z7z123m456p', '234567p234567s1z', '345678p345678s2z', '456m789m112233s3z'], 0, 'daisangen');
+  const k = g.s.k;
+  let need = [...k.fluid.need];
+  assert.ok([32, 33].every((t) => need.includes(t)), 'the two dragons it lacks are on the list');
+  g.draw(0);
+  assert.ok(need.includes(tileType(k.drawn)));
+  const before = k.wall.length + k.dead.length;
+  need = [...k.fluid.need];
+  g.act(0, { type: 'ankan', t: 31 });
+  assert.ok(k.rinshan && need.includes(tileType(k.drawn)), 'the tile from the dead wall is one it was missing');
+  assert.equal(k.fluid.key, 'daisangen');
+  assert.equal(k.wall.length + k.dead.length, before - 1, 'the walls only swapped tiles');
+  checkInvariants(g); // no tile duplicated or lost
+});
+
+test('the wall is the usual one unless the room asks for the fluid one', () => {
+  const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(9));
+  assert.equal(g.s.k.fluid, undefined);
+  assert.equal(g.view(0).fluid, null);
+});
