@@ -5,6 +5,7 @@
 // same discard) when the teammate said "no riichi", and fall back to a plain
 // safe move if the AI ever answers something illegal.
 import { majiangAction } from './majiang-bot.js';
+import { spareTile } from './fluid.js';
 
 export const LEVELS = ['normal', 'hard'];
 
@@ -24,6 +25,16 @@ export async function botAction(game, seat, requested = null, level = 'normal', 
   const v = game.view(seat);
   const o = v.options;
   if (!o) return null;
+  // Fluid wall: the bot the wall feeds goes along with it. It keeps what
+  // the yakuman needs, throws the rest away, calls nothing and wins only
+  // by drawing the last tile.
+  const f = game.k.fluid;
+  if (f && f.seat === seat && f.keep) {
+    if (o.kind !== 'turn') return { type: 'pass' };
+    if (o.tsumo && f.need.length === 0) return { type: 'tsumo' };
+    const spare = spareTile(game.k.hands[seat], f.keep);
+    if (spare !== null && o.discard.includes(spare)) return { type: 'discard', tile: spare };
+  }
   let a = level === 'hard' ? await hardAction(game, seat) : null;
   if (!a) {
     try {

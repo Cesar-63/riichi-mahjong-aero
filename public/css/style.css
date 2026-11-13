@@ -496,8 +496,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .char-opt:hover img { filter: none; }
 .char-opt:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 /* the waiting room: the host picks the time, the others read it */
-#w-timing { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
-#w-timing b { font-weight: 400; color: var(--chalk-yellow); }
+#w-timing, #w-wall { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
+#w-timing b, #w-wall b { font-weight: 400; color: var(--chalk-yellow); }
 .bot-levels { display: flex; flex-wrap: wrap; gap: 6px 10px; }
 :is(.bot-level, .chalk-opt) {
   position: relative;
@@ -1147,6 +1147,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .tag.streak.cielo { background: #2f6fb0; }
 .tag.streak.mar { background: #0e5a66; }
 .tag.streak.fuego { background: #a8340e; }
+/* the player the fluid wall feeds */
+.tag.fluid { color: #f6efdb; background: #5a3d7a; padding: 1px 5px; white-space: nowrap; }
 .seatcard.turn .plaque { background-color: #c9a46a; box-shadow: 0 0 0 2px var(--gold), 0 4px 6px rgba(0, 0, 0, .5); }
 #game.v-overview .seatcard { transform: translateY(calc(-132 * var(--px))); }
 #game.v-overview .seatcard.top { transform: translateY(calc(-124 * var(--px))); }
@@ -1471,7 +1473,7 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   .seatcard, .seatcard.left, .seatcard.right, .seatcard.top { position: static; flex: 1 1 0; min-width: 0; translate: none; transform: none !important; }
   .seatcard .plaque, .seatcard.right .plaque, .seatcard.top .plaque { width: auto; margin: 0; padding: 3px 6px; flex-wrap: wrap; row-gap: 0; }
   .seatcard .plaque .tag { display: none; }
-  .seatcard .plaque .tag.riichi, .seatcard .plaque .tag.streak { display: inline; }
+  .seatcard .plaque :is(.tag.riichi, .tag.streak, .tag.fluid) { display: inline; }
   /* the name gets a line of its own */
   .seatcard .plaque b { order: -1; flex: 1 1 100%; }
   .seatcard .plaque .score { margin-left: auto; }

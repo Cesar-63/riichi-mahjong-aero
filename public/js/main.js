@@ -1,7 +1,7 @@
 import {
   renderPartner, showCallouts, resultHTML, finalHTML, detectTileset, actionsHTML, tile,
 } from './render.js';
-import { sortTiles } from './shared/tiles.js';
+import { sortTiles, YAKU_NAMES } from './shared/tiles.js';
 import { climateOf } from './shared/streak.js';
 import { CHARACTERS, characterId } from './shared/characters.js';
 
@@ -28,6 +28,14 @@ const TIMINGS = {
   slow: ['Lento', '10 s + 20 s'],
   free: ['Sin límite', ''],
 };
+// The wall (server/handler.js WALLS): the usual one, or the fluid wall experiment
+const WALLS = {
+  normal: ['Normal', ''],
+  yakuman: ['Muro fluido', 'siempre un yakuman'],
+};
+const wallLabel = (w) => `${WALLS[w][0]}${WALLS[w][1] ? ` · ${WALLS[w][1]}` : ''}`;
+const wallButtons = (current) => Object.entries(WALLS).map(([id, [name, note]]) =>
+  `<button type="button" class="chalk-opt" data-wall="${id}" aria-pressed="${id === current}">${name}${note ? ` <small>${note}</small>` : ''}</button>`).join('');
 const timingLabel = (t) => `${TIMINGS[t][0]}${TIMINGS[t][1] ? ` · ${TIMINGS[t][1]}` : ''}`;
 const timingButtons = (current) => Object.entries(TIMINGS).map(([id, [name, secs]]) =>
   `<button type="button" class="chalk-opt" data-timing="${id}" aria-pressed="${id === current}">${name}${secs ? ` <small>${secs}</small>` : ''}</button>`).join('');
@@ -46,6 +54,7 @@ const state = {
   // level of Bot 1-3, for practice and for filling a room: "n" normal, "h" hard
   botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
   timing: TIMINGS[store.get('mj.timing')] ? store.get('mj.timing') : 'normal',
+  wall: WALLS[store.get('mj.wall')] ? store.get('mj.wall') : 'normal',
   // who I sit at the table as (shared/characters.js)
   character: characterId(store.get('mj.character')),
   name: store.get('mj.name') || '',
@@ -120,6 +129,10 @@ function showRoomTiming(data, host) {
   setIfChanged($('#w-timing'), host
     ? `<span>Tiempo:</span>${timingButtons(t)}`
     : `<span>Tiempo: <b>${timingLabel(t)}</b></span>`);
+  const w = WALLS[data.wall] ? data.wall : 'normal';
+  setIfChanged($('#w-wall'), host
+    ? `<span>Muro:</span>${wallButtons(w)}`
+    : `<span>Muro: <b>${wallLabel(w)}</b></span>`);
 }
 
 function showLobby(data) {
@@ -429,6 +442,15 @@ function streakTag(p) {
   return kind ? `<i class="tag streak ${kind}">Racha ${p.streak}</i>` : '';
 }
 
+// Fluid wall: on the plaque of the player it feeds, the yakuman it is
+// bringing and how many tiles are still to come
+function fluidTag(v, abs) {
+  const f = v.fluid;
+  if (!f || f.seat !== abs) return '';
+  const name = (YAKU_NAMES[f.yakuman] || [])[1] || f.yakuman;
+  return `<i class="tag fluid">Muro: ${name}${f.left ? ` · faltan ${f.left}` : ''}</i>`;
+}
+
 const BACKDROP = [['#7d7842', '#5f5b31'], ['#8a7a52', '#64583a'], ['#6f7a5a', '#4f573e'], ['#7a5a52', '#57403a']];
 const SILHOUETTE = '<svg viewBox="0 0 200 140" aria-hidden="true"><ellipse cx="100" cy="52" rx="30" ry="36"/><path d="M14 140 C 22 96, 60 84, 100 84 C 140 84, 178 96, 186 140 Z"/></svg>';
 function portraitsHTML(v) {
@@ -442,6 +464,7 @@ function portraitsHTML(v) {
       p.bot ? `<i class="tag bot">${p.level === 'hard' ? 'bot difícil' : 'bot'}</i>` : '',
       p.riichi ? '<i class="tag riichi">Riichi</i>' : '',
       streakTag(p),
+      fluidTag(v, abs),
       v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
       p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">sin conexión</i>' : '',
       turn ? '<i class="tag turn">su turno</i>' : '',
@@ -459,7 +482,8 @@ function roundInfoHTML(v) {
   const me = v.players[v.seat];
   return `<span class="round">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}${v.honba ? ` <small>· Honba ${v.honba}</small>` : ''}</span>
     <span>Depósitos ${v.kyoutaku} · Quedan ${v.wallLeft}</span>
-    <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}${streakTag(me) ? ` ${streakTag(me)}` : ''}</span>`;
+    <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}${streakTag(me) ? ` ${streakTag(me)}` : ''}</span>${v.wallMode === 'yakuman' ? `
+    <span>Muro fluido${fluidTag(v, v.seat) ? ` ${fluidTag(v, v.seat)}` : ''}</span>` : ''}`;
 }
 
 // The table's scores as seen from my seat: me at the bottom, the others in
@@ -671,7 +695,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode, levels: botLevels(), timing: state.timing, character: state.character });
+  await api('join', { name, mode, levels: botLevels(), timing: state.timing, wall: state.wall, character: state.character });
   pollLoop();
 });
 
@@ -906,6 +930,23 @@ $('#w-timing').addEventListener('click', (e) => {
   if (b && b.getAttribute('aria-pressed') !== 'true') api('timing', { timing: b.dataset.timing });
 });
 showTiming();
+
+// The wall: sent like the time; in the waiting room the host changes it.
+function showWall() {
+  setIfChanged($('#wall-opts'), wallButtons(state.wall));
+}
+$('#wall-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-wall]');
+  if (!b) return;
+  state.wall = b.dataset.wall;
+  store.set('mj.wall', state.wall);
+  showWall();
+});
+$('#w-wall').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-wall]');
+  if (b && b.getAttribute('aria-pressed') !== 'true') api('wall', { wall: b.dataset.wall });
+});
+showWall();
 
 // My character: sent when joining; in the waiting room a click changes it
 // for everyone to see.
