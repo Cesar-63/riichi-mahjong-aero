@@ -311,7 +311,8 @@ export function renderPartner(v, ui) {
 }
 
 // Paper score sheet at the end of the game.
-export function finalHTML(v, room) {
+// back: what the button that leaves the sheet says (the town has its own)
+export function finalHTML(v, room, back = ['Volver al lobby', '退出']) {
   const fmt = (x) => `${x > 0 ? '+' : x < 0 ? '−' : '±'}${Math.abs(Math.round(x * 10) / 10).toFixed(1)}`;
   const rows = v.final.map((f) => `<span class="rank">${f.rank}.º</span>
       <span class="who">${esc(f.name)}${f.seat === v.seat ? ' <small>(tú)</small>' : ''}</span>
@@ -344,5 +345,5 @@ export function finalHTML(v, room) {
       </div>
       <p class="f-note">Uma +20/+10/−10/−20 · oka +20 al primero · retorno 30.000 · resultado en miles</p>
     </div>
-    <div class="f-actions"><button class="paper" type="button" data-ui="lobby"><span class="es">Volver al lobby</span><span class="jp">退出</span></button></div>`;
+    <div class="f-actions"><button class="paper" type="button" data-ui="lobby"><span class="es">${back[0]}</span><span class="jp">${back[1]}</span></button></div>`;
 }
