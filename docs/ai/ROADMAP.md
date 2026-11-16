@@ -12,19 +12,19 @@ Las duraciones de entrenamiento son estimaciones
 Cada etapa termina en una **puerta**: si no se cumple, no se pasa a la
 siguiente.
 
-## Decisiones tuyas antes de empezar
+## Decisiones tomadas
 
-Nada de lo que sigue arranca sin estas respuestas.
+Respondidas el 16 de noviembre de 2026.
 
-| # | Decisión | Opciones | Recomendación |
-| --- | --- | --- | --- |
-| D1 | ¿Apruebas la arquitectura? | Sí, o con cambios | Revisar sobre todo las 13 desviaciones numeradas |
-| D2 | Repositorio | Privado separado, o módulo aquí | Privado separado |
-| D3 | Licencia de este juego cuando entre la IA propia | Quitar Mortal y cambiar la licencia, o servir la IA como servicio aparte | Quitar Mortal |
-| D4 | Fuente de datos | Dataset de Hugging Face, descarga propia de Tenhou, u otra | Empezar con el dataset de 2 millones de partidas ya en mjai, **después de que revises los términos** |
-| D5 | Dónde entrenar | Tu máquina o la nube | Cualquier GPU de 12 GB o más; idealmente 24 GB y 16 núcleos |
-| D6 | ¿Estos documentos se quedan en este repo público? | Dejarlos, o moverlos al privado | Moverlos |
-| D7 | Rigor del "clean room" | Aceptar la implementación desde la especificación, o exigir un implementador que no haya visto Mortal | Depende de tu tolerancia al riesgo; ver [ARCHITECTURE.md §15](ARCHITECTURE.md#15-licencias-y-procedencia) |
+| # | Decisión | Respuesta |
+| --- | --- | --- |
+| D1 | Arquitectura | **Aprobada** como está en [ARCHITECTURE.md](ARCHITECTURE.md) |
+| D2 | Repositorio | **Privado y separado** (`riichi-aero-ai`, nombre provisional) |
+| D3 | Licencia de este juego | **Quitar Mortal** y cambiar la licencia. Se hace en la etapa E, cuando el bot propio lo reemplace: antes, el nivel difícil se quedaría sin cerebro |
+| D4 | Fuente de datos | **El dataset de 2 millones de partidas de Houou ya en mjai** de Hugging Face, para entrenar en privado y sin redistribuirlo. Sigue siendo `license: other` sobre registros de Tenhou ([ARCHITECTURE.md §9](ARCHITECTURE.md#9-pipeline-de-datos)) |
+| D5 | Dónde entrenar | **Tu máquina.** Falta saber qué GPU, cuánta VRAM, cuántos núcleos y cuánto disco tiene, para ajustar los tamaños |
+| D6 | Estos documentos | **Se copian al repo privado.** La copia de allí pasa a ser la que se mantiene |
+| D7 | Rigor del "clean room" | **Implementación desde la especificación**, con las reglas de [ARCHITECTURE.md §15](ARCHITECTURE.md#15-licencias-y-procedencia): el repo privado no contiene código de Mortal y las sesiones de implementación no lo abren |
 
 ## Etapa A: cimientos del motor
 
@@ -38,7 +38,7 @@ Objetivo: un motor Rust propio que reproduce las partidas del motor JS.
 | `core`: yaku, fu, puntos y pagos | Claude |
 | `core`: máquina de estados con reglas configurables (Tenhou y esta plataforma) | Claude |
 | `mjai`: eventos, lectura, escritura y validador | Claude |
-| En este repo: un script que vuelca partidas con semilla del motor JS, con acciones legales y puntos | Claude (issue aparte) |
+| En este repo: un script que vuelca partidas con semilla del motor JS, con acciones legales y puntos | **Hecho:** `npm run ai:fixtures` |
 | Pruebas diferenciales contra esos volcados | Claude |
 
 **Puerta A:** 10.000 partidas aleatorias del motor JS se reproducen en Rust
@@ -177,5 +177,5 @@ Decisiones ─► A ─► B ─► C ─► D ─┬─► E (integración)
 - [ARCHITECTURE.md](ARCHITECTURE.md): el diseño propio.
 - Este documento.
 
-No se escribió código de la IA. El siguiente paso es tu revisión y las
-decisiones D1 a D7.
+No se escribió código de la IA. El siguiente paso es crear el repo privado
+(primera tarea de la etapa A).
