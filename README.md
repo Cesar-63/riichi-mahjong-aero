@@ -611,7 +611,9 @@ partidas aleatorias de `test/mjai.test.js` y sobre partidas entre bots. Las
 de las pruebas se guardan con `MJAI_DUMP=dir npm test`. `npm run ai:fixtures`
 vuelca partidas enteras con semilla (eventos, acciones legales de cada
 asiento, acción tomada y puntos de cada mano) en `fixtures/ai`, como casos de
-prueba para otro motor (ver [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)). Más contexto en
+prueba para otro motor (ver [docs/ai/ROADMAP.md](docs/ai/ROADMAP.md)). Con
+`--style rare`, `closed` u `honors` los jugadores fuerzan reglas poco
+frecuentes: nagashi mangan, cuatro vientos, cuatro kanes. Más contexto en
 [docs/ia-investigacion.md](docs/ia-investigacion.md).
 
 ## Desplegar en Vercel

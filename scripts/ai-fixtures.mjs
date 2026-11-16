@@ -4,9 +4,15 @@
 // hand's result and the final ranking. Tiles and actions are in mjai
 // notation, so nothing depends on this engine's tile ids.
 //
-// Usage: npm run ai:fixtures -- [--games 100] [--seed 1] [--out fixtures/ai]
+// Usage: npm run ai:fixtures -- [--games 100] [--seed 1] [--out fixtures/ai] [--style rare]
 // Writes one JSON-lines file per game: game-<seed>.jsonl. Even seeds play a
-// hanchan, odd ones a tonpuusen. Lines, by their `k`:
+// hanchan, odd ones a tonpuusen. Other styles provoke the rules random play
+// hardly reaches:
+//   rare     always riichi, kans and calls; terminals and honors go first
+//            (nagashi, four kans)
+//   closed   never calls, always riichi, winds go first (four riichi, four
+//            winds, triple ron)
+//   honors   keeps honors and calls only them (pao, big dragons and winds) Lines, by their `k`:
 //   start   { seed, rules }
 //   event   { e }                 one mjai event, hands and draws visible
 //   options { seats: { seat: … } } what every seat that must decide may do
@@ -19,7 +25,7 @@ import { pathToFileURL } from 'node:url';
 import { Game } from '../server/engine/game.js';
 import { shanten } from '../server/engine/hand.js';
 import { mjaiTile } from '../server/engine/mjai.js';
-import { counts34, sortTiles } from '../public/js/shared/tiles.js';
+import { counts34, sortTiles, isYaochuu, tileType } from '../public/js/shared/tiles.js';
 
 function mulberry32(seed) {
   return () => {
@@ -98,7 +104,10 @@ function plainResult(r) {
 
 // Random but hand-minded play, as in test/mjai.test.js: enough wins, calls,
 // kans, riichi and draws to visit the rules.
-function choose(g, seat, o, rng) {
+function choose(g, seat, o, rng, style) {
+  if (style === 'rare') return chooseRare(g, seat, o, rng);
+  if (style === 'closed') return chooseClosed(g, seat, o, rng);
+  if (style === 'honors') return chooseHonors(g, seat, o, rng);
   if (o.kind === 'turn') {
     if (o.tsumo && rng() < 0.9) return { type: 'tsumo' };
     if (o.riichi.length && rng() < 0.6) return { type: 'riichi', tile: o.riichi[Math.floor(rng() * o.riichi.length)] };
@@ -117,8 +126,59 @@ function choose(g, seat, o, rng) {
   return { type: 'pass' };
 }
 
+// Greedy for riichi, kans and calls; terminals and honors go first.
+function chooseRare(g, seat, o, rng) {
+  const pickOne = (list) => list[Math.floor(rng() * list.length)];
+  if (o.kind === 'turn') {
+    if (o.tsumo) return { type: 'tsumo' };
+    if (o.kyuushu && rng() < 0.5) return { type: 'kyuushu' };
+    if (o.ankan.length) return { type: 'ankan', t: o.ankan[0] };
+    if (o.kakan.length) return { type: 'kakan', t: o.kakan[0] };
+    if (o.riichi.length) return { type: 'riichi', tile: pickOne(o.riichi) };
+    const ends = o.discard.filter((id) => isYaochuu(tileType(id)));
+    return { type: 'discard', tile: pickOne(ends.length ? ends : o.discard) };
+  }
+  if (o.ron) return { type: 'ron' };
+  if (o.minkan) return { type: 'minkan' };
+  if (o.pon) return { type: 'pon', tiles: pickOne(o.pon) };
+  if (o.chi && rng() < 0.3) return { type: 'chi', tiles: pickOne(o.chi).tiles };
+  return { type: 'pass' };
+}
+
+// Never calls; riichi whenever it can; winds first, then terminals.
+function chooseClosed(g, seat, o, rng) {
+  const pickOne = (list) => list[Math.floor(rng() * list.length)];
+  if (o.kind === 'turn') {
+    if (o.tsumo) return { type: 'tsumo' };
+    if (o.riichi.length) return { type: 'riichi', tile: pickOne(o.riichi) };
+    const winds = o.discard.filter((id) => tileType(id) >= 27 && tileType(id) <= 30);
+    if (winds.length) return { type: 'discard', tile: winds[0] };
+    const ends = o.discard.filter((id) => isYaochuu(tileType(id)));
+    return { type: 'discard', tile: pickOne(ends.length ? ends : o.discard) };
+  }
+  return o.ron ? { type: 'ron' } : { type: 'pass' };
+}
+
+// Keeps honors and calls only them; suited tiles go first.
+function chooseHonors(g, seat, o, rng) {
+  const pickOne = (list) => list[Math.floor(rng() * list.length)];
+  if (o.kind === 'turn') {
+    if (o.tsumo) return { type: 'tsumo' };
+    if (o.ankan.length) return { type: 'ankan', t: o.ankan[0] };
+    if (o.kakan.length) return { type: 'kakan', t: o.kakan[0] };
+    const suited = o.discard.filter((id) => tileType(id) < 27);
+    return { type: 'discard', tile: pickOne(suited.length ? suited : o.discard) };
+  }
+  if (o.ron) return { type: 'ron' };
+  if (tileType(o.tile) >= 27) {
+    if (o.minkan) return { type: 'minkan' };
+    if (o.pon) return { type: 'pon', tiles: o.pon[0] };
+  }
+  return { type: 'pass' };
+}
+
 // One whole game as a list of lines (objects).
-export function dumpGame(seed) {
+export function dumpGame(seed, style = 'random') {
   const rng = mulberry32(seed);
   const g = Game.create(['A', 'B', 'C', 'D'], { rounds: seed % 2 === 0 ? 2 : 1 }, rng);
   const lines = [{ k: 'start', seed, rules: g.s.config }];
@@ -138,7 +198,7 @@ export function dumpGame(seed) {
       for (const seat of seats) all[seat] = plainOptions(g.view(seat).options);
       lines.push({ k: 'options', seats: all });
       const seat = seats[Math.floor(rng() * seats.length)];
-      const a = choose(g, seat, g.view(seat).options, rng);
+      const a = choose(g, seat, g.view(seat).options, rng, style);
       lines.push({ k: 'act', seat, action: plainAction(a) });
       g.act(seat, a);
       flush();
@@ -162,10 +222,11 @@ function main() {
   const games = Number(arg('games', 100));
   const first = Number(arg('seed', 1));
   const out = arg('out', 'fixtures/ai');
+  const style = arg('style', 'random');
   mkdirSync(out, { recursive: true });
   const seen = {};
   for (let seed = first; seed < first + games; seed++) {
-    const lines = dumpGame(seed);
+    const lines = dumpGame(seed, style);
     for (const l of lines) {
       if (l.k === 'event') seen[l.e.type] = (seen[l.e.type] || 0) + 1;
       if (l.k === 'kyoku' && l.result.type === 'draw') seen[`draw:${l.result.reason}`] = (seen[`draw:${l.result.reason}`] || 0) + 1;
