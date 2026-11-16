@@ -1,5 +1,8 @@
 # IA propia de riichi: arquitectura propuesta
 
+> **Copia congelada del 16 de noviembre de 2026.** La versión que se mantiene
+> está en el repo privado `riichi-mahjong-aero-ai` (`docs/`).
+
 Diseño de una IA de riichi de 4 jugadores con reglas tipo Tenhou, hecha desde
 cero. Toma ideas de Mortal (resumidas en [MORTAL_NOTES.md](MORTAL_NOTES.md)),
 pero no su código ni su formato de datos. Este documento es la especificación

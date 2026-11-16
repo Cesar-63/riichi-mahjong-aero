@@ -1,5 +1,8 @@
 # IA propia de riichi: hoja de ruta
 
+> **Copia congelada del 16 de noviembre de 2026.** La versión que se mantiene
+> está en el repo privado `riichi-mahjong-aero-ai` (`docs/`).
+
 Etapas y tareas para construir la IA descrita en
 [ARCHITECTURE.md](ARCHITECTURE.md). Cada tarea dice quién la hace:
 

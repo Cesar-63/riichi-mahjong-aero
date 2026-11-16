@@ -1,5 +1,8 @@
 # Notas sobre Mortal: análisis conceptual
 
+> **Copia congelada del 16 de noviembre de 2026.** La versión que se mantiene
+> está en el repo privado `riichi-mahjong-aero-ai` (`docs/`).
+
 Análisis de [Mortal](https://github.com/Equim-chan/Mortal) (Equim, AGPL-3.0-or-later)
 para diseñar una IA propia. Describe **qué hace y por qué**, con palabras y
 estructura propias. No contiene código de Mortal ni traducciones de su código.
