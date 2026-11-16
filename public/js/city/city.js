@@ -1,14 +1,14 @@
 // The town: draws what logic.js decides. Everything is unlit, in the manner
 // of a PS2 or PSP game: the scene has no lights at all, every static
 // surface shows texture × vertex colour (baked once by bake.js when the
-// zone is built), neon is full-bright faces plus additive halos, people
-// get a blob shadow, and the picture is rendered small and stretched to
+// zone is built: sun, shadows and lamps), signs are painted boards, a bare
+// bulb gets an additive halo, people get a blob shadow, and the picture is rendered small and stretched to
 // the window. Each zone is a handful of merged meshes (one per texture).
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { createState, restore, snapshot, step, promptFor, fadeAlpha } from './logic.js';
-import { buildZone, zoneLights, tintAt, hexToRgb } from './bake.js';
-import { texture, spotTexture, neonAtlas } from './textures.js';
+import { buildZone, bakeAt, tintAt, hexToRgb } from './bake.js';
+import { texture, spotTexture, signAtlas } from './textures.js';
 import { loadActor } from './actors.js';
 
 const raw = (hex) => new THREE.Color().setRGB(...hexToRgb(hex)); // colours as written, no gamma
@@ -31,10 +31,12 @@ function geometry({ positions, uvs, colors, indices }) {
 }
 
 // A flat quad into the arrays of a mesh being put together: centre c,
-// half-sides a and b (vectors), uv rectangle, one colour
-function quad(out, c, a, b, [u0, v0, u1, v1], color) {
+// half-sides a and b (vectors), one colour, and the uv of its corners
+// (bottom left, bottom right, top right, top left; the whole texture if none)
+const WHOLE = [[0, 0], [1, 0], [1, 1], [0, 1]];
+function quad(out, c, a, b, color, uv = WHOLE) {
   const base = out.positions.length / 3;
-  for (const [sa, sb, u, v] of [[-1, -1, u0, v0], [1, -1, u1, v0], [1, 1, u1, v1], [-1, 1, u0, v1]]) {
+  for (const [sa, sb, [u, v]] of [[-1, -1, uv[0]], [1, -1, uv[1]], [1, 1, uv[2]], [-1, 1, uv[3]]]) {
     out.positions.push(c[0] + a[0] * sa + b[0] * sb, c[1] + a[1] * sa + b[1] * sb, c[2] + a[2] * sa + b[2] * sb);
     out.uvs.push(u, v);
     out.colors.push(color[0], color[1], color[2]);
@@ -54,10 +56,10 @@ export async function createCity(root, opts) {
     prompt: root.querySelector('.city-prompt'),
     fade: root.querySelector('.city-fade'),
   };
-  // text for the neon signs: the page's own font, if it arrives in time
+  // lettering for the signs: the page's own brush font, if it arrives in time
   if (document.fonts) {
     await Promise.race([
-      document.fonts.load('700 32px "Zen Kaku Gothic New"', '麻雀'),
+      document.fonts.load('800 32px "Shippori Mincho B1"', '麻雀'),
       new Promise((r) => setTimeout(r, 1500)),
     ]).catch(() => {});
   }
@@ -89,40 +91,38 @@ export async function createCity(root, opts) {
     map: spotTexture('glow'), vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide,
   });
   const shadowMat = new THREE.MeshBasicMaterial({ map: spotTexture('shadow'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  const shadowQuad = (out, x, z, r) => quad(out, [x, 0.012, z], [r, 0, 0], [0, 0, -r], [0, 0, 1, 1], [1, 1, 1]);
+  const shadowQuad = (out, x, z, r) => quad(out, [x, 0.012, z], [r, 0, 0], [0, 0, -r], [1, 1, 1]);
 
   // -------------------------------------------------------------- zones
   const zones = {};
   async function build(name) {
     const zone = map.zones[name];
     const group = new THREE.Group();
-    const lights = zoneLights(zone);
     for (const [tex, arr] of buildZone(zone)) group.add(new THREE.Mesh(geometry(arr), material(tex)));
-    // neon: the signs at full brightness, all on one texture, and their halos
+    // the signs: painted boards, all on one texture, lit by the bake like
+    // the wall they hang on
     const halos = arrays();
-    const neons = zone.neons || [];
+    const signs = zone.signs || [];
     let atlas = null;
-    if (neons.length) {
-      atlas = neonAtlas(neons);
-      const signs = arrays();
-      neons.forEach((n, i) => {
+    if (signs.length) {
+      atlas = signAtlas(signs);
+      const boards = arrays();
+      signs.forEach((n, i) => {
         const [nx, , nz] = n.normal;
         const right = [nz, 0, -nx];
         const [w, h] = n.size;
-        quad(signs, n.at, right.map((v) => v * w / 2), [0, h / 2, 0], atlas.rects[i], [1, 1, 1]);
-        const g = n.glow ?? 0.6;
-        const c = hexToRgb(n.color).map((v) => v * 0.5);
-        quad(halos, [n.at[0] + nx * 0.03, n.at[1], n.at[2] + nz * 0.03], right.map((v) => v * (w / 2 + g)), [0, h / 2 + g, 0], [0, 0, 1, 1], c);
+        const at = [n.at[0] + nx * 0.01, n.at[1], n.at[2] + nz * 0.01];
+        quad(boards, at, right.map((v) => v * w / 2), [0, h / 2, 0], bakeAt(zone, at, n.normal), atlas.rects[i]);
       });
-      group.add(new THREE.Mesh(geometry(signs), new THREE.MeshBasicMaterial({ map: atlas.texture })));
+      group.add(new THREE.Mesh(geometry(boards), new THREE.MeshBasicMaterial({ map: atlas.texture, vertexColors: true })));
     }
-    // lamps: three crossed quads, so the glow shows from any side
+    // bare bulbs: three crossed quads, so the glow shows from any side
     for (const g of zone.glows || []) {
       const c = hexToRgb(g.color).map((v) => v * 0.6);
       const r = g.size / 2;
-      quad(halos, g.at, [r, 0, 0], [0, r, 0], [0, 0, 1, 1], c);
-      quad(halos, g.at, [0, 0, r], [0, r, 0], [0, 0, 1, 1], c);
-      quad(halos, g.at, [r, 0, 0], [0, 0, r], [0, 0, 1, 1], c);
+      quad(halos, g.at, [r, 0, 0], [0, r, 0], c);
+      quad(halos, g.at, [0, 0, r], [0, r, 0], c);
+      quad(halos, g.at, [r, 0, 0], [0, 0, r], c);
     }
     if (halos.indices.length) {
       const m = new THREE.Mesh(geometry(halos), haloMat);
@@ -135,7 +135,7 @@ export async function createCity(root, opts) {
     const npcs = await Promise.all((zone.npcs || []).map(async (n, i) => {
       const actor = await loadActor(n.character);
       actor.place(n.x, n.z, n.facing || 0);
-      actor.tint(tintAt(zone, n.x, 1, n.z, lights));
+      actor.tint(tintAt(zone, n.x, 1, n.z));
       if (n.pose === 'sit') actor.sit(0, i);
       group.add(actor.root);
       shadowQuad(blobs, n.x, n.z, 0.45);
@@ -159,7 +159,30 @@ export async function createCity(root, opts) {
       });
       group.add(gltf.scene);
     }
-    return { zone, group, lights, npcs, atlas, fog: new THREE.Fog(raw(zone.fog.color), zone.fog.near, zone.fog.far), background: raw(zone.fog.color) };
+    // the sky of an outdoor zone: a tall wall all around, deep blue above
+    // and hazy at the horizon, that goes wherever the camera goes
+    let sky = null;
+    if (zone.sky) {
+      const top = hexToRgb(zone.sky.top);
+      const low = hexToRgb(zone.sky.horizon);
+      const a = arrays();
+      const R = 40;
+      const N = 8;
+      for (let i = 0; i <= N; i++) {
+        const ang = (i / N) * Math.PI * 2;
+        for (const [y, c] of [[-4, low], [3, low], [30, top]]) {
+          a.positions.push(Math.cos(ang) * R, y, Math.sin(ang) * R);
+          a.uvs.push(0, 0);
+          a.colors.push(c[0], c[1], c[2]);
+        }
+        if (i < N) for (const k of [0, 1]) a.indices.push(i * 3 + k, i * 3 + k + 1, i * 3 + k + 4, i * 3 + k, i * 3 + k + 4, i * 3 + k + 3);
+      }
+      sky = new THREE.Mesh(geometry(a), new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+      sky.renderOrder = -1;
+      sky.frustumCulled = false;
+      group.add(sky);
+    }
+    return { zone, group, npcs, atlas, sky, fog: new THREE.Fog(raw(zone.fog.color), zone.fog.near, zone.fog.far), background: raw(zone.sky ? zone.sky.top : zone.fog.color) };
   }
   for (const name of Object.keys(map.zones)) zones[name] = await build(name);
 
@@ -292,7 +315,8 @@ export async function createCity(root, opts) {
     placeCamera(1 - Math.exp(-dt * 8));
     player.place(state.x, state.z, state.facing);
     player.walk(state.moving, dt, time);
-    player.tint(tintAt(current.zone, state.x, 1, state.z, current.lights));
+    player.tint(tintAt(current.zone, state.x, 1.2, state.z));
+    if (current.sky) current.sky.position.set(camPos.x, 0, camPos.z);
     blob.position.set(state.x, 0, state.z);
     for (const n of current.npcs) if (n.sits) n.actor.sit(time, n.k);
     const p = promptFor(state, map);

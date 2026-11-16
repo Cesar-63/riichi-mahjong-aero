@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   createState, step, promptFor, tableInReach, snapshot, restore, blocked, fadeAlpha, mapProblems, FADE, SPEED, PLAYER_RADIUS,
 } from '../public/js/city/logic.js';
-import { buildZone, zoneLights, tintAt, hexToRgb } from '../public/js/city/bake.js';
+import { buildZone, bakeAt, tintAt, hexToRgb } from '../public/js/city/bake.js';
 
 const map = JSON.parse(readFileSync(new URL('../public/city/map.json', import.meta.url)));
 const DT = 1 / 30;
@@ -218,7 +218,7 @@ test('the bake: furniture darkens the floor around it, emissive faces keep their
     boxes: [
       { min: [-3, -0.2, -3], max: [3, 0, 3], tex: 'floor' },
       { min: [-0.5, 0, -0.5], max: [0.5, 1, 0.5], tex: 'crate' },
-      { min: [2, 1, 2], max: [2.5, 1.5, 2.5], tex: 'neon', color: '#ff0080', emissive: true },
+      { min: [2, 1, 2], max: [2.5, 1.5, 2.5], tex: 'lamp', color: '#ff0080', emissive: true },
     ],
   };
   const groups = buildZone(zone);
@@ -230,17 +230,49 @@ test('the bake: furniture darkens the floor around it, emissive faces keep their
     return null;
   };
   assert.ok(red(0.5, 0) < red(2, 0));
-  const neon = groups.get('neon');
-  for (let i = 0; i < neon.colors.length; i += 3) assert.deepEqual(neon.colors.slice(i, i + 3), hexToRgb('#ff0080'));
+  const lamp = groups.get('lamp');
+  for (let i = 0; i < lamp.colors.length; i += 3) assert.deepEqual(lamp.colors.slice(i, i + 3), hexToRgb('#ff0080'));
 });
 
-test('neon signs light their surroundings, and the characters walking by', () => {
+test('the sun: what stands in its way casts a shadow, on the ground and on people', () => {
+  const zone = {
+    ambient: '#404050',
+    sun: { dir: [0, 1, 1], color: '#ffffff', intensity: 0.6 },
+    subdiv: 0.5,
+    boxes: [
+      { min: [-6, -0.2, -6], max: [6, 0, 6], tex: 'ground' },
+      { min: [-1, 0, 2], max: [1, 2, 3], tex: 'wall' }, // the sun is behind it, seen from z < 2
+    ],
+  };
+  const up = [0, 1, 0];
+  const shade = bakeAt(zone, [0, 0, 1], up)[0];
+  const sunny = bakeAt(zone, [0, 0, -3], up)[0];
+  const beside = bakeAt(zone, [4, 0, 1], up)[0];
+  assert.ok(sunny > shade + 0.3);
+  assert.equal(beside, sunny);
+  // the shadow is as long as the wall is tall (the sun at 45°)
+  assert.ok(bakeAt(zone, [0, 0, -0.5], up)[0] > shade + 0.3);
+  // a face that looks away from the sun gets none of it
+  const wall = buildZone(zone).get('wall');
+  for (let i = 0; i < wall.positions.length; i += 3) {
+    const [x, y, z] = wall.positions.slice(i, i + 3);
+    if (z === 2 && y > 1 && y < 2 && Math.abs(x) < 1) assert.ok(wall.colors[i] <= hexToRgb('#404050')[0] + 1e-9);
+  }
+  // someone standing in the shadow is darker than someone in the sun
+  assert.ok(tintAt(zone, 0, 1, 1.5)[0] < tintAt(zone, 0, 1, -3)[0]);
+});
+
+test('the alley at noon: sun, sky, painted signs and not one neon', () => {
   const street = map.zones.street;
-  const lights = zoneLights(street);
-  assert.equal(lights.length, street.lights.length + street.neons.filter((n) => n.light).length);
-  const sign = street.neons[0];
-  const near = tintAt(street, sign.at[0], 1, sign.at[2] + 1);
-  const far = tintAt(street, -13, 1, 0);
-  assert.ok(near[0] > far[0]);
-  assert.ok(near.every((c) => c <= 1));
+  assert.ok(street.sun && street.sky);
+  assert.ok(street.sun.dir[1] > 0.8); // high in the sky
+  assert.ok(street.signs.length >= 4 && street.signs.length <= 8); // one texture holds eight
+  for (const zone of Object.values(map.zones)) {
+    assert.equal(zone.neons, undefined);
+    assert.ok((zone.signs || []).length <= 8);
+  }
+  // signs mix kanji and Spanish
+  assert.ok(street.signs.some((s) => /[\u4e00-\u9fff]/.test(s.text) && /[A-ZÑ]/.test(s.sub || '')));
+  // half the alley lies in the shadow of the south side
+  assert.ok(tintAt(street, 0, 1.2, -2)[0] > tintAt(street, 0, 1.2, 2.5)[0]);
 });

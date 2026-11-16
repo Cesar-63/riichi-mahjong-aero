@@ -117,17 +117,21 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 
 ## Ciudad
 
-El modo **Ciudad** del menú principal es un pueblito de noche, en 3D, con el
-aspecto de un juego de PS2 o PSP. Es el primer corte del mundo navegable de
+El modo **Ciudad** del menú principal es un barrio chico en 3D, a mediodía,
+con el aspecto de un juego de PS2 o PSP y la ambientación del salón: el Japón
+de posguerra, con barracas de tablas, callejones de tierra, postes llenos de
+cables, yeso roto que deja ver el ladrillo y carteles pintados a mano que
+mezclan kanji y español. Es el primer corte del mundo navegable de
 [docs/vision-mundo-y-comunidad.md](docs/vision-mundo-y-comunidad.md).
 
 1. Escribe tu nombre, elige **Ciudad** y pulsa **Ir a la ciudad**.
 2. **Elige tu personaje** (Shiro, Momo o Kaito) y la **resolución interna**
    (272p, 360p o 540p; más baja, más liviano. Queda guardada en el
    navegador, y `?res=360` en la dirección la fuerza). **Entrar al pueblo**.
-3. Empiezas en **tu habitación**. La puerta de la derecha da a **la calle**;
-   al fondo de la calle, bajo el cartel rosado 麻雀, está la puerta del
-   **jansou**. Las puertas se cruzan caminando hacia ellas.
+3. Empiezas en **tu habitación**. La puerta de la derecha da al
+   **callejón**; hacia el fondo, junto a la tabla roja 麻雀荘 con la flecha
+   hacia abajo, una escalera baja al **jansou**, que está en un sótano. Las
+   puertas se cruzan caminando hacia ellas.
 4. En el jansou, acércate al asiento libre de la mesa donde juegan tres
    personas: aparece **Presiona E para sentarte**. Al aceptar empieza una
    partida contra 3 bots en la mesa de siempre, con el tiempo por jugada, el
@@ -145,16 +149,20 @@ Cómo está hecho (`public/js/city/`, datos en `public/city/map.json`):
 - **Sin luces:** la escena no tiene ninguna luz ni sombra en tiempo real.
   Cada superficie muestra su textura por el color de sus vértices, y ese
   color se calcula una sola vez al cargar a partir de las "luces de
-  horneado" del mapa (faroles, carteles, ventanas, lámparas), con un
+  horneado" del mapa: el sol del callejón, con las sombras que proyectan
+  las casas, y las ventanas y ampolletas de los interiores, más un
   oscurecimiento en las esquinas, cerca del suelo y alrededor de los muebles.
-- **Neón:** caras a brillo completo más un halo aditivo; no hay bloom.
+- **Carteles:** tablas pintadas, todas en una sola textura por zona, con la
+  misma luz horneada del muro donde cuelgan. No hay neón; solo las
+  ampolletas del jansou llevan un halo aditivo.
 - **Personajes:** los mismos modelos de la mesa, teñidos con la luz del
-  lugar donde están parados, con una mancha oscura como sombra.
+  lugar donde están parados (más oscuros a la sombra), con una mancha oscura
+  como sombra.
 - **Liviano:** cada zona son unas pocas mallas combinadas (una por textura,
-  entre 13 y 21 draw calls y hasta 6.000 triángulos por zona), texturas de
+  entre 11 y 19 draw calls y hasta 8.600 triángulos por zona), texturas de
   64 a 128 px dibujadas por código, niebla, e imagen a baja resolución
   estirada a la ventana.
-- **Cámaras:** fija en la habitación, en tercera persona en la calle y
+- **Cámaras:** fija en la habitación, en tercera persona en el callejón y
   fija que acompaña un poco al jugador en el jansou.
 
 Todo el arte es provisorio. Cómo agregar zonas o reemplazarlo por modelos

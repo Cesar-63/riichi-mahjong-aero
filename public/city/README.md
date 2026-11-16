@@ -26,8 +26,12 @@ radianes: 0 mira a +z y crece hacia +x.
   que ofrece el menú (`options`).
 - `start`: zona y posición donde empieza el jugador.
 - `zones`: cada zona tiene:
-  - `name`, `ambient` (la luz mínima), `fog` (color, `near`, `far`) y
-    `subdiv` (tamaño de la cuadrícula de vértices, en metros).
+  - `name`, `ambient` (la luz mínima: el color de las sombras), `fog`
+    (color, `near`, `far`) y `subdiv` (tamaño de la cuadrícula de vértices,
+    en metros).
+  - `sun` (zonas al aire libre): `dir` (hacia dónde está el sol), `color` e
+    `intensity`. Se hornea con las sombras que proyectan las cajas.
+  - `sky`: colores del cielo, `top` y `horizon`.
   - `bounds`: el rectángulo por donde se puede caminar.
   - `camera`: `{ "type": "fixed", position, target, fov, track }` (`track`
     de 0 a 1: cuánto gira hacia el jugador) o `{ "type": "follow",
@@ -41,16 +45,20 @@ radianes: 0 mira a +z y crece hacia +x.
     - `uv`: metros por repetición de la textura; `fit` estira una sola
       copia sobre cada cara (puertas, ventanas).
     - `solid`: el jugador choca con ella.
-    - `emissive`: brillo completo, no recibe horneado (neón, pantallas,
-      ventanas encendidas).
+    - `emissive`: color plano, no recibe horneado (ventanas con luz de día,
+      ampolletas, cables).
     - `ao: false`: no oscurece lo que tiene cerca.
+    - `shadow: false`: no proyecta sombra al sol.
     - `visible: false`: solo colisión.
-  - `lights`: las **luces de horneado** (`at`, `color`, `intensity`,
-    `radius`). No existen en la escena: solo se usan para calcular los
-    colores de los vértices y el tinte de los personajes.
-  - `neons`: carteles (`text`, `sub`, `color`, `at`, `normal`, `size`,
-    `glow`). Con `light`, el cartel también ilumina en el horneado.
-  - `glows`: halos de lámparas (`at`, `size`, `color`).
+  - `lights`: las **luces de horneado** de ampolletas y ventanas (`at`,
+    `color`, `intensity`, `radius`). Como el sol, no existen en la escena:
+    solo se usan para calcular los colores de los vértices y el tinte de
+    los personajes.
+  - `signs`: carteles pintados (`text`, `sub`, `at`, `normal`, `size`, y
+    los colores `bg`, `fg` y `accent`; `vertical` escribe un carácter bajo
+    otro y `arrow` agrega una flecha hacia abajo). Hasta 8 por zona: van
+    todos en una textura.
+  - `glows`: halos de ampolletas (`at`, `size`, `color`).
   - `doors`: `x`, `z`, `radius` y `to` (zona, posición, `facing` y, para
     cámaras en tercera persona, `cam`: hacia dónde mira la cámara al llegar).
   - `tables`: mesas de mahjong (`x`, `z`, `radius` de choque, `seat` y
