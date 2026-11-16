@@ -48,8 +48,9 @@ store.set('mj.token', token);
 
 const state = {
   room: store.get('mj.room') || 'publica',
-  // lobby choice: 'classic', 'teams' or 'practice' (against bots)
-  mode: ['teams', 'practice'].includes(store.get('mj.mode')) ? store.get('mj.mode') : 'classic',
+  // lobby choice: 'classic', 'teams', 'practice' (against bots) or 'city'
+  // (the town, where a game against bots starts at a table)
+  mode: ['teams', 'practice', 'city'].includes(store.get('mj.mode')) ? store.get('mj.mode') : 'classic',
   practiceMate: store.get('mj.practiceMate') === '1',
   // level of Bot 1-3, for practice and for filling a room: "n" normal, "h" hard
   botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
@@ -71,12 +72,16 @@ const state = {
 async function api(op, extra = {}) {
   const hb = Date.now() - state.lastHb > 4000;
   if (hb) state.lastHb = Date.now();
+  const room = state.room;
   const res = await fetch('/api/game', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op, room: state.room, token, hb, ...extra }),
+    body: JSON.stringify({ op, room, token, hb, ...extra }),
   });
   const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  // an answer about a room left meanwhile (sitting down in town, a practice
+  // game): it must not put that room's screen back
+  if (room !== state.room) return data;
   if (data.error) toast(data.error);
   if (data.now) state.clockOffset = data.now - Date.now();
   // while a discard is on its way, an older poll answer would put the tile back
@@ -99,6 +104,7 @@ function toast(msg) {
 // ------------------------------------------------------------------ flow
 
 function apply(data) {
+  if (state.inCity) return; // walking in town: no room to follow
   state.version = data.version;
   if (data.status === 'finished' && state.leftFinished) {
     showLobby({ queue: [], inQueue: false, room: data.room });
@@ -292,7 +298,7 @@ function showGame(v) {
   const holdModal = winKey && ui.winDone !== winKey;
   if (holdModal) hideModal();
   else if (v.phase === 'result' && v.result) showModal(resultHTML(v), 'result');
-  else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room), 'final');
+  else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room, citySeat() ? ['Volver al pueblo', '街へ'] : undefined), 'final');
   else hideModal();
 
   autoPlay(v, ui);
@@ -595,10 +601,12 @@ async function send(action) {
   }
 }
 
+let pollRun = 0; // a loop stopped and started again must not leave two running
 async function pollLoop() {
   if (state.polling) return;
   state.polling = true;
-  while (state.polling) {
+  const run = ++pollRun;
+  while (state.polling && run === pollRun) {
     try {
       if (!state.busy) await api('poll', { since: state.version });
     } catch {
@@ -667,6 +675,7 @@ document.addEventListener('click', (e) => {
   }
   const u = e.target.closest('[data-ui="lobby"]');
   if (u) {
+    if (backToTown()) return;
     state.view = null;
     state.version = -1;
     state.leftFinished = true;
@@ -682,6 +691,12 @@ $('#join').addEventListener('click', async () => {
   if (!name) {
     toast('Escribe tu nombre');
     $('#name').focus();
+    return;
+  }
+  if (state.mode === 'city') {
+    state.name = name;
+    store.set('mj.name', name);
+    openCity();
     return;
   }
   const practice = state.mode === 'practice';
@@ -866,6 +881,7 @@ $('#m-abandon').addEventListener('click', async () => {
     if (!confirm(msg)) return;
     await api('abandon');
   }
+  if (backToTown()) return;
   state.view = null;
   state.version = -1;
   state.leftFinished = v && v.phase === 'end';
@@ -882,9 +898,12 @@ $('#m-abandon').addEventListener('click', async () => {
 // Practice needs no room name; it can be played as a team with Bot 1.
 function showMode() {
   const practice = state.mode === 'practice';
-  $('#entry').classList.toggle('practice', practice);
-  $('#join .es').textContent = practice ? 'Empezar práctica' : 'Entrar a la sala';
-  $('#join .jp').textContent = practice ? '稽古' : '入場';
+  const city = state.mode === 'city';
+  // (the town needs no room either: its games are against bots)
+  $('#entry').classList.toggle('practice', practice || city);
+  $('#entry').classList.toggle('city', city);
+  $('#join .es').textContent = city ? 'Ir a la ciudad' : practice ? 'Empezar práctica' : 'Entrar a la sala';
+  $('#join .jp').textContent = city ? '街' : practice ? '稽古' : '入場';
 }
 document.querySelectorAll('input[name="mode"]').forEach((r) => {
   r.checked = r.value === state.mode;
@@ -997,6 +1016,148 @@ $('#practice-mate').addEventListener('change', (e) => {
   store.set('mj.practiceMate', state.practiceMate ? '1' : '0');
 });
 showMode();
+
+// ------------------------------------------------------------------ city
+// Ciudad: a small town in 3D (js/city/). The player picks a character,
+// walks from their room down the street to the mahjong parlour and sits at
+// a table: that starts a game against three bots in a room of their own,
+// like Práctica. When it ends they are back in the parlour where they stood.
+let city = null; // the town, once loaded (kept while a game is played)
+let cityMap = null;
+const CITY_ROOM = `bots-ciudad-${token.slice(0, 10)}`;
+// where the player stood when they sat down; kept in the browser so a
+// reload in the middle of the game still ends back in town
+function citySeat() {
+  try { return JSON.parse(store.get('mj.citySeat')); } catch { return null; }
+}
+const cityHeight = () => {
+  const h = Number(new URLSearchParams(location.search).get('res') || store.get('mj.cityRes'));
+  return h >= 120 && h <= 1080 ? h : cityMap.render.height;
+};
+function showCityScreen(walking) {
+  $('#lobby').classList.add('hidden');
+  $('#game').classList.add('hidden');
+  $('#city').classList.remove('hidden');
+  $('#city-select').classList.toggle('hidden', walking);
+  $('#city .city-hud').classList.toggle('hidden', !walking);
+  hideModal();
+}
+function showCitySelect() {
+  const mine = cityMap.characters.includes(state.character) ? state.character : cityMap.characters[0];
+  const cast = CHARACTERS.filter((c) => cityMap.characters.includes(c.id));
+  setIfChanged($('#city-chars'), cast.map((c) =>
+    `<button type="button" class="char-opt" data-character="${c.id}" aria-pressed="${c.id === mine}" title="${c.about}"><img src="img/personajes/${c.id}.png" alt=""><span>${c.name}</span></button>`).join(''));
+  $('#city-char-about').textContent = cast.find((c) => c.id === mine).about;
+  const h = cityHeight();
+  setIfChanged($('#city-res'), cityMap.render.options.map((o) =>
+    `<button type="button" class="chalk-opt" data-res="${o}" aria-pressed="${o === h}">${o}p</button>`).join(''));
+  return mine;
+}
+// The town's screen: the character sheet first
+async function openCity() {
+  state.inCity = true;
+  state.polling = false;
+  try {
+    cityMap ||= await (await import('./city/city.js')).loadMap();
+  } catch (e) {
+    state.inCity = false;
+    toast(e.message);
+    pollLoop();
+    return;
+  }
+  showCityScreen(false);
+  showCitySelect();
+}
+// Walking: a new visit from the start, or back where a snapshot says
+async function walkCity(resume) {
+  showCityScreen(true);
+  if (city && resume) {
+    city.resumeAt(resume);
+    return;
+  }
+  if (city) city.dispose();
+  city = null;
+  $('#city-loading').classList.remove('hidden');
+  try {
+    const { createCity, loadMap } = await import('./city/city.js');
+    cityMap ||= await loadMap();
+    city = await createCity($('#city'), {
+      map: cityMap, character: showCitySelect(), resume, height: cityHeight(), onSit: sitDown, onExit: leaveCity,
+    });
+    city.start();
+    if (new URLSearchParams(location.search).has('debug')) window.__city = city;
+  } catch (e) {
+    toast(`No se pudo abrir la ciudad: ${e.message}`);
+    leaveCity();
+  } finally {
+    $('#city-loading').classList.add('hidden');
+  }
+}
+// Sitting at a table: a game against three bots, on the usual table
+async function sitDown(table, where) {
+  store.set('mj.citySeat', JSON.stringify(where));
+  state.inCity = false;
+  state.room = CITY_ROOM;
+  store.set('mj.room', state.room);
+  state.version = -1;
+  state.view = null;
+  state.leftFinished = false;
+  state.lastHb = 0;
+  let data;
+  try {
+    data = await api('join', { name: state.name || 'Jugador', mode: 'classic', levels: botLevels(), timing: state.timing, wall: state.wall, character: where.character });
+  } catch {
+    data = { error: true };
+    toast('Sin conexión: no se pudo empezar la partida');
+  }
+  if (data.error) {
+    backToTown();
+    return;
+  }
+  $('#city').classList.add('hidden');
+  pollLoop();
+}
+// After the game (or abandoning it): the parlour again, same spot. False
+// if this game did not start in town.
+function backToTown() {
+  const where = citySeat();
+  if (!where) return false;
+  store.set('mj.citySeat', '');
+  state.inCity = true;
+  state.polling = false;
+  state.view = null;
+  state.version = -1;
+  state.room = 'publica';
+  store.set('mj.room', state.room);
+  hideModal();
+  walkCity(where);
+  return true;
+}
+function leaveCity() {
+  if (city) city.dispose();
+  city = null;
+  state.inCity = false;
+  $('#city').classList.add('hidden');
+  showLobby({ queue: [], inQueue: false, room: state.room });
+  pollLoop();
+}
+$('#city-chars').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-character]');
+  if (!b) return;
+  state.character = b.dataset.character;
+  store.set('mj.character', state.character);
+  showCharacter();
+  showCitySelect();
+});
+$('#city-res').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-res]');
+  if (!b) return;
+  store.set('mj.cityRes', b.dataset.res);
+  showCitySelect();
+});
+$('#city-go').addEventListener('click', () => walkCity(null));
+$('#city-back').addEventListener('click', leaveCity);
+$('#city .city-exit').addEventListener('click', leaveCity);
 
 $('#name').value = state.name;
 $('#room').value = state.room.startsWith('bots-') ? 'publica' : state.room;

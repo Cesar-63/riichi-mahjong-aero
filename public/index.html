@@ -42,6 +42,10 @@
           <span class="mark" aria-hidden="true"></span>
           <span class="txt"><b>Práctica</b><small>Contra bots, normales o difíciles</small></span>
           <span class="jp">稽古</span></label>
+        <label><input type="radio" name="mode" value="city">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="txt"><b>Ciudad</b><small>Camina por el pueblo hasta el jansou y siéntate a jugar</small></span>
+          <span class="jp">街</span></label>
       </div>
       <div class="fields">
         <label><span class="chalk">Tu nombre</span><input id="name" maxlength="16" autocomplete="nickname"></label>
@@ -195,6 +199,32 @@
     </div>
   </div>
 
+  <!-- Ciudad: a small town to walk through, down to a mahjong parlour -->
+  <div id="city" class="screen hidden">
+    <div class="city-stage"></div>
+    <div class="city-fade" aria-hidden="true"></div>
+    <div class="city-hud hidden">
+      <span class="city-zone paper-chit"></span>
+      <button class="city-exit paper plain" type="button">Salir al menú</button>
+      <button class="city-prompt paper seal" type="button"></button>
+      <p class="city-hint">Camina con WASD o las flechas (o arrastrando) · E para interactuar · Esc para salir</p>
+    </div>
+    <section id="city-select" class="board">
+      <div class="board-head"><span>Elige tu personaje</span><span class="jp">人物選択</span></div>
+      <div class="city-fields">
+        <div class="char-picker" id="city-chars" role="group" aria-label="Tu personaje"></div>
+        <p class="chalk" id="city-char-about"></p>
+        <span class="chalk" id="city-res-label">Resolución interna <small>(más baja, más liviano)</small></span>
+        <div class="chalk-opts" id="city-res" role="group" aria-labelledby="city-res-label"></div>
+      </div>
+      <div class="board-foot">
+        <button id="city-back" class="paper plain" type="button">Volver</button>
+        <button id="city-go" class="paper seal" type="button"><span class="es">Entrar al pueblo</span><span class="jp">出発</span></button>
+      </div>
+    </section>
+    <p id="city-loading" class="hidden">Cargando el pueblo…</p>
+  </div>
+
   <div id="modal" class="hidden"></div>
   <!-- the one settings sheet: from the main menu and from ☰ in a game -->
   <dialog id="settings-dialog" class="sheet crumpled" aria-labelledby="settings-title">
@@ -224,6 +254,7 @@
     <ul>
       <li><b>Clásico:</b> ranked individual; la partida empieza al llegar 4 jugadores, con asientos al azar.</li>
       <li><b>Por equipos:</b> Norte contra Sur, 2 y 2. Los compañeros se sientan uno al lado del otro, ven la mano del otro y pueden pedirse descartes (clic en una ficha del compañero). Al final se suman los resultados de cada equipo.</li>
+      <li><b>Ciudad:</b> eliges un personaje y caminas desde tu habitación, por la calle, hasta el jansou. Junto a la mesa, E te sienta a una partida contra 3 bots (con el tiempo, el muro y el nivel de bots del menú); al terminar vuelves al jansou.</li>
       <li><b>Práctica:</b> contra bots que juegan de verdad: ganan, declaran riichi y se defienden. Cada bot puede ser normal (la IA de 電脳麻将) o difícil (Mortal, una red neuronal entrenada con partidas de jugadores fuertes); los eliges en el menú. Por equipos, Bot 1 es tu compañero y descarta lo que le pidas.</li>
       <li>25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (oka +20 al primero).</li>
       <li>Kuitan (tanyao abierto) permitido. Tres akadora (un 5 rojo por palo).</li>
