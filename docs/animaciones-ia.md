@@ -216,7 +216,10 @@ Detalles:
    la mesa): sirven para el tráiler y para la cámara de cine del bloque A.
 4. **Escenas desde un registro mjai**, además de las manos armadas en
    `scripts/lab-scenarios.mjs`. Es el puente con las repeticiones del
-   bloque C.
+   bloque C. *Primer paso hecho:* las manos de la partida de
+   exhibición entre bots (`scripts/exhibition/scenes.mjs`), armadas
+   volviendo a jugar la partida con el motor desde su semilla. Falta leer
+   un registro mjai cualquiera.
 5. **Personajes a la mesa**: primero provisorios CC0 para montar el rig y
    las animaciones, después los del bloque B. *Hecho:* seis personajes propios sentados
    a la mesa, en el juego y en el laboratorio (**Personajes en la mesa**,

@@ -707,6 +707,13 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   ron con los ura saliendo del agujero). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
+- **Partida de exhibición**: las 13 manos de la partida entre bots elegida
+  para la exhibición, cada una desde el inicio hasta el resultado, vistas
+  desde el asiento de Momo y con el elenco de la exhibición en la mesa (Momo,
+  Kaito, Michihime y Shiro). Aparecen después de correr
+  `node scripts/exhibition/scenes.mjs`, que vuelve a jugar la partida con el
+  motor, comprueba que sale igual al registro guardado y escribe
+  `public/lab/exhibicion.json` (fuera del repositorio).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
   0,05×, comienzo (R) y una barra para saltar a cualquier momento (con una
   marca por cada jugada). Toda la mesa usa un reloj propio de la página, así
@@ -718,8 +725,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
 - **Cajón de puntos**: ábrelo con cualquier puntaje para ver cómo quedan los
   palitos.
 - **Personajes en la mesa**: los mismos del juego (ver
-  [Personajes](#personajes)), con un reparto fijo, para afinar sus
-  animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
+  [Personajes](#personajes)), con un reparto fijo (las escenas de la
+  exhibición traen el suyo), para afinar sus animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
   **Rival de enfrente, de cerca** los muestran.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
@@ -771,6 +778,7 @@ public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y l
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
+scripts/exhibition/      Partida de exhibición entre bots: estilos, búsqueda de la partida y sus escenas del laboratorio
 dev-server.js            Servidor local
 test/                    node:test
 ```
