@@ -183,6 +183,222 @@ def hair_lock(mn, mx, tile, taper=0.5, tilt=0.0):
     return p
 
 
+def emit_michihime(base, src, emit):
+    """Michihime: a cat girl in a festive shrine maiden's outfit. A coral
+    kimono whose sleeves carry the pattern, a red bow, a dark hakama to the
+    knee, white stockings and tall okobo sandals; a dark auburn bob with cat
+    ears and golden bells on red ribbons. Shiro's head, neck and legs; the
+    donor's arms; everything else made here."""
+    k = 0.88
+    atlas = page2(src['pelo_blanco'][1].copy())
+    auburn = (92, 44, 38)
+    coral = (238, 128, 108)
+    coral_dark = (206, 92, 80)
+    garnet = (120, 24, 40)
+    red = (200, 34, 44)
+    cream = (246, 230, 196)
+    white = (246, 244, 240)
+    gold = (222, 168, 64)
+    mauve = (196, 132, 160)
+    hakama = (58, 34, 44)
+    lacquer = (34, 24, 24)
+    sage = (126, 156, 120)
+    slate = (96, 104, 120)
+    for t in ((3, 0), (2, 3)):
+        recolor(atlas, tile_box(*t), auburn, gain=0.6)
+    # eyebrows auburn, eyes amber, a little blush
+    recolor_where(atlas, (0, 0, 128, 44), lambda a: (a[..., 2] > a[..., 0] + 6), (96, 50, 40))
+    recolor_where(atlas, (0, 44, 128, 128), lambda a: (a[..., 2] > a[..., 0] + 6) & (a.sum(-1) < 520), (170, 96, 36))
+    face = atlas.crop((0, 0, 128, 128)).convert('RGBA')
+    blush = Image.new('RGBA', (128, 128), (0, 0, 0, 0))
+    d = ImageDraw.Draw(blush)
+    d.ellipse([22, 62, 44, 74], fill=(240, 120, 110, 60))
+    d.ellipse([84, 62, 106, 74], fill=(240, 120, 110, 60))
+    atlas.paste(Image.alpha_composite(face, blush).convert('RGB'), (0, 0))
+
+    def lace(d, y, color=white, holes=None, down=True):
+        """A scalloped lace edge along y, with little holes."""
+        for x in range(0, 64, 8):
+            d.ellipse([x - 1, y - 4, x + 8, y + 4], fill=color)
+            if holes:
+                d.point([(x + 3, y + (1 if down else -1))], fill=holes)
+
+    def kimono(d, im):  # the torso; the middle of the tile is the front
+        shade(d, coral)
+        d.polygon([(18, 0), (32, 34), (46, 0)], fill=white)  # under-collar
+        d.line([(18, 0), (34, 38)], fill=garnet, width=3)  # crossed collar, left over right
+        d.line([(46, 0), (30, 30)], fill=garnet, width=3)
+        d.line([(24, 0), (36, 30)], fill=coral_dark, width=2)
+
+    def sleeve(d, im):  # the arm: plain coral, lace at the wrist
+        shade(d, coral)
+        d.rectangle([0, 54, 63, 63], fill=white)
+        lace(d, 54, white, (210, 210, 206), down=False)
+
+    def patterned(d, im):  # the forearm's sleeve: the pattern grows downward
+        shade(d, coral)
+        for y in range(18, 64, 9):
+            d.arc([-6, y - 4, 22, y + 4], 0, 180, fill=cream)
+            d.arc([20, y - 4, 48, y + 4], 180, 360, fill=cream)
+            d.arc([42, y - 4, 70, y + 4], 0, 180, fill=cream)
+        for x in range(0, 64, 12):
+            d.chord([x - 2, 30, x + 12, 42], 180, 360, fill=coral_dark)
+        for (x, y, c) in ((14, 44, red), (40, 50, sage), (26, 56, slate), (52, 38, red)):
+            d.ellipse([x - 6, y - 6, x + 6, y + 6], fill=c)
+            d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=cream)
+            for a in range(0, 360, 60):
+                v = np.radians(a)
+                d.point([(x + 4 * np.cos(v), y + 4 * np.sin(v))], fill=cream)
+        d.rectangle([0, 61, 63, 63], fill=white)
+
+    def pleats(d, im):
+        shade(d, hakama, 0.9)
+        for x in range(0, 64, 8):
+            d.line([(x, 0), (x, 63)], fill=(36, 20, 28))
+            d.line([(x + 1, 0), (x + 1, 63)], fill=(84, 52, 64))
+
+    def stocking(d, im):
+        shade(d, white, 0.92)
+        lace(d, 3, white, (214, 214, 210))
+
+    def bow(d, im):
+        shade(d, red, 0.85)
+        for (x, y) in ((10, 10), (34, 20), (54, 8), (20, 40), (46, 46), (8, 56)):
+            for dx, dy in ((0, -3), (3, 0), (0, 3), (-3, 0)):
+                d.ellipse([x + dx - 2, y + dy - 2, x + dx + 2, y + dy + 2], fill=white)
+
+    def apron(d, im):
+        shade(d, red, 0.85)
+        d.rectangle([0, 46, 63, 63], fill=white)
+        lace(d, 46, white)
+        for x in (8, 24, 40, 56):
+            d.polygon([(x - 4, 52), (x, 58), (x + 4, 52), (x + 2, 50), (x, 52), (x - 2, 50)], fill=(236, 140, 170))
+
+    def ribbon(d, im):
+        shade(d, red, 0.9)
+        d.rectangle([0, 0, 5, 63], fill=white)
+        d.rectangle([58, 0, 63, 63], fill=white)
+
+    def okobo(d, im):
+        shade(d, lacquer, 0.9)
+        d.rectangle([0, 0, 63, 10], fill=red)  # the hanao over the instep
+
+    def ear(d, im):
+        shade(d, auburn, 0.9)
+        d.rectangle([0, 0, 63, 14], fill=(40, 22, 20))  # dark tips
+
+    def choker(d, im):
+        shade(d, mauve, 0.9)
+        lace(d, 60, white)
+
+    def obi(d, im):
+        shade(d, (176, 40, 60), 0.9)
+        for (x, y) in ((8, 12), (28, 30), (48, 14), (16, 50), (44, 52)):
+            d.ellipse([x - 5, y - 5, x + 5, y + 5], fill=(236, 120, 150))
+            d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=(250, 210, 220))
+
+    tiles = {(0, 0): kimono, (1, 0): sleeve, (2, 0): pleats, (3, 0): stocking,
+             (0, 1): bow, (1, 1): apron, (3, 1): ribbon,
+             (0, 2): okobo, (1, 2): ear, (2, 2): choker, (3, 2): patterned,
+             (0, 3): obi}
+    for tile, fn in tiles.items():
+        paint(atlas, tile, 1, fn)
+    paint(atlas, (1, 3), 1, lambda d, im: shade(d, cream, 0.95))  # inside the ears
+    paint(atlas, (2, 3), 1, lambda d, im: shade(d, gold, 0.8))  # the bells
+    # her hand with red nails: the skin tile, the fingertips painted
+    atlas.paste(atlas.crop(tile_box(2, 1)), tile_box(3, 3, 1)[:2])
+    paint(atlas, (3, 3), 1, lambda d, im: d.rectangle([0, 52, 63, 63], fill=(176, 20, 32)))
+
+    parts = []
+    for p in base['pelo_blanco']:
+        b = p.bone
+        neck = b == 'spine' and abs(p.c[0]) < 0.02 and p.ntris == 24 and p.mx[1] > 1.5
+        if b == 'head':
+            if p.ntris == 24 and p.mn[1] > 1.68:
+                continue  # the quiff
+            parts.append(p.copy())
+        elif neck:
+            parts.append(p.copy().scale(0.86, 1, 0.86))
+        elif b == 'hips' and p.ntris == 30:
+            parts.append(borrow(p.copy().flat((2, 0))).scale(0.9, 1, 0.9))
+        elif b[:-1] == 'thigh':
+            parts.append(borrow(p.copy().retile((2, 0))).scale(0.9, 1, 0.9))
+        elif b[:-1] == 'shin':
+            parts.append(borrow(p.copy().retile((3, 0))).scale(0.84, 1, 0.84))
+        elif b[:-1] == 'foot':
+            parts.append(borrow(p.copy().retile((0, 2))).scale(0.86, 1, 0.84))
+    for p in parts:
+        if isinstance(p.bone, str) and p.bone[:-1] in ('thigh', 'shin', 'foot'):
+            p.pos[:, 0] *= 0.9  # legs a little closer together
+    parts = straight_arms(parts, base['viejo'], np.array([0.15, 1.40, -0.002]), 1.03,
+                          {'arm': on_page2((1, 0)), 'fore': on_page2((3, 2)), 'cuff': on_page2((1, 0)),
+                           'hand': on_page2((3, 3)), 'thumb': (2, 0)}, thin=0.82)
+
+    def spine(p, bone='spine'):
+        p.bone = bone
+        return borrow(p)
+
+    # the kimono's body, its obi and the bow in front
+    parts.append(spine(tube([(1.44, 0, 0, 0.07, 0.056), (1.40, 0, 0, 0.152, 0.08), (1.31, 0, 0.014, 0.138, 0.102),
+                             (1.20, 0, 0.004, 0.122, 0.084), (1.10, 0, 0, 0.12, 0.08)], (0, 0), sides=8, turn=np.pi)))
+    parts.append(spine(tube([(1.15, 0, 0.002, 0.128, 0.09), (1.07, 0, 0.002, 0.132, 0.094)], (0, 3), sides=8, caps=(False, False))))
+    parts += [spine(box((-0.095, 1.08, 0.085), (-0.012, 1.16, 0.115), (0, 1))).rotate('z', -10, about=(-0.012, 1.12, 0.1)),
+              spine(box((0.012, 1.08, 0.085), (0.095, 1.16, 0.115), (0, 1))).rotate('z', 10, about=(0.012, 1.12, 0.1)),
+              spine(box((-0.022, 1.09, 0.09), (0.022, 1.15, 0.122), (0, 1)))]
+    # the hakama, to the knee: the hem follows the knees when she sits
+    skirt = tube([(1.08, 0, 0, 0.13, 0.092), (0.90, 0, 0.004, 0.18, 0.13), (0.56, 0, 0.012, 0.22, 0.17)], (2, 0), sides=10, caps=(False, False))
+    skirt.bone = [('thighL' if v[0] > 0 else 'thighR') if (v[1] < 0.85 and v[2] > 0.03) else 'hips' for v in skirt.pos]
+    parts.append(borrow(skirt))
+    # the apron-like red panel under the bow
+    apr = box((-0.06, 0.86, 0.135), (0.06, 1.08, 0.15), (1, 1))
+    apr.bone = [('thighL' if v[0] > 0 else 'thighR') if v[1] < 0.95 else 'hips' for v in apr.pos]
+    parts.append(borrow(apr))
+    # the choker
+    parts.append(spine(tube([(1.505, 0, -0.004, 0.056, 0.05), (1.465, 0, -0.004, 0.06, 0.054)], (2, 2), sides=8, caps=(False, False))))
+
+    # the hair: a short bob with a straight fringe and an ahoge
+    hair = [
+        hair_lock((-0.112, 1.55, -0.13), (0.112, 1.745, -0.06), (2, 3), 0.85),  # the back
+        hair_lock((-0.126, 1.54, -0.08), (-0.092, 1.72, 0.06), (2, 3), 0.85),  # the sides, to the jaw
+        hair_lock((0.092, 1.54, -0.08), (0.126, 1.72, 0.06), (2, 3), 0.85),
+        hair_lock((-0.104, 1.665, 0.07), (0.104, 1.765, 0.13), (2, 3), 1.0),  # straight fringe
+        box((-0.105, 1.70, -0.115), (0.105, 1.78, 0.115), (3, 0)),  # crown
+        hair_lock((-0.005, 1.77, 0.0), (0.005, 1.82, 0.03), (2, 3), 0.3, -40),  # ahoge
+    ]
+    hair[4].bone = 'head'
+    parts += hair
+    for side in (1, -1):
+        # cat ears: dark-tipped outside, cream inside
+        ear_out = tube([(1.75, 0.072 * side, -0.012, 0.05, 0.022), (1.835, 0.082 * side, -0.012, 0.004, 0.004)], (1, 2), sides=4, turn=np.pi / 4)
+        ear_in = tube([(1.76, 0.074 * side, 0.004, 0.026, 0.005), (1.815, 0.08 * side, 0.004, 0.002, 0.002)], (1, 3), sides=4, turn=np.pi / 4)
+        for e in (ear_out, ear_in):
+            e.rotate('z', -14 * side, about=(0.07 * side, 1.76, 0))
+            e.bone = 'head'
+            parts.append(borrow(e))
+        # golden bells on red ribbons, at the sides of the head
+        bell = box((0.13 * side - 0.02, 1.60, -0.02), (0.13 * side + 0.02, 1.64, 0.02), (2, 3))
+        tail = box((0.13 * side - 0.012, 1.46, -0.004), (0.13 * side + 0.012, 1.62, 0.004), (3, 1), 0.8)
+        for e in (bell, tail):
+            e.bone = 'head'
+            parts.append(borrow(e))
+
+    parts = scaled(parts, k)
+    # tall okobo: the body stands on platforms
+    plat = 0.05
+    for p in parts:
+        p.move(0, plat, 0)
+    for side in 'LR':
+        foot = [p for p in parts if p.bone == 'foot' + side]
+        mn = np.min([p.mn for p in foot], 0)
+        mx = np.max([p.mx for p in foot], 0)
+        sole = box((mn[0], 0.0, mn[2]), (mx[0], plat + 0.004, mx[2]), (0, 2))
+        sole.bone = 'foot' + side
+        parts.append(borrow(sole))
+    cut = cuts_scaled(CUTS['pelo_blanco'], k)
+    cut = {a: (b if a == 'arm' else b + plat) for a, b in cut.items()}
+    emit('michihime', parts, atlas, cut)
+
+
 def build_all(debug=False):
     src = {n: load(HERE / 'fuentes' / f'{n}_retro.glb') for n in CUTS}
     base = {n: classify([p.copy() for p in src[n][0]], CUTS[n]) for n in CUTS}
@@ -386,6 +602,8 @@ def build_all(debug=False):
     clip.bone = 'head'
     parts += hair + [clip]
     emit('momo', scaled(parts, k), atlas, cuts_scaled(CUTS['pelo_blanco'], k))
+
+    emit_michihime(base, src, emit)
 
     for name in made:
         print(f'{name}: {made[name][0]} triángulos, {made[name][1]:.2f} m')

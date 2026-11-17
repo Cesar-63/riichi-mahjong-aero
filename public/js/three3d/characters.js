@@ -44,6 +44,8 @@ const STYLE = {
   kaito: { lean: 0.2, reach: 0.11, hold: 0.05, back: 0.24, lift: 0.05, flick: 0.5, carry: 1.25, left: 'table', gesture: ['neck', 6, 17, 2.4], glance: 5, sway: 1.3 },
   // the gentleman: upright, slow and exact
   tatsuo: { lean: 0.02, reach: 0.24, hold: 0.16, back: 0.6, lift: 0.025, flick: 0, carry: 0.72, left: 'table', gesture: ['lapel', 14, 28, 2.4], glance: 14, sway: 0.25 },
+  // the shrine maiden in a hurry: quick, light hands, rings her bell
+  michihime: { lean: 0.12, reach: 0.12, hold: 0.05, back: 0.26, lift: 0.05, flick: 0.4, carry: 1.2, left: 'table', gesture: ['bell', 5, 15, 1.6], glance: 6, sway: 1.1 },
 };
 // Where a gesture takes the left hand: [joint it is measured from, offset
 // from it (metres; x to the character's left, z forward), which way the
@@ -55,6 +57,7 @@ const GESTURE = {
   neck: ['head', [0.07, 0.03, -0.085], [-0.6, 0.6, -0.5], -0.12],
   tie: ['spine', [0.0, 0.3, 0.15], [-0.7, 0.6, 0], 0],
   lapel: ['spine', [0.075, 0.27, 0.14], [-0.5, 0.8, 0], 0],
+  bell: ['head', [0.12, 0.1, 0.01], [-0.3, 0.9, -0.2], -0.1],
 };
 
 const PARENT = { spine: 'hips', head: 'spine', armL: 'spine', foreL: 'armL', handL: 'foreL', armR: 'spine', foreR: 'armR', handR: 'foreR', thighL: 'hips', shinL: 'thighL', footL: 'shinL', thighR: 'hips', shinR: 'thighR', footR: 'shinR' };
