@@ -36,6 +36,14 @@ const WALLS = {
 const wallLabel = (w) => `${WALLS[w][0]}${WALLS[w][1] ? ` · ${WALLS[w][1]}` : ''}`;
 const wallButtons = (current) => Object.entries(WALLS).map(([id, [name, note]]) =>
   `<button type="button" class="chalk-opt" data-wall="${id}" aria-pressed="${id === current}">${name}${note ? ` <small>${note}</small>` : ''}</button>`).join('');
+// The tiles (server/handler.js TILE_SETS): the usual ones, or Washizu
+const TILE_SETS = {
+  normal: ['Normales', ''],
+  washizu: ['Washizu', 'tres de cada cuatro, de vidrio'],
+};
+const tilesLabel = (t) => `${TILE_SETS[t][0]}${TILE_SETS[t][1] ? ` · ${TILE_SETS[t][1]}` : ''}`;
+const tilesButtons = (current) => Object.entries(TILE_SETS).map(([id, [name, note]]) =>
+  `<button type="button" class="chalk-opt" data-tiles="${id}" aria-pressed="${id === current}">${name}${note ? ` <small>${note}</small>` : ''}</button>`).join('');
 const timingLabel = (t) => `${TIMINGS[t][0]}${TIMINGS[t][1] ? ` · ${TIMINGS[t][1]}` : ''}`;
 const timingButtons = (current) => Object.entries(TIMINGS).map(([id, [name, secs]]) =>
   `<button type="button" class="chalk-opt" data-timing="${id}" aria-pressed="${id === current}">${name}${secs ? ` <small>${secs}</small>` : ''}</button>`).join('');
@@ -56,6 +64,7 @@ const state = {
   botLevels: /^[nh]{3}$/.test(store.get('mj.botLevels') || '') ? store.get('mj.botLevels') : 'nnn',
   timing: TIMINGS[store.get('mj.timing')] ? store.get('mj.timing') : 'normal',
   wall: WALLS[store.get('mj.wall')] ? store.get('mj.wall') : 'normal',
+  tiles: TILE_SETS[store.get('mj.tiles')] ? store.get('mj.tiles') : 'normal',
   // who I sit at the table as (shared/characters.js)
   character: characterId(store.get('mj.character')),
   name: store.get('mj.name') || '',
@@ -139,6 +148,10 @@ function showRoomTiming(data, host) {
   setIfChanged($('#w-wall'), host
     ? `<span>Muro:</span>${wallButtons(w)}`
     : `<span>Muro: <b>${wallLabel(w)}</b></span>`);
+  const ts = TILE_SETS[data.tiles] ? data.tiles : 'normal';
+  setIfChanged($('#w-tiles'), host
+    ? `<span>Fichas:</span>${tilesButtons(ts)}`
+    : `<span>Fichas: <b>${tilesLabel(ts)}</b></span>`);
 }
 
 function showLobby(data) {
@@ -489,7 +502,8 @@ function roundInfoHTML(v) {
   return `<span class="round">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}${v.honba ? ` <small>· Honba ${v.honba}</small>` : ''}</span>
     <span>Depósitos ${v.kyoutaku} · Quedan ${v.wallLeft}</span>
     <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}${streakTag(me) ? ` ${streakTag(me)}` : ''}</span>${v.wallMode === 'yakuman' ? `
-    <span>Muro fluido${fluidTag(v, v.seat) ? ` ${fluidTag(v, v.seat)}` : ''}</span>` : ''}`;
+    <span>Muro fluido${fluidTag(v, v.seat) ? ` ${fluidTag(v, v.seat)}` : ''}</span>` : ''}${v.tiles === 'washizu' ? `
+    <span>Washizu · se ven tus fichas de vidrio</span>` : ''}`;
 }
 
 // The table's scores as seen from my seat: me at the bottom, the others in
@@ -710,7 +724,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode, levels: botLevels(), timing: state.timing, wall: state.wall, character: state.character });
+  await api('join', { name, mode, levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, character: state.character });
   pollLoop();
 });
 
@@ -967,6 +981,23 @@ $('#w-wall').addEventListener('click', (e) => {
 });
 showWall();
 
+// The tiles: sent like the wall; in the waiting room the host changes them.
+function showTiles() {
+  setIfChanged($('#tiles-opts'), tilesButtons(state.tiles));
+}
+$('#tiles-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tiles]');
+  if (!b) return;
+  state.tiles = b.dataset.tiles;
+  store.set('mj.tiles', state.tiles);
+  showTiles();
+});
+$('#w-tiles').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tiles]');
+  if (b && b.getAttribute('aria-pressed') !== 'true') api('tiles', { tiles: b.dataset.tiles });
+});
+showTiles();
+
 // My character: sent when joining; in the waiting room a click changes it
 // for everyone to see.
 function showCharacter() {
@@ -1105,7 +1136,7 @@ async function sitDown(table, where) {
   state.lastHb = 0;
   let data;
   try {
-    data = await api('join', { name: state.name || 'Jugador', mode: 'classic', levels: botLevels(), timing: state.timing, wall: state.wall, character: where.character });
+    data = await api('join', { name: state.name || 'Jugador', mode: 'classic', levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, character: where.character });
   } catch {
     data = { error: true };
     toast('Sin conexión: no se pudo empezar la partida');

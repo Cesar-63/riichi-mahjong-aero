@@ -33,6 +33,10 @@ const clockOf = (room) => TIME_PRESETS[timingId(room.timing)];
 // (engine/fluid.js).
 export const WALLS = ['normal', 'yakuman'];
 const wallId = (id) => (WALLS.includes(id) ? id : 'normal');
+// The tiles, chosen per room like the wall: 'normal', or 'washizu', where
+// three of every four copies are glass and the others see them in a hand.
+export const TILE_SETS = ['normal', 'washizu'];
+const tilesId = (id) => (TILE_SETS.includes(id) ? id : 'normal');
 const ROOM_TTL = 6 * 3600 * 1000;
 const LOCK_MS = 5000;
 
@@ -47,7 +51,7 @@ const keys = (code) => ({
 
 function newRoom(code) {
   // mode: 'classic' (ranked, 4 individual players) or 'teams' (2 vs 2); set by whoever opens the room
-  return { code, version: 0, status: 'lobby', mode: null, timing: 'normal', wall: 'normal', queue: [], seats: null, game: null, clock: null, deadline: null };
+  return { code, version: 0, status: 'lobby', mode: null, timing: 'normal', wall: 'normal', tiles: 'normal', queue: [], seats: null, game: null, clock: null, deadline: null };
 }
 
 function cleanName(n) {
@@ -88,7 +92,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'character'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'tiles', 'character'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -170,6 +174,7 @@ function apply(room, op, token, body, now, seen) {
       room.mode = mode;
       room.timing = timingId(body.timing);
       room.wall = wallId(body.wall);
+      room.tiles = tilesId(body.tiles);
       const bots = [1, 2, 3].map((n) => newBot(n, body.levels));
       room.queue = [{ token, name, character }, ...bots];
       if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
@@ -181,6 +186,7 @@ function apply(room, op, token, body, now, seen) {
       room.mode = mode;
       room.timing = timingId(body.timing);
       room.wall = wallId(body.wall);
+      room.tiles = tilesId(body.tiles);
     } else if (room.mode !== mode) {
       throw new Error(`La sala "${room.code}" es de modo ${MODE_NAME[room.mode]}: elige ese modo o usa otra sala`);
     }
@@ -248,6 +254,16 @@ function apply(room, op, token, body, now, seen) {
     if (!WALLS.includes(body.wall)) throw new Error('Muro desconocido');
     if (wallId(room.wall) === body.wall) return false;
     room.wall = body.wall;
+    for (const q of room.queue) if ('ready' in q) q.ready = false;
+    return true;
+  }
+  if (op === 'tiles') {
+    // The host picks the tiles before the game starts, as with the wall.
+    if (room.status !== 'lobby') return false;
+    if (!room.queue.length || room.queue[0].token !== token) throw new Error('Solo el anfitrión puede cambiar las fichas');
+    if (!TILE_SETS.includes(body.tiles)) throw new Error('Fichas desconocidas');
+    if (tilesId(room.tiles) === body.tiles) return false;
+    room.tiles = body.tiles;
     for (const q of room.queue) if ('ready' in q) q.ready = false;
     return true;
   }
@@ -354,7 +370,7 @@ function startGame(room, now, seen) {
   room.noRiichi = {};
   room.queue = [];
   room.status = 'playing';
-  room.game = Game.create(players.map((p) => p.name), { wall: wallId(room.wall) }).s;
+  room.game = Game.create(players.map((p) => p.name), { wall: wallId(room.wall), washizu: tilesId(room.tiles) === 'washizu' }).s;
   room.clock = { bank: [0, 0, 0, 0], decisions: {}, kyokuKey: null };
   afterChange(room, new Game(room.game), now);
   schedule(room, now, seen);
@@ -472,6 +488,7 @@ function viewFor(room, token, seen, now) {
       queue: room.queue.map((q, i) => ({ name: q.name, character: q.bot ? null : characterId(q.character), team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
       timing: timingId(room.timing),
       wall: wallId(room.wall),
+      tiles: tilesId(room.tiles),
       inQueue: room.queue.some((q) => q.token === token),
     };
   }
@@ -507,6 +524,7 @@ function viewFor(room, token, seen, now) {
   const clk = clockOf(room);
   view.timing = timingId(room.timing);
   view.wallMode = wallId(room.wall);
+  view.tiles = tilesId(room.tiles);
   view.clock = dec
     ? {
       // The grace period is hidden from the displayed countdown; no limit: null

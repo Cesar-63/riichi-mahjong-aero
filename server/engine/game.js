@@ -2,7 +2,7 @@
 // The whole game lives in a plain JSON-serializable object (`game.s`), so it
 // can be stored between stateless serverless invocations.
 import {
-  tileType, isYaochuu, isWind, isDragon, counts34, sortTiles, YAOCHUU, deadSlot,
+  tileType, isYaochuu, isWind, isDragon, counts34, sortTiles, YAOCHUU, deadSlot, isGlass,
 } from '../../public/js/shared/tiles.js';
 import { waits, isAgari, isKokushi, decompose } from './hand.js';
 import { evaluate, ronValue, tsumoValues, limitName } from './score.js';
@@ -16,6 +16,9 @@ export const DEFAULT_CONFIG = {
   rounds: 1, // 1 = tonpuusen (East only), 2 = hanchan (East-South)
   // 'normal', or 'yakuman': the fluid wall that always feeds a yakuman (fluid.js)
   wall: 'normal',
+  // Washizu mode: three of every four copies are glass (isGlass), so the
+  // others see them in a hand; only the opaque copy stays hidden
+  washizu: false,
 };
 
 function cryptoRandom() {
@@ -904,6 +907,12 @@ export class Game {
     return { hand: sortTiles(k.hands[seat].filter((x) => x !== drawn)), drawn };
   }
 
+  // Washizu: the glass tiles of a seat's concealed hand, split like handOf
+  glassOf(seat) {
+    const { hand, drawn } = this.handOf(seat);
+    return { hand: hand.filter(isGlass), drawn: drawn !== null && isGlass(drawn) ? drawn : null };
+  }
+
   view(seat) {
     const s = this.s;
     const k = s.k;
@@ -943,6 +952,9 @@ export class Game {
         hasDrawn: k.turn === i && k.drawn !== null,
         melds: k.melds[i],
         discards: k.discards[i],
+        // Washizu: the glass tiles of a rival's hand, which everybody sees
+        // (never the opaque ones); null for my own hand and outside the mode
+        glass: s.config.washizu && i !== seat ? this.glassOf(i) : null,
       })),
       hand: sortTiles(mine.filter((x) => x !== drawn)),
       drawn,

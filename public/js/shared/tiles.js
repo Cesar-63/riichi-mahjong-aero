@@ -20,6 +20,10 @@ export const deadSlot = (i) => {
 
 export const tileType = (id) => id >> 2;
 export const isAka = (id) => id === 16 || id === 52 || id === 88;
+// Washizu mode: of the four copies of every tile, three are glass (seen
+// from any side) and one is opaque. The opaque one is the first copy, so a
+// red five is always the opaque copy of its five.
+export const isGlass = (id) => id % 4 !== 0;
 export const isHonor = (t) => t >= 27;
 export const isTerminal = (t) => t < 27 && (t % 9 === 0 || t % 9 === 8);
 export const isYaochuu = (t) => t >= 27 || t % 9 === 0 || t % 9 === 8;

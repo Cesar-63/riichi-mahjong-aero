@@ -4,7 +4,7 @@
 // The sides use vertex colours: ivory body towards the face, a band of the
 // back colour towards the back, with a short blend between them.
 import * as THREE from '../../vendor/three/three.module.min.js';
-import { tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI } from '../shared/tiles.js';
+import { tileType, isAka, isGlass, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI } from '../shared/tiles.js';
 import { tileset } from '../render.js';
 
 export const W = 1; // width
@@ -16,6 +16,9 @@ const BACK_SHARE = 0.36; // part of the thickness in the back colour
 // parlour tiles: yellow backs, ivory bodies
 // muted, aged colours: the parlour is not brightly lit
 const look = { back: '#c49c4e', backHi: '#dcbf7e', backLo: '#8a6426', ivory: '#e9e1c9', ivoryLo: '#c3b593', glow: 0xff9a2a, shine: 14 };
+// Washizu glass tiles: a pale, cold body you see through, with the design
+// on the face and again, readable, on the back
+const glassLook = { body: '#cfe6ee', face: [228, 242, 248], shine: 80 };
 
 export function createTileKit(renderer) {
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -123,14 +126,8 @@ export function createTileKit(renderer) {
     faces.set(key, f);
     return f;
   }
-  function paintFace(f) {
-    const { g } = f;
-    const grad = g.createLinearGradient(0, 0, 60, 320);
-    grad.addColorStop(0, '#f5efdd');
-    grad.addColorStop(0.5, look.ivory);
-    grad.addColorStop(1, look.ivoryLo);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 240, 320);
+  // the design alone (image or painted text), in a 240 x 320 face
+  function drawDesign(g, f) {
     if (f.img && f.img.complete && f.img.naturalWidth) g.drawImage(f.img, 18, 22, 204, 276);
     else if (f.id !== null && tileset.mode !== 'img') {
       const t = tileType(f.id);
@@ -146,8 +143,66 @@ export function createTileKit(renderer) {
         g.fillText(SUIT_KANJI[suitOf(t)], 120, 238);
       }
     }
+  }
+  function paintFace(f) {
+    if (f.glass) return paintGlass(f);
+    const { g } = f;
+    const grad = g.createLinearGradient(0, 0, 60, 320);
+    grad.addColorStop(0, '#f5efdd');
+    grad.addColorStop(0.5, look.ivory);
+    grad.addColorStop(1, look.ivoryLo);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 240, 320);
+    drawDesign(g, f);
     bevel(g, 240, 320, 'rgba(255,255,255,.95)', 'rgba(120,100,60,.38)', 12);
     outline(g, 240, 320, 'rgba(70,55,30,.32)', 4);
+    f.t.needsUpdate = true;
+  }
+
+  // Glass faces: see-through, a little frosted so the design always reads
+  // (on the felt and over the dark under my hand), with a cold rim and a
+  // streak of light across. The back carries the same design, readable
+  // from behind and a touch fainter, as seen through the glass.
+  const glassFaces = new Map();
+  function glassTexture(id, back) {
+    const key = `${id === null ? 'blank' : imageName(id)}:${back ? 'b' : 'f'}`;
+    if (glassFaces.has(key)) return glassFaces.get(key);
+    const f = canvasTex(240, 320);
+    Object.assign(f, { key, id, glass: true, back, img: null });
+    if (id !== null && tileset.mode === 'img') {
+      f.img = new Image();
+      f.img.onload = () => paintFace(f);
+      f.img.src = `${tileset.dir}${imageName(id)}.${tileset.ext}`;
+    }
+    paintFace(f);
+    glassFaces.set(key, f);
+    return f;
+  }
+  function paintGlass(f) {
+    const { g } = f;
+    const [r, gr, b] = glassLook.face;
+    g.clearRect(0, 0, 240, 320);
+    const grad = g.createLinearGradient(0, 0, 240, 320);
+    grad.addColorStop(0, `rgba(${r},${gr},${b},${f.back ? 0.62 : 0.86})`);
+    grad.addColorStop(1, `rgba(${r - 30},${gr - 18},${b - 10},${f.back ? 0.52 : 0.78})`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 240, 320);
+    g.save();
+    g.globalAlpha = f.back ? 0.82 : 1;
+    drawDesign(g, f);
+    g.restore();
+    // a streak of light across the glass
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    const shine = g.createLinearGradient(0, 0, 240, 320);
+    shine.addColorStop(0.18, 'rgba(255,255,255,0)');
+    shine.addColorStop(0.26, 'rgba(255,255,255,.22)');
+    shine.addColorStop(0.32, 'rgba(255,255,255,0)');
+    g.fillStyle = shine;
+    g.fillRect(0, 0, 240, 320);
+    g.restore();
+    bevel(g, 240, 320, 'rgba(255,255,255,.95)', 'rgba(70,110,130,.55)', 12);
+    outline(g, 240, 320, 'rgba(40,80,100,.45)', 4);
     f.t.needsUpdate = true;
   }
 
@@ -161,7 +216,31 @@ export function createTileKit(renderer) {
 
   // BoxGeometry material order: +x, -x, +y, -y, +z (face), -z (back).
   // Side and face materials are per tile so each can be dimmed or lit alone.
-  function makeTile(id) {
+  // Washizu (setWashizu): a glass copy is made of glass; glass = true makes a
+  // glass tile without a design (the intro's face-down tiles)
+  let washizu = false;
+  const glassSide = new THREE.MeshPhongMaterial({
+    color: glassLook.body, map: edges.t, transparent: true, opacity: 0.38, depthWrite: false, specular: 0x777777, shininess: glassLook.shine,
+  });
+  const glassMat = (map) => new THREE.MeshPhongMaterial({ map, transparent: true, depthWrite: false, specular: 0x666666, shininess: glassLook.shine });
+  function makeGlass(id) {
+    const side = glassSide.clone();
+    const front = glassMat(glassTexture(id, false).t);
+    const behind = glassMat(glassTexture(id, true).t);
+    const mesh = new THREE.Mesh(geo, [side, side, side, side, front, behind]);
+    // after the felt's shadows and glows, which it does not hide
+    mesh.renderOrder = 3;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.userData.id = id;
+    mesh.userData.glass = true;
+    mesh.userData.mats = [side, front, behind];
+    for (const m of mesh.userData.mats) m.userData.base = m.color.clone();
+    return mesh;
+  }
+
+  function makeTile(id, glass = washizu && id !== null && isGlass(id)) {
+    if (glass) return makeGlass(id);
     const side = sideMat.clone();
     const front = phong({ map: faceTexture(id).t });
     side.shininess = front.shininess = look.shine;
@@ -179,7 +258,8 @@ export function createTileKit(renderer) {
     if (mesh.userData.style === key) return;
     mesh.userData.style = key;
     for (const m of mesh.userData.mats) {
-      m.color.setScalar(tint);
+      if (m.userData.base) m.color.copy(m.userData.base).multiplyScalar(tint);
+      else m.color.setScalar(tint);
       m.emissive.setHex(glow || 0);
       m.emissiveIntensity = glow ? 0.35 : 0;
     }
@@ -189,5 +269,12 @@ export function createTileKit(renderer) {
     for (const m of mesh.userData.mats || []) m.dispose();
   }
 
-  return { makeTile, style, dispose, glowColor: () => look.glow };
+  // Washizu on or off; true when it changed (tiles made before are stale)
+  function setWashizu(on) {
+    const changed = !!on !== washizu;
+    washizu = !!on;
+    return changed;
+  }
+
+  return { makeTile, style, dispose, setWashizu, faceTexture: (id) => faceTexture(id).t, washizu: () => washizu, glowColor: () => look.glow };
 }

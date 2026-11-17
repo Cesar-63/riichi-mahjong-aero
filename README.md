@@ -42,6 +42,9 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    - **Muro** (Normal, o **Muro fluido · siempre un yakuman**, un
      experimento: ver [Muro fluido](#muro-fluido-experimento)): se elige igual
      que el tiempo, y el anfitrión puede cambiarlo en la sala de espera.
+   - **Fichas** (Normales, o **Washizu · tres de cada cuatro, de vidrio**:
+     ver [Modo Washizu](#modo-washizu)): se elige igual que el muro, y el
+     anfitrión puede cambiarlas en la sala de espera.
    - **Jugar con personajes** (opcional, en cualquier modo): los jugadores
      se sientan a la mesa en 3D y eliges **tu personaje** (ver
      [Personajes](#personajes)).
@@ -211,6 +214,41 @@ comporta de forma natural: **Muro fluido · siempre un yakuman**.
 - No es una garantía: otro jugador puede ganar antes con su propia mano.
 
 Es el primer paso del modo flow; sirve solo para experimentar.
+
+## Modo Washizu
+
+Un homenaje al modo de juego con fichas de vidrio, apagado por defecto: se
+elige en **Fichas** al abrir la sala o la práctica.
+
+- **Tres de cada cuatro fichas son de vidrio.** De las cuatro copias de cada
+  ficha, tres son transparentes y una es opaca. Una ficha de vidrio se ve
+  desde cualquier lado: en la mano de un rival se lee su dibujo (por detrás,
+  derecho) y solo la copia opaca queda oculta, de reverso como siempre.
+  Cuando una ficha tiene cinco rojo, **el cinco rojo es la copia opaca**.
+- **La cara sobre el paño.** Delante de cada ficha de vidrio parada en una
+  mano, del lado del centro de la mesa, queda acostada sobre el paño una
+  copia plana de su cara, nítida y a todo color, con el dibujo apuntando al
+  centro (como la dejaría su dueño). Así se leen fácil las fichas de vidrio
+  de los rivales. Las opacas no tienen copia, y la copia desaparece mientras
+  la ficha se mueve o cae.
+- **Tu mano** muestra a simple vista qué fichas ven los demás: las de vidrio
+  son claras y frías, con un reflejo; las opacas, de marfil como siempre.
+- **Las manos rivales** ponen primero sus fichas de vidrio, en orden, y
+  después las opacas: el lugar de una opaca en la fila no dice nada.
+- **No hay muro.** La mesa tiene un agujero en el centro: al empezar la mano
+  las fichas revueltas caen en él, y el reparto, cada robo y cada reposición
+  de kan salen de ahí, así que las fichas que no se robaron nunca se ven.
+- **Los indicadores de dora** tienen su espacio entre el agujero y tu
+  estanque: un marco de madera donde calzan justo cinco fichas acostadas. Al
+  empezar la mano se saca una ficha del agujero y se pone boca arriba en el
+  primer lugar; cada kan saca otra al lugar siguiente. Al ganar con riichi,
+  los **ura dora también salen del agujero**. Los depósitos de riichi van del
+  otro lado del agujero, y los palitos de riichi un poco más afuera que de
+  costumbre, para dejar libre el marco.
+- **Reglas:** las de siempre. El furiten y las esperas se informan igual.
+- El servidor solo envía, de cada rival, sus fichas de vidrio (nunca las
+  opacas). Los bots (majiang-ai y Mortal) no usan esa información: juegan
+  como en una partida normal.
 
 ## Muro y robos
 
@@ -662,8 +700,10 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
 
 - **Escenas**: inicio de mano (revolver, muros, dados, reparto), robos y
   descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
-  tsumo, tu tsumo con tres kan, empate, kan y muro muerto, doble ron, y racha
-  (cielo, mar y fuego, con el brillo de las manos). Salen de
+  tsumo, tu tsumo con tres kan, empate, kan y muro muerto, doble ron, racha
+  (cielo, mar y fuego, con el brillo de las manos), y el modo Washizu (el
+  inicio de mano con el agujero, una mano con fichas de vidrio, y riichi y
+  ron con los ura saliendo del agujero). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta

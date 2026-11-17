@@ -496,8 +496,8 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .char-opt:hover img { filter: none; }
 .char-opt:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 /* the waiting room: the host picks the time, the others read it */
-#w-timing, #w-wall { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
-#w-timing b, #w-wall b { font-weight: 400; color: var(--chalk-yellow); }
+#w-timing, #w-wall, #w-tiles { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 18px 2px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
+#w-timing b, #w-wall b, #w-tiles b { font-weight: 400; color: var(--chalk-yellow); }
 .bot-levels { display: flex; flex-wrap: wrap; gap: 6px 10px; }
 :is(.bot-level, .chalk-opt) {
   position: relative;
