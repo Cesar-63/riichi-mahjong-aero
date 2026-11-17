@@ -220,6 +220,7 @@ export function createHand3D({ world, kit, onPick }) {
         auraTint.setScalar(1).lerp(aura.material.color, k).multiplyScalar(Number(dim) || 1);
         for (const m of t.mesh.userData.mats) {
           m.color.copy(auraTint);
+          if (m.userData.base) m.color.multiply(m.userData.base); // glass keeps its cold tint
           m.emissive.copy(aura.material.color);
           m.emissiveIntensity = 0.035;
         }
@@ -351,8 +352,19 @@ export function createHand3D({ world, kit, onPick }) {
   renderer.domElement.addEventListener('pointercancel', () => release(null));
 
   fit();
+  // drop every tile (they are made again at the next layout)
+  function clear() {
+    for (const t of tiles.values()) {
+      scene.remove(t.mesh);
+      kit.dispose(t.mesh);
+    }
+    tiles.clear();
+    selected = null;
+  }
+
   return {
     layout,
+    clear,
     // the glow of a streak behind the hand: a colour, or null for none
     setAura(color) {
       const was = auraOn;
@@ -364,6 +376,7 @@ export function createHand3D({ world, kit, onPick }) {
           const dim = Number(String(t.mesh.userData.style).split(':')[0]) || 1;
           for (const m of t.mesh.userData.mats) {
             m.color.setScalar(dim);
+            if (m.userData.base) m.color.multiply(m.userData.base);
             m.emissiveIntensity = 0;
           }
         }

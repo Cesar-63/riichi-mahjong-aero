@@ -438,3 +438,30 @@ test('wall: the opener picks it, the host can change it, and the game is dealt w
   const usual = await call({ op: 'join', token: tokens[2], name: 'P2', hb: true }, 'wl2');
   assert.equal(usual.wall, 'normal');
 });
+
+test('washizu tiles: the opener picks them, the host can change them, and every view shows the rivals\' glass tiles only', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 72_000_000;
+  const call = async (body, room = 'wz1') => (await handle({ room, ...body }, store, now)).body;
+  assert.equal((await call({ op: 'join', token: tokens[0], name: 'P0' })).tiles, 'normal');
+  assert.equal((await call({ op: 'join', token: tokens[1], name: 'P1', tiles: 'washizu' })).tiles, 'normal', 'a later player does not change them');
+  assert.ok((await call({ op: 'tiles', token: tokens[1], tiles: 'washizu' })).error, 'only the host');
+  assert.ok((await call({ op: 'tiles', token: tokens[0], tiles: 'oro' })).error, 'unknown tiles');
+  assert.equal((await call({ op: 'tiles', token: tokens[0], tiles: 'washizu' })).tiles, 'washizu');
+  const filled = await call({ op: 'fill', token: tokens[0] });
+  assert.ok(!filled.error, filled.error);
+  const { game } = await call({ op: 'poll', token: tokens[0] });
+  assert.equal(game.tiles, 'washizu');
+  assert.equal(game.config.washizu, true);
+  assert.equal(game.players[game.seat].glass, null, 'my own hand is mine already');
+  for (const [i, p] of game.players.entries()) {
+    if (i === game.seat) continue;
+    const seen = [...p.glass.hand, ...(p.glass.drawn !== null ? [p.glass.drawn] : [])];
+    assert.ok(seen.every((id) => id % 4 !== 0), 'never an opaque copy');
+    assert.ok(seen.length <= p.handCount + (p.hasDrawn ? 1 : 0));
+  }
+  // a room opened without asking plays with the usual tiles
+  const usual = await call({ op: 'join', token: tokens[2], name: 'P2', hb: true, room: 'wz2' }, 'wz2');
+  assert.equal(usual.tiles, 'normal');
+});

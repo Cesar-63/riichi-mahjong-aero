@@ -177,6 +177,58 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // ---------------------------------------------------------- object pool
   const objects = new Map(); // key -> { obj, target: {p, q}, lift }
   let me = 0;
+  // every tile on the table goes (a new hand, or the tiles changed kind)
+  function dropObjects() {
+    for (const [key, o] of objects) {
+      scene.remove(o.obj);
+      kit.dispose(o.obj);
+      if (o.blob) {
+        scene.remove(o.blob);
+        o.blob.material.dispose();
+      }
+      objects.delete(key);
+    }
+  }
+
+  // ------------------------------------------------------------ washizu
+  // Washizu mode (view.config.washizu): no walls. The tiles go into a hole
+  // in the middle of the table and every draw comes up out of it, so the
+  // tiles not drawn yet are never seen. The dora indicators lie face up in
+  // a row by the hole, facing me; riichi deposits go on its far side.
+  const isWashizu = (v) => !!(v.config && v.config.washizu);
+  const HOLE_R = 1.35;
+  const hole = new THREE.Group();
+  {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, '#000');
+    grad.addColorStop(0.7, '#050605');
+    grad.addColorStop(0.92, '#1b2019');
+    grad.addColorStop(1, '#2a3226');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mouth = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex }));
+    mouth.position.y = 0.006;
+    // a worn brass lip round it
+    const lip = new THREE.Mesh(
+      new THREE.TorusGeometry(HOLE_R + 0.05, 0.08, 10, 64).rotateX(Math.PI / 2),
+      new THREE.MeshPhongMaterial({ color: 0x8a6a34, specular: 0x6b5a3a, shininess: 40 }),
+    );
+    lip.position.y = 0.02;
+    hole.add(mouth, lip);
+    hole.visible = false;
+    scene.add(hole);
+  }
+  // a tile down in the hole, out of sight under the felt
+  const holePose = () => ({ p: new THREE.Vector3(0, -H, 0), q: qLocal.down.clone() });
+  // where dora indicator i lies, face up and facing me, between the hole and my pond
+  const doraPose = (i) => place(0, (i - 2) * PITCH, D / 2, 2.38, 'up');
+  // where a drawn tile comes from: its wall slot, or the hole
+  const drawFrom = (v, slot, rel) => (isWashizu(v) ? holePose() : slotPose(v, slot, rel));
 
   // Plays never overlap: the moves of one play (a discard, a call, a draw)
   // wait until the previous play's moves have landed, even when a single
@@ -357,7 +409,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const lift = Math.max(0, bottom - floor);
     o.blob.position.set(o.obj.position.x, floor + 0.012, o.obj.position.z);
     o.blob.scale.set(ex * 1.35 + lift * 0.4, 1, ez * 1.35 + lift * 0.4);
-    o.blob.material.opacity = lift > 0.5 ? 0 : 0.42 * (1 - lift / 0.5);
+    // light goes through glass: its shadow is a faint one
+    o.blob.material.opacity = (lift > 0.5 ? 0 : 0.42 * (1 - lift / 0.5)) * (o.obj.userData.glass ? 0.45 : 1);
   }
 
   // ------------------------------------------------------- win reveal
@@ -615,7 +668,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
         lbl('Ura', '#ff8ad8', t);
         ura.forEach((id, i) => {
           const slot = deadSlot(9 + i);
-          flyer(id, slotPose(v, slot, rel), i, t, 'ura');
+          flyer(id, drawFrom(v, slot, rel), i, t, 'ura');
           flyers[flyers.length - 1].slot = slot;
         });
         t += ura.length * WIN.flyGap + WIN.flyMs;
@@ -653,7 +706,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
     v.players.forEach((p, abs) => {
       const r = rel(abs);
       const up = tenpai.has(abs);
-      const ids = up ? res.hands[abs] || [] : abs === v.seat ? v.hand : Array.from({ length: p.handCount }, () => null);
+      const seen = p.glass ? p.glass.hand : [];
+      const ids = up ? res.hands[abs] || [] : abs === v.seat ? v.hand : [...seen, ...Array.from({ length: p.handCount - seen.length }, () => null)];
       const x0 = r === 0 ? 10 : 12;
       ids.forEach((id, i) => {
         items.push(revealTile(r, id, rowX(x0, i), up, r === 0 ? i * WIN.placeGap : 0, DRAW.startMs + i * DRAW.tileMs));
@@ -961,7 +1015,15 @@ export function createTable3D(container, { onPick, signal } = {}) {
 
     // wall: every slot still in place is a face-down tile; revealed dora face up
     const w = v.wall;
-    if (w) {
+    const washizu = isWashizu(v);
+    hole.visible = washizu;
+    if (w && washizu) {
+      // no wall: only the dora indicators, out of the hole into their row
+      v.dora.forEach((id, i) => {
+        put(`t${id}`, id, doraPose(i), null, 'call');
+        if (id !== introFlipped) spawns.set(`t${id}`, holePose());
+      });
+    } else if (w) {
       const rinshan = new Set();
       for (let r = 0; r < w.pops; r++) rinshan.add(deadSlot(r));
       const dora = new Map();
@@ -998,10 +1060,15 @@ export function createTable3D(container, { onPick, signal } = {}) {
         // on a streak the tiles themselves glow too (the wall hides the felt under a far hand)
         const kind = climateOf(p.streak);
         const lit = kind ? { aura: CLIMATES[kind].glow } : null;
-        for (let i = 0; i < p.handCount; i++) put(`h${abs}:${i}`, null, place(r, rowX(12, i), H / 2, fzo(95), 'stand'), lit);
+        // Washizu: the glass tiles everybody sees first, in order, then the
+        // opaque ones (their place in the row would give them away)
+        const glass = p.glass || { hand: [], drawn: null };
+        const handKeys = [...glass.hand.map((id) => [`t${id}`, id]), ...Array.from({ length: p.handCount - glass.hand.length }, (_, i) => [`h${abs}:${i}`, null])];
+        handKeys.forEach(([key, id], i) => put(key, id, place(r, rowX(12, i), H / 2, fzo(95), 'stand'), { ...lit, hand: true }));
         if (p.hasDrawn) {
-          put(`h${abs}:d`, null, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), lit, 'draw', null, r);
-          if (drawSlot && drawSlot.seat === abs) spawns.set(`h${abs}:d`, slotPose(v, drawSlot.slot, rel));
+          const key = glass.drawn !== null ? `t${glass.drawn}` : `h${abs}:d`;
+          put(key, glass.drawn, place(r, rowX(12, p.handCount) + 0.35, H / 2, fzo(95), 'stand'), { ...lit, hand: true }, 'draw', null, r);
+          if (drawSlot && drawSlot.seat === abs) spawns.set(key, drawFrom(v, drawSlot.slot, rel));
         }
       }
       // pond (called tiles leave it; the tile after a called riichi tile goes sideways)
@@ -1034,7 +1101,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
         x += width + 0.1;
         col++;
         const key = `t${d.tile}`;
-        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, objects.has(key) ? null : r === 0 ? 'mine' : 'discard', null, r);
+        // (a glass tile seen in the hand is already on the table: it is the one that goes)
+        const leaving = !objects.has(key) || objects.get(key).flags.hand;
+        put(key, d.tile, target, { tg: d.tsumogiri, last: last && last.tile === d.tile }, leaving ? (r === 0 ? 'mine' : 'discard') : null, null, r);
         // a discard lies down flat as soon as it leaves the hand (a riichi
         // discard lies down sideways), crosses over the wall and drops in
         if (!objects.has(key) && r === 0) {
@@ -1042,7 +1111,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
           spawns.set(key, place(0, target.p.x * 0.6, 2.6, fzo(104), 'stand'));
         } else if (!objects.has(key)) {
           // opponents' discards leave from their hand: drawn slot for tsumogiri, else inside the hand
-          const from = d.tsumogiri ? prevPos(`h${abs}:d`) : prevPos(`h${abs}:${d.tile % Math.max(1, p.handCount)}`);
+          const hidden = p.handCount - (p.glass ? p.glass.hand.length : 0);
+          const from = d.tsumogiri ? prevPos(`h${abs}:d`) : prevPos(`h${abs}:${d.tile % Math.max(1, hidden)}`);
           if (from) spawns.set(key, from);
         }
       });
@@ -1095,7 +1165,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     // my hand: a freshly drawn tile flies in from its wall slot
     let spawn = null;
     if (drawSlot && drawSlot.seat === v.seat && v.drawn !== null) {
-      const p = slotPose(v, drawSlot.slot, rel).p.clone().project(camera);
+      const p = (washizu ? new THREE.Vector3(0, 0.5, 0) : slotPose(v, drawSlot.slot, rel).p.clone()).project(camera);
       const rect = renderer.domElement.getBoundingClientRect();
       spawn = { id: v.drawn, x: ((p.x + 1) / 2) * rect.width, y: ((p.y + 1) / 2) * rect.height, wait: laneWait() };
       laneEnd = performance.now() + spawn.wait + 90; // its flight to the hand
@@ -1226,7 +1296,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
   let deposits = { key: '', meshes: [] };
   function syncDeposits(v) {
     const n = carriedDeposits(v);
-    const key = n ? `${resultKey(v)}:${n}:${v.seat}` : '';
+    const key = n ? `${resultKey(v)}:${n}:${v.seat}:${isWashizu(v)}` : '';
     if (key === deposits.key) return;
     for (const m of deposits.meshes) scene.remove(m);
     deposits = { key, meshes: [] };
@@ -1235,7 +1305,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
       const m = new THREE.Mesh(stickGeo, stickMats[1000]);
       m.castShadow = true;
       // a slightly untidy pile: each row a little turned and shifted
-      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0));
+      // (Washizu: on the far side of the hole)
+      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0) - (isWashizu(v) ? 2.45 : 0));
       m.rotation.y = (row % 2 ? -0.05 : 0.04) * (row ? 1 : 0.5);
       scene.add(m);
       deposits.meshes.push(m);
@@ -1275,15 +1346,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const rel = (abs) => (abs - v.seat + 4) % 4;
     const total = v.intro.total;
     // drop what is on the table from the previous hand
-    for (const [key, o] of objects) {
-      scene.remove(o.obj);
-      kit.dispose(o.obj);
-      if (o.blob) {
-        scene.remove(o.blob);
-        o.blob.material.dispose();
-      }
-      objects.delete(key);
-    }
+    dropObjects();
     if (v.wall && v.wall.lastDraw) ui.lastDraw3d = v.wall.lastDraw.n;
     const rnd = (a, b) => a + Math.random() * (b - a);
     const pile = createShuffle({ count: 136, hw: W / 2, hh: H / 2, ring: [0, 40], start: PILE.start, square: PILE.open, panel: 0 });
@@ -1294,11 +1357,15 @@ export function createTable3D(container, { onPick, signal } = {}) {
     for (const st of sticks.values()) scene.remove(st.mesh);
     sticks.clear();
     const tiles = [];
+    // Washizu: the tiles go into the hole instead of building walls (three
+    // of every four of them glass), and the deal comes up out of it
+    const washizu = isWashizu(v);
+    hole.visible = washizu;
     for (let slot = 0; slot < 136; slot++) {
       const isDora = slot === deadSlot(4);
-      const obj = makeTile(isDora ? v.dora[0] : null);
+      const obj = isDora ? makeTile(v.dora[0]) : makeTile(null, washizu && slot % 4 !== 0);
       scene.add(obj);
-      const final = slotPose(v, slot, rel);
+      const final = washizu ? holePose() : slotPose(v, slot, rel);
       const stack = (v.wall.breakStack + (slot >> 1)) % (4 * STACKS);
       const ownerRel = rel((4 - Math.floor(stack / STACKS)) % 4);
       const out = new THREE.Vector3(0, 0, 1).applyQuaternion(qSeat[ownerRel]);
@@ -1374,7 +1441,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       };
     });
     world.forceView('overview');
-    intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, pile, myDealt: -1, v, ui };
+    intro = { t0: performance.now() - (total - v.intro.left), total, tiles, dice, pile, myDealt: -1, v, ui, washizu };
     hand.layout(v, ui, 0);
     introListener({ active: true, myTiles: 0 });
   }
@@ -1406,6 +1473,17 @@ export function createTable3D(container, { onPick, signal } = {}) {
         // shuffling: lying face down where the simulation put it
         o.position.set(t.sim.x, D / 2, t.sim.z);
         o.quaternion.copy(qLocal.down).premultiply(tmpQ.setFromAxisAngle(Y_AXIS, t.sim.yaw));
+        continue;
+      }
+      if (intro.washizu) {
+        // into the hole: over the pile, then straight down through the felt
+        t.build ||= makePath({ p: o.position.clone(), q: o.quaternion.clone() }, t.final, { hy: Math.max(o.position.y, 0) + 1.2 });
+        poseAt(t.build, clamp01((p - buildStart(t)) / 0.06) * t.build.total, o);
+        // the dora indicator comes back up and lies face up by the hole
+        if (t.isDora && p > PHASES.flip[0]) {
+          t.flip ||= makePath(t.final, doraPose(0));
+          poseAt(t.flip, clamp01(span(p, PHASES.flip)) * t.flip.total, o);
+        }
         continue;
       }
       if (p < PHASES.push[0]) {
@@ -1494,6 +1572,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
   return {
     update(v, ui) {
       relOf = (abs) => (abs - v.seat + 4) % 4;
+      // glass tiles or not: the tiles made the other way go
+      if (kit.setWashizu(isWashizu(v))) {
+        dropObjects();
+        hand.clear();
+      }
       const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
       if (v.intro && v.intro.left > 400 && v.wall && key !== introKey) {
         introKey = key;
@@ -1539,7 +1622,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     // Screen position of a wall slot (where a drawn tile came from).
     slotOnScreen(v, slot) {
       if (!v.wall) return null;
-      const p = slotPose(v, slot, (abs) => (abs - v.seat + 4) % 4).p.clone().project(camera);
+      const p = (isWashizu(v) ? new THREE.Vector3(0, 0.5, 0) : slotPose(v, slot, (abs) => (abs - v.seat + 4) % 4).p.clone()).project(camera);
       const rect = renderer.domElement.getBoundingClientRect();
       return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
     },

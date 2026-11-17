@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Game } from '../server/engine/game.js';
-import { parseIds, tileType, counts34 } from '../public/js/shared/tiles.js';
+import { parseIds, tileType, counts34, isGlass } from '../public/js/shared/tiles.js';
 import { shanten } from '../server/engine/hand.js';
 
 function mulberry32(seed) {
@@ -450,4 +450,44 @@ test('the wall is the usual one unless the room asks for the fluid one', () => {
   const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(9));
   assert.equal(g.s.k.fluid, undefined);
   assert.equal(g.view(0).fluid, null);
+});
+
+test('washizu: three of every four copies are glass, and a red five is the opaque one', () => {
+  for (let t = 0; t < 34; t++) {
+    const ids = [0, 1, 2, 3].map((c) => t * 4 + c);
+    assert.equal(ids.filter(isGlass).length, 3, `type ${t}`);
+  }
+  for (const red of [16, 52, 88]) assert.equal(isGlass(red), false);
+});
+
+test('washizu: a view shows the glass tiles of the rivals\' hands and never an opaque one', () => {
+  const g = Game.create(['A', 'B', 'C', 'D'], { washizu: true }, mulberry32(11));
+  const k = g.s.k;
+  for (let seat = 0; seat < 4; seat++) {
+    const v = g.view(seat);
+    assert.equal(v.players[seat].glass, null, 'not my own hand');
+    for (let i = 0; i < 4; i++) {
+      if (i === seat) continue;
+      const { hand, drawn } = v.players[i].glass;
+      const drawnHere = k.turn === i ? k.drawn : null;
+      const concealed = k.hands[i].filter((id) => id !== drawnHere);
+      assert.deepEqual(hand, concealed.filter(isGlass).sort((a, b) => a - b), 'every glass tile of the hand');
+      assert.equal(drawn, drawnHere !== null && isGlass(drawnHere) ? drawnHere : null, 'the drawn one too, if glass');
+      const opaque = k.hands[i].filter((id) => !isGlass(id));
+      assert.ok(opaque.every((id) => !JSON.stringify(v.players[i].glass).match(new RegExp(`\\b${id}\\b`))), 'no opaque tile');
+    }
+  }
+  // after a discard the next player draws, and the views follow
+  const dealer = g.dealer();
+  g.act(dealer, { type: 'discard', tile: k.drawn });
+  while (g.s.phase === 'response') g.act(g.pendingSeats()[0], { type: 'pass' });
+  const next = (dealer + 1) % 4;
+  const v = g.view(dealer);
+  assert.equal(v.players[next].hasDrawn, true);
+  assert.equal(v.players[next].glass.drawn, isGlass(k.drawn) ? k.drawn : null);
+});
+
+test('without washizu nobody sees a rival tile', () => {
+  const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(12));
+  assert.ok(g.view(0).players.every((p) => p.glass === null));
 });

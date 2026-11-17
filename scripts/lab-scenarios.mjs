@@ -22,8 +22,8 @@ function seeded(seed) {
 
 // A game whose four hands and first wall tiles are given (as in the
 // engine's tests); the dealer (me, seat 0) has drawn.
-function scripted(hands, front, seed = 1) {
-  const g = Game.create(NAMES, {}, seeded(seed));
+function scripted(hands, front, seed = 1, config = {}) {
+  const g = Game.create(NAMES, config, seeded(seed));
   const used = new Set();
   const k = g.s.k;
   k.hands = hands.map((h) => parseIds(h, used));
@@ -322,6 +322,37 @@ function myTsumo() {
   play([0, 0, 5, 0], 3); // still fire
   play([0, 0, 0, 0], 0, 3500); // back to the parlour
   scenes.push({ id: 'streak', name: 'Racha: cielo, mar y fuego', note: 'Vas en racha 2 (cielo) y 3 (mar); después la racha pasa al rival de enfrente, que llega a 4 (fuego); al final la racha se corta y vuelve el garito.', steps: rec.steps, length: rec.end });
+}
+
+// --------------------------------------------------------------- washizu
+{
+  const g = Game.create(NAMES, { washizu: true }, seeded(7));
+  const v = view(g);
+  v.intro = { left: 8000, total: 8000 };
+  scenes.push({ id: 'washizu-intro', name: 'Washizu: inicio de mano', note: 'Modo Washizu: no hay muros; las fichas (tres de cada cuatro de vidrio) se revuelven y caen al agujero del centro, y el reparto y el dora salen de ahí.', steps: [{ at: 0, view: v }], length: 9000 });
+}
+{
+  // red fives in my hand (always the opaque copy), a rival's pon of glass tiles
+  const g = scripted(['055m456p789s123z5z', '55z123m456p789s11z', '258m258p258s1357z', '369m369p369s2466z'], '7z', 1, { washizu: true });
+  g.s.kyoutaku = 1; // a riichi deposit: on the far side of the hole
+  const rec = recorder();
+  rec.add(g, 1500);
+  g.act(0, { type: 'discard', tile: idOf(g, 0, T('5z')) });
+  rec.add(g, 600);
+  const o = g.view(1).options;
+  passAll(g, 1);
+  g.act(1, { type: 'pon', tiles: o.pon[0] });
+  passAll(g);
+  rec.add(g, 1000);
+  g.act(1, { type: 'discard', tile: idOf(g, 1, T('1z')) });
+  passAll(g);
+  rec.add(g);
+  for (const seat of [2, 3, 0, 1]) {
+    tsumogiri(g, seat);
+    passAll(g);
+    rec.add(g, 900);
+  }
+  scenes.push({ id: 'washizu', name: 'Washizu: fichas de vidrio', note: 'Modo Washizu: se leen las fichas de vidrio de los rivales y solo la copia opaca queda oculta (tus cincos rojos son opacos). Los robos salen del agujero, los dora están junto a él y el depósito de riichi del otro lado. El rival de la derecha hace pon.', steps: rec.steps, length: rec.end + 800 });
 }
 
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });
