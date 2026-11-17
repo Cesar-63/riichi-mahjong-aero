@@ -567,6 +567,7 @@ mismo. Los bots se sientan con personajes que nadie eligió.
 | **Momo** | Estudiante de uniforme marinero, pelo rosado largo | Prolija y rápida. Se acomoda el pelo |
 | **Kaito** | Camisa verde abierta, polera negra, jeans, pelo negro más largo atrás | Inquieto, echado sobre la mesa, manos veloces. Se soba la nuca |
 | **Tatsuo** | Un señor de pelo cano peinado hacia atrás, traje negro, camisa roja y detalles dorados | Erguido, lento y exacto. Se acomoda la solapa |
+| **Michihime** | Chica gato vestida de miko festiva: bob castaño rojizo, kimono coral, lazo rojo, hakama oscuro, okobo y cascabeles dorados | Rápida y liviana, inclinada sobre la mesa. Hace sonar su cascabel |
 
 En la mesa:
 

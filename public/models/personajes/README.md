@@ -1,6 +1,6 @@
 # Personajes
 
-Los seis personajes que se sientan a la mesa (`public/js/shared/characters.js`
+Los siete personajes que se sientan a la mesa (`public/js/shared/characters.js`
 tiene la lista; el jugador elige el suyo en el lobby).
 
 | Archivo | Quién es | De dónde sale |
@@ -11,6 +11,7 @@ tiene la lista; el jugador elige el suyo en el lobby).
 | `kaito.glb` | Camisa verde abierta, polera negra, jeans | Shiro recoloreado, pelo negro con mechones más largos atrás |
 | `tatsuo.glb` | Señor de traje negro, camisa roja, detalles dorados | El traje de Ryuji recoloreado y la cabeza de Genzo, sin cigarro y con pelo cano peinado hacia atrás |
 | `momo.glb` | Estudiante de uniforme marinero, pelo rosado | Cabeza, cuello y piernas de Shiro; torso, falda, pelo y texturas del uniforme hechos por el script |
+| `michihime.glb` | Chica gato vestida de miko festiva | Cabeza, cuello y piernas de Shiro y brazos de Genzo; kimono, obi, lazo, hakama, okobo, pelo, orejas y cascabeles hechos por el script. Va sobre plataformas de 5 cm (las okobo) |
 
 ## Cómo se arman
 

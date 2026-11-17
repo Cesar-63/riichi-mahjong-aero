@@ -8,6 +8,7 @@ export const CHARACTERS = [
   { id: 'momo', name: 'Momo', about: 'Estudiante de uniforme marinero y pelo rosado' },
   { id: 'kaito', name: 'Kaito', about: 'Camisa verde abierta, polera negra y jeans' },
   { id: 'tatsuo', name: 'Tatsuo', about: 'Un señor de traje negro, camisa roja y detalles dorados' },
+  { id: 'michihime', name: 'Michihime', about: 'Chica gato vestida de miko festiva: kimono coral, hakama y cascabeles' },
 ];
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 export const isCharacter = (id) => CHARACTERS.some((c) => c.id === id);
