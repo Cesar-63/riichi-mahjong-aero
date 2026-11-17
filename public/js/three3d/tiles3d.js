@@ -206,43 +206,6 @@ export function createTileKit(renderer) {
     f.t.needsUpdate = true;
   }
 
-  // The drawing a glass tile throws on the felt (table3d.js): light that
-  // went through the glass, a soft brighter patch, with the design in its
-  // own colours, a little blurred.
-  const prints = new Map();
-  function printTexture(id) {
-    const key = id === null ? 'blank' : imageName(id);
-    if (prints.has(key)) return prints.get(key).t;
-    const f = canvasTex(120, 160);
-    Object.assign(f, { id, img: null });
-    const paint = () => {
-      const { g } = f;
-      g.clearRect(0, 0, 120, 160);
-      g.save();
-      g.filter = 'blur(3px)';
-      g.fillStyle = 'rgba(225, 255, 235, .3)';
-      g.beginPath();
-      g.roundRect(6, 6, 108, 148, 10);
-      g.fill();
-      g.restore();
-      g.save();
-      g.filter = 'blur(1.2px)';
-      g.globalAlpha = 0.85;
-      g.scale(0.5, 0.5);
-      drawDesign(g, f);
-      g.restore();
-      f.t.needsUpdate = true;
-    };
-    if (id !== null && tileset.mode === 'img') {
-      f.img = new Image();
-      f.img.onload = paint;
-      f.img.src = `${tileset.dir}${imageName(id)}.${tileset.ext}`;
-    }
-    paint();
-    prints.set(key, f);
-    return f.t;
-  }
-
   // ---------------------------------------------------------- materials
   const phong = (opts) => new THREE.MeshPhongMaterial({ specular: 0x151515, shininess: look.shine, ...opts });
   const backMat = phong({ map: back.t });
@@ -313,5 +276,5 @@ export function createTileKit(renderer) {
     return changed;
   }
 
-  return { makeTile, style, dispose, setWashizu, printTexture, washizu: () => washizu, glowColor: () => look.glow };
+  return { makeTile, style, dispose, setWashizu, faceTexture: (id) => faceTexture(id).t, washizu: () => washizu, glowColor: () => look.glow };
 }

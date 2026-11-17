@@ -243,54 +243,47 @@ export function createTable3D(container, { onPick, signal } = {}) {
   const holePose = () => ({ p: new THREE.Vector3(0, -H, 0), q: qLocal.down.clone() });
   // where dora indicator i lies in the tray, face up and facing me
   const doraPose = (i) => place(0, (i - 2) * PITCH, D / 2, TRAY.z, 'up');
-  // Light through glass: every glass tile on the table throws its drawing on
-  // the felt. The light is not the lamp (right above, it would hide the
-  // drawing under the tile) but a low one from the far side of the table,
-  // so the drawing falls towards me: a little past a lying tile, and out in
-  // front of a standing one. It fades as the tile lifts.
-  const PRINT_K = 0.75; // how far the drawing slides towards me per unit of height
-  const PRINT_UV = [0, 0, 1, 0, 1, 1, 0, 1];
-  const printCorners = [[-W / 2, -H / 2], [W / 2, -H / 2], [W / 2, H / 2], [-W / 2, H / 2]].map(([x, y]) => new THREE.Vector3(x, y, D / 2));
-  const prints = new Map(); // tile mesh -> its drawing on the felt
-  const tmpV = new THREE.Vector3();
-  function makePrint(tile) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
-    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(PRINT_UV), 2));
-    geo.setIndex([0, 1, 2, 0, 2, 3]);
-    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      map: kit.printTexture(tile.userData.id), transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-    }));
-    mesh.renderOrder = 2; // over the shadows, under the glass
-    mesh.frustumCulled = false;
+  // A standing glass tile shows what it is on the felt: right in front of
+  // it, towards the middle of the table, a flat copy of its face lies on
+  // the felt, sharp and in full colour, the way its owner would lay it down
+  // (the drawing's top towards the middle). It makes the rivals' glass
+  // tiles easy to read. Only while the tile stands on the table: one that
+  // moves, tips over or lies has none. The opaque copies never get one.
+  const CARD_OUT = D / 2 + 0.06 + H / 2; // from the tile's centre to the card's
+  const cardGeo = new THREE.PlaneGeometry(W * 0.97, H * 0.97);
+  const cards = new Map(); // tile mesh -> its card on the felt
+  const qUp = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  const tmpN = new THREE.Vector3();
+  function makeCard(tile) {
+    const mesh = new THREE.Mesh(cardGeo, new THREE.MeshPhongMaterial({ map: kit.faceTexture(tile.userData.id), specular: 0x151515, shininess: 14 }));
+    mesh.receiveShadow = true;
     scene.add(mesh);
     return mesh;
   }
-  function dropPrint(tile) {
-    const pr = prints.get(tile);
-    scene.remove(pr);
-    pr.geometry.dispose();
-    pr.material.dispose();
-    prints.delete(tile);
+  function dropCard(tile) {
+    const c = cards.get(tile);
+    scene.remove(c);
+    c.material.dispose();
+    cards.delete(tile);
   }
   world.onTick(() => {
-    for (const tile of prints.keys()) if (tile.parent !== scene) dropPrint(tile);
+    for (const tile of cards.keys()) if (tile.parent !== scene) dropCard(tile);
     for (const tile of scene.children) {
-      if (!tile.userData.glass) continue;
-      let pr = prints.get(tile);
-      if (!pr) prints.set(tile, (pr = makePrint(tile)));
-      const pos = pr.geometry.attributes.position;
-      let low = Infinity;
-      printCorners.forEach((c, i) => {
-        tmpV.copy(c).applyQuaternion(tile.quaternion).add(tile.position);
-        low = Math.min(low, tmpV.y);
-        pos.setXYZ(i, tmpV.x, 0.008, tmpV.z + PRINT_K * Math.max(0, tmpV.y));
-      });
-      pos.needsUpdate = true;
-      // (a lying face down tile has its drawing against the felt: none shows)
-      const lift = Math.max(0, low - D);
-      pr.visible = tile.visible && lift < 0.6;
-      pr.material.opacity = 1 - lift / 0.6;
+      if (!tile.userData.glass || tile.userData.id === null) continue;
+      tmpN.set(0, 0, 1).applyQuaternion(tile.quaternion);
+      // standing upright, on the felt
+      const standing = tile.visible && Math.abs(tmpN.y) < 0.05 && Math.abs(tile.position.y - H / 2) < 0.05;
+      let card = cards.get(tile);
+      if (!standing) {
+        if (card) card.visible = false;
+        continue;
+      }
+      if (!card) cards.set(tile, (card = makeCard(tile)));
+      card.visible = true;
+      // in front of the tile on the middle's side (the face looks at its owner)
+      tmpN.setY(0).normalize();
+      card.position.copy(tile.position).addScaledVector(tmpN, -CARD_OUT).setY(0.012);
+      card.quaternion.copy(tile.quaternion).multiply(qUp);
     }
   });
 

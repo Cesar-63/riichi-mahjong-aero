@@ -225,10 +225,12 @@ elige en **Fichas** al abrir la sala o la práctica.
   desde cualquier lado: en la mano de un rival se lee su dibujo (por detrás,
   derecho) y solo la copia opaca queda oculta, de reverso como siempre.
   Cuando una ficha tiene cinco rojo, **el cinco rojo es la copia opaca**.
-- **El dibujo sobre el paño.** La luz que atraviesa una ficha de vidrio
-  dibuja su cara sobre el paño, con sus colores y un poco borrosa: asoma
-  junto a una ficha acostada y se alarga delante de una parada. Se apaga
-  mientras la ficha está en el aire.
+- **La cara sobre el paño.** Delante de cada ficha de vidrio parada en una
+  mano, del lado del centro de la mesa, queda acostada sobre el paño una
+  copia plana de su cara, nítida y a todo color, con el dibujo apuntando al
+  centro (como la dejaría su dueño). Así se leen fácil las fichas de vidrio
+  de los rivales. Las opacas no tienen copia, y la copia desaparece mientras
+  la ficha se mueve o cae.
 - **Tu mano** muestra a simple vista qué fichas ven los demás: las de vidrio
   son claras y frías, con un reflejo; las opacas, de marfil como siempre.
 - **Las manos rivales** ponen primero sus fichas de vidrio, en orden, y
