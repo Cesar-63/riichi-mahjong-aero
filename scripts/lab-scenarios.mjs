@@ -169,12 +169,13 @@ const scenes = [];
 }
 
 // ------------------------------------------- rival riichi, then ron on me
-function riichiRon() {
-  const g = scripted(['4m7z11z22z33z44z55z6z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'], '9p9m8p8s9s');
+function riichiRon(config = {}) {
+  const g = scripted(['4m7z11z22z33z44z55z6z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'], '9p9m8p8s9s', 1, config);
   return g;
 }
-{
-  const g = riichiRon();
+// played the same with or without washizu tiles
+function riichiRonScene(config) {
+  const g = riichiRon(config);
   const rec = recorder();
   rec.add(g, 900);
   g.act(0, { type: 'discard', tile: idOf(g, 0, 33) });
@@ -193,6 +194,10 @@ function riichiRon() {
   g.act(1, { type: 'ron' });
   passAll(g);
   rec.add(g, 7000);
+  return rec;
+}
+{
+  const rec = riichiRonScene();
   scenes.push({ id: 'riichi-ron', name: 'Riichi y ron de un rival', note: 'El rival de la derecha declara riichi (palito) y te hace ron: la mano cae, la ficha del ron vuela y llegan dora y ura.', steps: rec.steps, length: rec.end });
 }
 
@@ -351,6 +356,10 @@ function myTsumo() {
     tsumogiri(g, seat);
     passAll(g);
     rec.add(g, 900);
+  }
+  {
+    const ron = riichiRonScene({ washizu: true });
+    scenes.push({ id: 'washizu-riichi-ron', name: 'Washizu: riichi y ron', note: 'Modo Washizu: el rival de la derecha declara riichi y te hace ron. El dora sale de su espacio junto al agujero y los ura salen del agujero.', steps: ron.steps, length: ron.end });
   }
   scenes.push({ id: 'washizu', name: 'Washizu: fichas de vidrio', note: 'Modo Washizu: se leen las fichas de vidrio de los rivales y solo la copia opaca queda oculta (tus cincos rojos son opacos). Los robos salen del agujero, los dora están junto a él y el depósito de riichi del otro lado. El rival de la derecha hace pon.', steps: rec.steps, length: rec.end + 800 });
 }

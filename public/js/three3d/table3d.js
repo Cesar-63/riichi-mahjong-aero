@@ -193,10 +193,14 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // ------------------------------------------------------------ washizu
   // Washizu mode (view.config.washizu): no walls. The tiles go into a hole
   // in the middle of the table and every draw comes up out of it, so the
-  // tiles not drawn yet are never seen. The dora indicators lie face up in
-  // a row by the hole, facing me; riichi deposits go on its far side.
+  // tiles not drawn yet are never seen. Between the hole and my pond there
+  // is a tray that holds exactly five dora indicators, face up and facing
+  // me: each indicator is taken out of the hole and laid in it. Riichi
+  // deposits go on the far side of the hole, and the riichi sticks a little
+  // further out than usual, past the tray.
   const isWashizu = (v) => !!(v.config && v.config.washizu);
-  const HOLE_R = 1.35;
+  const HOLE_R = 0.95;
+  const TRAY = { z: 1.95, rim: 0.12, h: 0.12, w: 5 * PITCH - GAP + 0.08, d: H + 0.08 };
   const hole = new THREE.Group();
   {
     const c = document.createElement('canvas');
@@ -220,13 +224,76 @@ export function createTable3D(container, { onPick, signal } = {}) {
     );
     lip.position.y = 0.02;
     hole.add(mouth, lip);
+    // the dora tray: a low wooden frame round a darker felt, five tiles wide
+    const wood = new THREE.MeshPhongMaterial({ color: 0x4a3322, specular: 0x2a2018, shininess: 25 });
+    const bed = new THREE.Mesh(new THREE.PlaneGeometry(TRAY.w, TRAY.d).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x0f2116 }));
+    bed.position.set(0, 0.004, TRAY.z);
+    hole.add(bed);
+    const { w, d, rim, h } = TRAY;
+    for (const [sx, sz, x, z] of [[w + 2 * rim, rim, 0, -(d + rim) / 2], [w + 2 * rim, rim, 0, (d + rim) / 2], [rim, d, -(w + rim) / 2, 0], [rim, d, (w + rim) / 2, 0]]) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(sx, h, sz), wood);
+      bar.position.set(x, h / 2, TRAY.z + z);
+      bar.receiveShadow = true;
+      hole.add(bar);
+    }
     hole.visible = false;
     scene.add(hole);
   }
   // a tile down in the hole, out of sight under the felt
   const holePose = () => ({ p: new THREE.Vector3(0, -H, 0), q: qLocal.down.clone() });
-  // where dora indicator i lies, face up and facing me, between the hole and my pond
-  const doraPose = (i) => place(0, (i - 2) * PITCH, D / 2, 2.38, 'up');
+  // where dora indicator i lies in the tray, face up and facing me
+  const doraPose = (i) => place(0, (i - 2) * PITCH, D / 2, TRAY.z, 'up');
+  // Light through glass: every glass tile on the table throws its drawing on
+  // the felt. The light is not the lamp (right above, it would hide the
+  // drawing under the tile) but a low one from the far side of the table,
+  // so the drawing falls towards me: a little past a lying tile, and out in
+  // front of a standing one. It fades as the tile lifts.
+  const PRINT_K = 0.75; // how far the drawing slides towards me per unit of height
+  const PRINT_UV = [0, 0, 1, 0, 1, 1, 0, 1];
+  const printCorners = [[-W / 2, -H / 2], [W / 2, -H / 2], [W / 2, H / 2], [-W / 2, H / 2]].map(([x, y]) => new THREE.Vector3(x, y, D / 2));
+  const prints = new Map(); // tile mesh -> its drawing on the felt
+  const tmpV = new THREE.Vector3();
+  function makePrint(tile) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(PRINT_UV), 2));
+    geo.setIndex([0, 1, 2, 0, 2, 3]);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      map: kit.printTexture(tile.userData.id), transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }));
+    mesh.renderOrder = 2; // over the shadows, under the glass
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    return mesh;
+  }
+  function dropPrint(tile) {
+    const pr = prints.get(tile);
+    scene.remove(pr);
+    pr.geometry.dispose();
+    pr.material.dispose();
+    prints.delete(tile);
+  }
+  world.onTick(() => {
+    for (const tile of prints.keys()) if (tile.parent !== scene) dropPrint(tile);
+    for (const tile of scene.children) {
+      if (!tile.userData.glass) continue;
+      let pr = prints.get(tile);
+      if (!pr) prints.set(tile, (pr = makePrint(tile)));
+      const pos = pr.geometry.attributes.position;
+      let low = Infinity;
+      printCorners.forEach((c, i) => {
+        tmpV.copy(c).applyQuaternion(tile.quaternion).add(tile.position);
+        low = Math.min(low, tmpV.y);
+        pos.setXYZ(i, tmpV.x, 0.008, tmpV.z + PRINT_K * Math.max(0, tmpV.y));
+      });
+      pos.needsUpdate = true;
+      // (a lying face down tile has its drawing against the felt: none shows)
+      const lift = Math.max(0, low - D);
+      pr.visible = tile.visible && lift < 0.6;
+      pr.material.opacity = 1 - lift / 0.6;
+    }
+  });
+
   // where a drawn tile comes from: its wall slot, or the hole
   const drawFrom = (v, slot, rel) => (isWashizu(v) ? holePose() : slotPose(v, slot, rel));
 
@@ -937,7 +1004,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     v.players.forEach((p, abs) => {
       let st = sticks.get(abs);
       // on the felt in front of the player
-      const target = place(rel(abs), 0, 0.06, 2.7, 'stand');
+      const target = place(rel(abs), 0, 0.06, isWashizu(v) ? 3.1 : 2.7, 'stand');
       if (st && p.riichi && !samePose(st.target, target)) {
         st.path = makePath({ p: st.mesh.position.clone(), q: st.mesh.quaternion.clone() }, target, { hy: null, turnAll: true });
         st.dist = 0;
@@ -1306,7 +1373,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       m.castShadow = true;
       // a slightly untidy pile: each row a little turned and shifted
       // (Washizu: on the far side of the hole)
-      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0) - (isWashizu(v) ? 2.45 : 0));
+      m.position.set((row % 2 ? 0.12 : -0.08) * (row ? 1 : 0), 0.05 + row * 0.1, ((k % 3) - 1) * 0.46 + (row ? 0.23 : 0) - (isWashizu(v) ? 2 : 0));
       m.rotation.y = (row % 2 ? -0.05 : 0.04) * (row ? 1 : 0.5);
       scene.add(m);
       deposits.meshes.push(m);

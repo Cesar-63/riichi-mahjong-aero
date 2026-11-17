@@ -225,15 +225,24 @@ elige en **Fichas** al abrir la sala o la práctica.
   desde cualquier lado: en la mano de un rival se lee su dibujo (por detrás,
   derecho) y solo la copia opaca queda oculta, de reverso como siempre.
   Cuando una ficha tiene cinco rojo, **el cinco rojo es la copia opaca**.
+- **El dibujo sobre el paño.** La luz que atraviesa una ficha de vidrio
+  dibuja su cara sobre el paño, con sus colores y un poco borrosa: asoma
+  junto a una ficha acostada y se alarga delante de una parada. Se apaga
+  mientras la ficha está en el aire.
 - **Tu mano** muestra a simple vista qué fichas ven los demás: las de vidrio
   son claras y frías, con un reflejo; las opacas, de marfil como siempre.
 - **Las manos rivales** ponen primero sus fichas de vidrio, en orden, y
   después las opacas: el lugar de una opaca en la fila no dice nada.
 - **No hay muro.** La mesa tiene un agujero en el centro: al empezar la mano
   las fichas revueltas caen en él, y el reparto, cada robo y cada reposición
-  de kan salen de ahí, así que las fichas que no se robaron nunca se ven. El
-  indicador de dora (y los de kan) quedan boca arriba junto al agujero, de
-  tu lado; los depósitos de riichi, del otro lado.
+  de kan salen de ahí, así que las fichas que no se robaron nunca se ven.
+- **Los indicadores de dora** tienen su espacio entre el agujero y tu
+  estanque: un marco de madera donde calzan justo cinco fichas acostadas. Al
+  empezar la mano se saca una ficha del agujero y se pone boca arriba en el
+  primer lugar; cada kan saca otra al lugar siguiente. Al ganar con riichi,
+  los **ura dora también salen del agujero**. Los depósitos de riichi van del
+  otro lado del agujero, y los palitos de riichi un poco más afuera que de
+  costumbre, para dejar libre el marco.
 - **Reglas:** las de siempre. El furiten y las esperas se informan igual.
 - El servidor solo envía, de cada rival, sus fichas de vidrio (nunca las
   opacas). Los bots (majiang-ai y Mortal) no usan esa información: juegan
@@ -691,7 +700,8 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   descartes (con 3 honba y 2 depósitos de riichi), pon de un rival, tu pon y tu chi, riichi y ron de un rival, tu
   tsumo, tu tsumo con tres kan, empate, kan y muro muerto, doble ron, racha
   (cielo, mar y fuego, con el brillo de las manos), y el modo Washizu (el
-  inicio de mano con el agujero, y una mano con fichas de vidrio). Salen de
+  inicio de mano con el agujero, una mano con fichas de vidrio, y riichi y
+  ron con los ura saliendo del agujero). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Tiempo**: pausa (espacio), cuadro a cuadro (→), cámara lenta hasta
