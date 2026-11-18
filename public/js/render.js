@@ -243,7 +243,7 @@ export function resultHTML(v) {
         <div class="r-sub">${extra.join(' · ')}</div>
         ${more.map((m) => `<div class="r-sub also">También gana ${esc(v.players[m.seat].name)}: ${handValue(m).plain}${honbaText(m) ? ` ${honbaText(m)}` : ''}${m.label ? ` · ${limitName(m.label)}` : ''}</div>`).join('')}
       </div>
-      ${label ? `<div class="streak" aria-hidden="true"></div>${label}` : ''}
+      ${label ? `<div class="r-streak" aria-hidden="true"></div>${label}` : ''}
       <ul class="r-yaku${shown.length > 4 ? ' many' : ''}">${yaku}</ul>`;
   } else {
     const n = DRAW_NAMES[r.reason] || [r.reason, r.reason];
@@ -267,7 +267,7 @@ export function resultHTML(v) {
         <div class="r-round">${round} · sin ganador</div>
         <div class="r-hanfu"><span>${why}</span></div>
       </div>
-      <div class="streak" aria-hidden="true"></div>${stampHTML(name, n[0], 'draw')}
+      <div class="r-streak" aria-hidden="true"></div>${stampHTML(name, n[0], 'draw')}
       ${list}`;
   }
   return `<div class="r-sheet">
