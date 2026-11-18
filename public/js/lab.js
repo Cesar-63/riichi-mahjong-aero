@@ -1,5 +1,6 @@
 // Animation lab: plays fixed scenes (lab/scenarios.json, built with
-// scripts/lab-scenarios.mjs) on the real 3D table, on the page's virtual
+// scripts/lab-scenarios.mjs, and lab/exhibicion.json when it has been
+// built, the hands of the bots' exhibition match) on the real 3D table, on the page's virtual
 // clock (lab.html), with a free camera and the animation settings of
 // three3d/tuning.js changing live.
 import { createTable3D } from './three3d/table3d.js';
@@ -30,9 +31,10 @@ let lastView = null;
 let seeking = false;
 let pass = 'color';
 let peopleReady = Promise.resolve();
-// who sits at the lab's table (the scenes name no characters): the player,
-// then the rivals to the right, across and to the left
+// who sits at the lab's table when a scene names no characters: the
+// player, then the rivals to the right, across and to the left
 const LAB_CAST = ['shiro', 'momo', 'tatsuo', 'kaito'];
+const castOf = (s) => (s && s.cast) || LAB_CAST;
 
 // a fresh table for every run, so each run starts from nothing
 function start() {
@@ -45,7 +47,7 @@ function start() {
   table.setCallouts([...stage.querySelectorAll('.callout')]);
   table.showHand($('#lab-hand').checked);
   table.setPass(pass);
-  peopleReady = table.showCharacters($('#lab-people').checked, LAB_CAST);
+  peopleReady = table.showCharacters($('#lab-people').checked, castOf(scene));
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
   ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)) };
@@ -184,7 +186,7 @@ for (const [name, pos, target] of PRESETS) {
 $('#lab-hand').addEventListener('change', (e) => table && table.showHand(e.target.checked));
 $('#lab-people').addEventListener('change', (e) => {
   store.set('lab.people', e.target.checked ? '1' : '');
-  if (table) table.showCharacters(e.target.checked, LAB_CAST);
+  if (table) table.showCharacters(e.target.checked, castOf(scene));
 });
 $('#lab-people').checked = store.get('lab.people') !== '';
 $('#lab-copycam').addEventListener('click', () => copy(cam ? `posición ${fmt(camPos(cam))}, mira a ${fmt(cam.target)}` : 'cámara del juego'));
@@ -299,6 +301,11 @@ buildParams();
 // ---------------------------------------------------------------- start
 const res = await fetch('lab/scenarios.json');
 scenes = (await res.json()).scenes;
+// the exhibition match, if scripts/exhibition/scenes.mjs has made it
+try {
+  const more = await fetch('lab/exhibicion.json');
+  if (more.ok) scenes.push(...(await more.json()).scenes);
+} catch { /* not made: only the lab's own scenes */ }
 $('#lab-scene').innerHTML = scenes.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
 // Video capture (lab.html?captura, driven by scripts/lab-capture.mjs): the
 // stage alone, and a scene played from its start with the clock paused, so
