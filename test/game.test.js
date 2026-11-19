@@ -31,13 +31,13 @@ function checkInvariants(g) {
   for (let i = 0; i < 4; i++) {
     const n = k.hands[i].length + k.melds[i].length * 3;
     const expected = s.phase === 'turn' && k.turn === i ? 14 : 13;
-    if (s.phase !== 'result' && s.phase !== 'end') assert.equal(n, expected, `hand size seat ${i}`);
+    if (!['result', 'coin', 'end'].includes(s.phase)) assert.equal(n, expected, `hand size seat ${i}`);
   }
 }
 
-function playRandom(seed, stats, smart = false) {
+function playRandom(seed, stats, smart = false, config = {}) {
   const rng = mulberry32(seed);
-  const g = Game.create(['A', 'B', 'C', 'D'], {}, rng);
+  const g = Game.create(['A', 'B', 'C', 'D'], config, rng);
   let steps = 0;
   while (g.s.phase !== 'end') {
     if (++steps > 20000) throw new Error('game did not terminate');
@@ -47,6 +47,7 @@ function playRandom(seed, stats, smart = false) {
     const o = v.options;
     let a;
     if (g.s.phase === 'result') a = { type: 'ok' };
+    else if (o.kind === 'coin') a = { type: 'coin', call: rng() < 0.5 ? 'cara' : 'sello' };
     else if (o.kind === 'turn') {
       if (o.tsumo && rng() < 0.9) a = { type: 'tsumo' };
       else if (o.riichi.length && rng() < 0.6) a = { type: 'riichi', tile: o.riichi[Math.floor(rng() * o.riichi.length)] };
@@ -490,4 +491,218 @@ test('washizu: a view shows the glass tiles of the rivals\' hands and never an o
 test('without washizu nobody sees a rival tile', () => {
   const g = Game.create(['A', 'B', 'C', 'D'], {}, mulberry32(12));
   assert.ok(g.view(0).players.every((p) => p.glass === null));
+});
+
+// ------------------------------------------------------------ blood duel
+
+// a game where the blood check runs on hand-written scores
+function bloodGame(config, scores) {
+  const g = Game.create(['A', 'B', 'C', 'D'], config, mulberry32(5));
+  if (scores) g.s.players.forEach((p, i) => { p.score = scores[i]; });
+  return g;
+}
+const noDraw = { type: 'draw', reason: 'exhaustive', deltas: [0, 0, 0, 0], tenpai: [] };
+const allOk = (g) => { for (const x of g.pendingSeats()) g.act(x, { type: 'ok' }); };
+
+test('blood: off by default; the modes set the rate and the uma of the manga', () => {
+  assert.equal(bloodGame({}).s.blood, null);
+  assert.equal(bloodGame({}).view(0).blood, null);
+  assert.equal(bloodGame({ blood: 'nope' }).s.blood, null, 'an unknown mode is no blood');
+  const g = bloodGame({ blood: 'akagi' });
+  assert.deepEqual(g.s.config.uma, [30, 10, -10, -30]);
+  assert.equal(g.view(0).blood.rate, 100);
+  assert.equal(bloodGame({ blood: 'washizu' }).view(0).blood.rate, 10);
+  assert.deepEqual(g.view(0).blood.lost, [0, 0, 0, 0]);
+});
+
+test('blood: on their own, what a duelist is down from 25000 is drawn as blood, and winning gives it back', () => {
+  const g = scripted(
+    ['4m11z22z33z44z55z66z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'],
+    '9p',
+  );
+  g.s.config.blood = 'akagi';
+  g.s.blood = { duelists: [0, 1, 2, 3], checked: [0, 0, 0, 0], duel: [0, 0, 0, 0], dead: [], tosses: [], settled: null };
+  g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
+  g.act(1, { type: 'ron' });
+  const w = g.s.result.wins[0];
+  assert.equal(g.view(2).blood.lost[0], w.points / 10, 'the direct hit: 100 cc per 1000');
+  assert.equal(g.view(2).blood.lost[1], 0, 'ahead: nothing lost');
+  assert.deepEqual(g.s.result.blood.lost, g.view(0).blood.lost);
+  // washizu: ten times less
+  g.s.config.blood = 'washizu';
+  assert.equal(g.view(2).blood.lost[0], w.points / 100);
+  // won back: the blood goes back in
+  g.s.players[0].score = 26000;
+  assert.equal(g.view(0).blood.lost[0], 0);
+});
+
+test('blood: the riichi stick is 100 cc, and it is not allowed when it would kill', () => {
+  const g = scripted(
+    ['23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z', '4m11z22z33z44z55z66z'],
+    '9s',
+  );
+  g.s.config.blood = 'akagi';
+  g.s.blood = { duelists: [0, 1, 2, 3], checked: [0, 0, 0, 0], duel: [0, 0, 0, 0], dead: [], tosses: [], settled: null };
+  g.s.players[0].score = 6000; // 1900 cc: a stick takes it to 2000, still alive
+  assert.ok(g.turnOptions(0).riichi.length > 0);
+  g.s.players[0].score = 5000; // 2000 cc: a stick would be 2100
+  assert.equal(g.turnOptions(0).riichi.length, 0);
+  g.s.config.blood = 'washizu';
+  assert.ok(g.turnOptions(0).riichi.length > 0, 'at 10 cc a stick is far from the limit');
+});
+
+test('blood: over 2000 cc a duelist dies at once, the game ends and they go last', () => {
+  const g = bloodGame({ blood: 'akagi' }, [44000, 30000, 30000, 4000]);
+  g.endKyoku({ ...noDraw }, false);
+  assert.deepEqual(g.s.result.blood.dead, [3]);
+  assert.equal(g.s.result.gameEnds, true);
+  allOk(g);
+  assert.equal(g.s.phase, 'end');
+  assert.equal(g.s.final[3].seat, 3);
+  assert.equal(g.s.final[3].blood.dead, true);
+});
+
+test('blood: between 1500 and 2000 cc (both included) the duelist tosses a coin', () => {
+  for (const [score, coin] of [[10500, false], [10000, true], [5000, true], [4900, false]]) {
+    const g = bloodGame({ blood: 'akagi' }, [40000, 30000, 100000 - 70000 - score, score]);
+    g.endKyoku({ ...noDraw }, false);
+    const b = g.s.result.blood;
+    assert.equal(b.coins.includes(3), coin, `${score}: coin`);
+    if (score === 4900) assert.deepEqual(b.dead, [3], '2010 cc: dead without a coin');
+  }
+});
+
+test('blood: a right call keeps the duelist playing, a wrong one kills', () => {
+  for (const [roll, alive] of [[0.1, true], [0.9, false]]) {
+    // the others stay out of the coin zone in the final settlement
+    const g = bloodGame({ blood: 'akagi' }, [35000, 29000, 26000, 10000]);
+    g.endKyoku({ ...noDraw }, false);
+    allOk(g);
+    assert.equal(g.s.phase, 'coin');
+    assert.deepEqual(g.pendingSeats(), [3]);
+    assert.equal(g.view(3).options.kind, 'coin');
+    assert.equal(g.view(0).options, null);
+    assert.deepEqual(g.view(0).blood.coin.seats, [3]);
+    assert.throws(() => g.act(0, { type: 'coin', call: 'cara' }));
+    assert.throws(() => g.act(3, { type: 'coin', call: 'canto' }));
+    g.rng = () => roll; // < 0.5: cara
+    g.act(3, { type: 'coin', call: 'cara' });
+    const toss = g.s.events.find((e) => e.type === 'coin');
+    assert.deepEqual([toss.face, toss.ok], [alive ? 'cara' : 'sello', alive]);
+    if (alive) {
+      assert.equal(g.s.phase, 'turn', 'the next hand starts');
+      assert.deepEqual(g.s.blood.dead, []);
+    } else {
+      assert.equal(g.s.phase, 'end');
+      assert.equal(g.s.final[3].seat, 3);
+      assert.equal(g.s.final[3].blood.dead, true);
+    }
+  }
+});
+
+test('blood: inside the zone, bleeding more tosses again; staying or healing does not', () => {
+  const g = bloodGame({ blood: 'akagi' }, [40000, 30000, 20000, 10000]);
+  g.endKyoku({ ...noDraw }, false);
+  allOk(g);
+  g.rng = () => 0.1;
+  g.act(3, { type: 'coin', call: 'cara' });
+  g.endKyoku({ ...noDraw }, false);
+  assert.deepEqual(g.s.result.blood.coins, [], 'the same 1500 cc: no coin');
+  g.endKyoku({ ...noDraw, deltas: [1000, 0, 0, -1000] }, false);
+  assert.deepEqual(g.s.result.blood.coins, [3], '1600 cc: another coin');
+  g.s.coin = null;
+  g.endKyoku({ ...noDraw, deltas: [-2000, 0, 0, 2000] }, false);
+  assert.deepEqual(g.s.result.blood.coins, [], 'healed to 1400 cc');
+  g.endKyoku({ ...noDraw, deltas: [1000, 0, 0, -1000] }, false);
+  assert.deepEqual(g.s.result.blood.coins, [3], 'back in the zone: a coin again');
+});
+
+test('blood: the timer and the bots call the coin at random', () => {
+  const g = bloodGame({ blood: 'akagi' }, [40000, 30000, 20000, 10000]);
+  g.endKyoku({ ...noDraw }, false);
+  allOk(g);
+  g.defaultAction(3);
+  assert.equal(g.s.events.filter((e) => e.type === 'coin').length, 1);
+  assert.notEqual(g.s.phase, 'coin');
+});
+
+test('blood: the final settlement pays the negative final points in blood (uma 30-10, oka 20)', () => {
+  const g = bloodGame({ blood: 'washizu' }, [45000, 30000, 15000, 10000]);
+  g.finish();
+  // final points: +65, +10, -25, -50 -> 0, 0, 250 cc, 500 cc
+  assert.deepEqual(g.s.final.map((f) => f.points), [65, 10, -25, -50]);
+  assert.deepEqual(g.s.final.map((f) => f.blood.lost), [0, 0, 250, 500]);
+  assert.equal(g.s.phase, 'end');
+  const a = bloodGame({ blood: 'akagi' }, [45000, 34000, 11000, 10000]);
+  a.finish();
+  // 3rd: -19 + -10 = -29 -> 2900 cc: dead; 2nd: +4 + 10 = 14 -> 0
+  assert.deepEqual(a.s.final.map((f) => [f.seat, f.blood.lost, f.blood.dead]), [[0, 0, false], [1, 0, false], [2, 2900, true], [3, 5000, true]]);
+});
+
+test('blood: a final settlement in the coin zone tosses before the end', () => {
+  const z = bloodGame({ blood: 'akagi' }, [36000, 30000, 25000, 9000]);
+  z.s.blood.dead.push(3);
+  z.finish();
+  // 3rd at 25000: -5 - 10 = -15 -> 1500 cc: coin
+  assert.equal(z.s.phase, 'coin');
+  assert.deepEqual(z.pendingSeats(), [2]);
+  z.rng = () => 0.1;
+  z.act(2, { type: 'coin', call: 'cara' });
+  assert.equal(z.s.phase, 'end');
+  assert.deepEqual(z.s.final.find((f) => f.seat === 2).blood, { lost: 1500, dead: false });
+});
+
+test('blood by teams: only the two duelists bleed, and only on what they pay each other', () => {
+  // seats 0-1 one team, 2-3 the other; duelists 1 and 2
+  const mk = () => {
+    const g = scripted(
+      ['4m11z22z33z44z55z66z', '23m456p789s11p678s', '19m19p19s1234z56z7z', '258m258p258s1357z'],
+      '9p',
+    );
+    g.s.config.blood = 'akagi';
+    g.s.blood = { duelists: [1, 2], checked: [0, 0, 0, 0], duel: [0, 0, 0, 0], dead: [], tosses: [], settled: null };
+    return g;
+  };
+  // seat 1 (duelist) rons its own support (seat 0): no blood
+  let g = mk();
+  g.act(0, { type: 'discard', tile: g.s.k.hands[0].find((id) => tileType(id) === 3) });
+  g.act(1, { type: 'ron' });
+  assert.deepEqual(g.view(0).blood.lost, [null, 0, 0, null], 'not between the duelists');
+  // the same hand dealt in by the rival duelist (seat 2)
+  g = mk();
+  const k = g.s.k;
+  [k.hands[0], k.hands[2]] = [k.hands[2], k.hands[0]];
+  g.s.k.turn = 2;
+  g.s.k.drawn = k.hands[2][k.hands[2].length - 1];
+  g.s.phase = 'turn';
+  g.act(2, { type: 'discard', tile: k.hands[2].find((id) => tileType(id) === 3) });
+  g.act(1, { type: 'ron' });
+  const w = g.s.result.wins[0];
+  assert.equal(g.view(0).blood.lost[2], w.points / 10);
+  assert.equal(g.s.blood.duel[1], w.points);
+  assert.equal(g.s.result.blood.lost[0], null, 'the support does not bleed');
+});
+
+test('blood by teams: the final settlement is the difference between the duelists', () => {
+  const g = bloodGame({ blood: 'washizu', duelists: [0, 2] }, [40000, 20000, 30000, 10000]);
+  g.s.blood.duel = [-3000, 0, 3000, 0];
+  g.finish();
+  // final: seat 0 +60, seat 2 +10: seat 2 owes 50 - 3 = 47 -> 470 cc
+  const by = Object.fromEntries(g.s.final.map((f) => [f.seat, f.blood]));
+  assert.deepEqual(by[0], { lost: 0, dead: false });
+  assert.deepEqual(by[2], { lost: 470, dead: false });
+  assert.equal(by[1], null);
+});
+
+test('blood: random games run to completion, alone and by teams', () => {
+  let coins = 0;
+  let dead = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const config = { blood: 'akagi', duelists: seed % 2 ? null : [0, 3] };
+    const g = playRandom(seed, {}, true, config);
+    coins += g.s.blood.tosses.length;
+    dead += g.s.blood.dead.length;
+    for (const f of g.s.final) assert.equal(f.blood === null, !g.isDuelist(f.seat));
+  }
+  assert.ok(coins > 0 && dead > 0, `coins ${coins}, dead ${dead}`);
 });

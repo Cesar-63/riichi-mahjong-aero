@@ -103,3 +103,16 @@ test('told "no riichi" by its teammate, the bot discards the same tile quietly',
   const quiet = await botAction(scripted(hands, '6z'), 0, null, 'normal', true);
   assert.deepEqual(quiet, { type: 'discard', tile: free.tile });
 });
+
+test('blood duel: a bot in the coin zone calls heads or tails', async () => {
+  const g = Game.create(['A', 'B', 'C', 'D'], { blood: 'akagi' });
+  g.s.players.forEach((p, i) => { p.score = [40000, 30000, 20000, 10000][i]; });
+  g.endKyoku({ type: 'draw', reason: 'exhaustive', deltas: [0, 0, 0, 0], tenpai: [] }, false);
+  for (const x of g.pendingSeats()) g.act(x, await botAction(g, x));
+  assert.equal(g.s.phase, 'coin');
+  const a = await botAction(g, 3);
+  assert.equal(a.type, 'coin');
+  assert.ok(['cara', 'sello'].includes(a.call));
+  g.act(3, a);
+  assert.notEqual(g.s.phase, 'coin');
+});

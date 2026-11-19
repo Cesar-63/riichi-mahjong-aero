@@ -364,6 +364,76 @@ function myTsumo() {
   scenes.push({ id: 'washizu', name: 'Washizu: fichas de vidrio', note: 'Modo Washizu: se leen las fichas de vidrio de los rivales y solo la copia opaca queda oculta (tus cincos rojos son opacos). Los robos salen del agujero, los dora están junto a él y el depósito de riichi del otro lado. El rival de la derecha hace pon.', steps: rec.steps, length: rec.end + 800 });
 }
 
+// ------------------------------------------------------------ blood duel
+// My hand has a tile of every kind that hallucinates: 1 of sou (the bird),
+// 1 of pin (the eye), other pins, sous and man, and the three dragons.
+const BLOOD_HANDS = ['159m159p1289s567z', '258m258p258s1357z', '369m369p369s2466z', '147m147p147s1234z'];
+const BLOOD_FRONT = '4z3z2z1z4z3z2z1z';
+// a hand in the apuesta de Akagi with my score down to `score`
+function bloodScene(score, seed = 1) {
+  const g = scripted(BLOOD_HANDS, BLOOD_FRONT, seed, { blood: 'akagi' });
+  g.s.players[0].score = score;
+  g.s.players[1].score += 25000 - score;
+  return g;
+}
+// everybody throws away what they draw, `rounds` times
+function bloodPlay(g, rec, rounds, gap) {
+  for (let i = 0; i < rounds; i++) {
+    for (const seat of [0, 1, 2, 3]) {
+      tsumogiri(g, seat);
+      passAll(g);
+      rec.add(g, gap);
+    }
+  }
+}
+{
+  const g = bloodScene(19000);
+  const rec = recorder();
+  rec.add(g, 1500);
+  bloodPlay(g, rec, 2, 1100);
+  scenes.push({ id: 'blood-500', name: 'Sangre: 600 cc', note: 'Duelo de sangre, apuesta de Akagi: vas 6000 puntos abajo, 600 cc perdidos. La mesa pierde color y los bordes se oscurecen; las fichas todavía no alucinan.', steps: rec.steps, length: rec.end });
+}
+{
+  const g = bloodScene(13000);
+  const rec = recorder();
+  rec.add(g, 1500);
+  bloodPlay(g, rec, 2, 2600);
+  // one of each, on my hand, in a row
+  const kinds = [[18, 'bird'], [9, 'eye'], [13, 'spin'], [19, 'sway'], [0, 'shake'], [33, 'drip'], [31, 'ghost'], [32, 'lift']];
+  const hallucinate = kinds.map(([type, kind], i) => ({ at: 1500 + i * 3600, type, kind }));
+  scenes.push({ id: 'blood-1000', name: 'Sangre: 1200 cc, alucinaciones', note: 'Te quedan menos de 1000 cc: las fichas alucinan. En orden: el pájaro del 1 de sou sale y vuelve, el 1 de pin gira y parpadea, los círculos giran, las cañas se mecen, el man tiembla, el chun gotea, una sombra cruza el haku y el hatsu flota. Además salen otras al azar.', steps: rec.steps, length: Math.max(rec.end, 1500 + kinds.length * 3600), hallucinate });
+}
+{
+  const g = bloodScene(9000);
+  const rec = recorder();
+  rec.add(g, 1500);
+  bloodPlay(g, rec, 2, 2000);
+  scenes.push({ id: 'blood-1500', name: 'Sangre: 1600 cc, al borde', note: 'En la zona de la moneda (1600 cc): la mesa late con el corazón, la vista se cierra en túnel y a ratos se ve doble; las alucinaciones son más seguidas, hasta dos a la vez.', steps: rec.steps, length: rec.end });
+}
+// the coin at the end of a hand: I call heads; it lands heads (I go on) or tails (I bleed out)
+function coinScene(lands) {
+  const g = bloodScene(11000);
+  const rec = recorder();
+  rec.add(g, 1500);
+  bloodPlay(g, rec, 1, 900);
+  g.endKyoku({ type: 'draw', reason: 'exhaustive', deltas: [-1000, 1000, 0, 0], tenpai: [] }, false);
+  rec.add(g, 3500);
+  for (const x of [1, 2, 3, 0]) g.act(x, { type: 'ok' });
+  rec.add(g, 2500);
+  g.rng = () => (lands === 'cara' ? 0.1 : 0.9);
+  g.act(0, { type: 'coin', call: 'cara' });
+  rec.add(g, 5500);
+  return rec;
+}
+{
+  const rec = coinScene('cara');
+  scenes.push({ id: 'blood-coin', name: 'Sangre: la moneda', note: 'Un pago te deja en 1500 cc: tiras la moneda, eliges cara y sale cara. Sigues jugando la mano siguiente.', steps: rec.steps, length: rec.end });
+}
+{
+  const rec = coinScene('sello');
+  scenes.push({ id: 'blood-death', name: 'Sangre: la muerte', note: 'La moneda sale sello: te desangras. La pantalla se va a rojo, después a negro, y la partida termina contigo último.', steps: rec.steps, length: rec.end });
+}
+
 mkdirSync(new URL('../public/lab/', import.meta.url), { recursive: true });
 const out = new URL('../public/lab/scenarios.json', import.meta.url);
 writeFileSync(out, JSON.stringify({ scenes }));

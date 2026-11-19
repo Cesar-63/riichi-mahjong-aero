@@ -394,6 +394,17 @@ export function createHand3D({ world, kit, onPick }) {
       if (last) layout(...last);
     },
     dragging: () => !!(drag && drag.moved),
+    // blood duel: the tiles of my hand that may hallucinate (not the drawn
+    // one, nor one I hold or picked up)
+    calmTiles() {
+      const drawn = last ? last[0].drawn : null;
+      const out = [];
+      for (const [id, t] of tiles) {
+        if (id === drawn || id === selected || (drag && drag.id === id)) continue;
+        out.push({ id, mesh: t.mesh });
+      }
+      return out;
+    },
     // whether a pointer event is over one of my hand tiles
     overTile: (ev) => pick(ev) !== null,
     // test hook: screen point (top-left origin) of a hand tile

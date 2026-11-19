@@ -4,6 +4,10 @@ import {
 import { sortTiles, YAKU_NAMES } from './shared/tiles.js';
 import { climateOf } from './shared/streak.js';
 import { CHARACTERS, characterId } from './shared/characters.js';
+import { bloodStage } from './shared/blood.js';
+import {
+  BLOOD_OPTIONS, bloodButtons, bloodLabel, bloodTag, roundBloodHTML, coinHTML, showCoinTosses, applyBloodScreen,
+} from './blood-ui.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -65,6 +69,7 @@ const state = {
   timing: TIMINGS[store.get('mj.timing')] ? store.get('mj.timing') : 'normal',
   wall: WALLS[store.get('mj.wall')] ? store.get('mj.wall') : 'normal',
   tiles: TILE_SETS[store.get('mj.tiles')] ? store.get('mj.tiles') : 'normal',
+  blood: BLOOD_OPTIONS[store.get('mj.blood')] ? store.get('mj.blood') : 'none',
   // who I sit at the table as (shared/characters.js)
   character: characterId(store.get('mj.character')),
   name: store.get('mj.name') || '',
@@ -75,7 +80,7 @@ const state = {
   lastHb: 0,
   busy: false,
   leftFinished: false,
-  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: null, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', characters: store.get('mj.characters') === '1', optKey: '' },
+  ui: { partnerOpen: store.get('mj.partnerOpen') !== '0', riichiMode: false, kanSelect: false, chiSelect: false, ponSelect: false, lastEvent: null, autoSort: store.get('mj.autoSort') !== '0', autoWin: false, noCalls: false, autoTsumogiri: false, oneClick: store.get('mj.oneClick') === '1', viewByKey: store.get('mj.viewByKey') === '1', viewKey: store.get('mj.viewKey') || 'KeyV', dblTsumo: store.get('mj.dblTsumo') === '1', rightTsumo: store.get('mj.rightTsumo') === '1', characters: store.get('mj.characters') === '1', bloodFx: store.get('mj.bloodFx') !== '0', optKey: '' },
 };
 
 async function api(op, extra = {}) {
@@ -152,10 +157,18 @@ function showRoomTiming(data, host) {
   setIfChanged($('#w-tiles'), host
     ? `<span>Fichas:</span>${tilesButtons(ts)}`
     : `<span>Fichas: <b>${tilesLabel(ts)}</b></span>`);
+  const bl = BLOOD_OPTIONS[data.blood] ? data.blood : 'none';
+  setIfChanged($('#w-blood'), host
+    ? `<span>Sangre:</span>${bloodButtons(bl)}`
+    : `<span>Sangre: <b>${bloodLabel(bl)}</b></span>`);
 }
 
 function showLobby(data) {
   state.view = null;
+  // a new game shows its own coins and its own death
+  Object.assign(state.ui, { coinSeen: null, deathShown: false });
+  applyBloodScreen(null, state.ui);
+  if (table3d) table3d.then((t) => t.setBlood(0));
   // automatic play is per hand (sorting is a preference and stays)
   Object.assign(state.ui, { autoWin: false, noCalls: false, autoTsumogiri: false, autoHand: null, lastEvent: null });
   showAutoButtons();
@@ -279,10 +292,14 @@ function showGame(v) {
     if (state.view !== v) return;
     t.update(v, ui);
   });
+  const hallucinate = !!(ui.bloodFx && !reducedMotion() && v.blood);
+  if (table3d) table3d.then((t) => t.setBlood(hallucinate ? stageOf(v) : 0));
   // entering a game (a reload, joining or coming back to a room) catches up
   // with its recent events without shouting the calls made before
   if (ui.lastEvent === null) ui.lastEvent = Math.max(0, ...v.events.map((e) => e.id));
   showCallouts($('#hud3d'), v, ui);
+  showCoinTosses(v, ui);
+  applyBloodScreen(v, ui, { effects: ui.bloodFx });
   // the teammate's hand waits for the deal to end (server clock and animation)
   if (v.intro) {
     ui.introUntil = Date.now() + v.intro.left;
@@ -311,6 +328,7 @@ function showGame(v) {
   const holdModal = winKey && ui.winDone !== winKey;
   if (holdModal) hideModal();
   else if (v.phase === 'result' && v.result) showModal(resultHTML(v), 'result');
+  else if (v.phase === 'coin') showModal(coinHTML(v), 'coin');
   else if (v.phase === 'end' && v.final) showModal(finalHTML(v, state.room, citySeat() ? ['Volver al pueblo', '街へ'] : undefined), 'final');
   else hideModal();
 
@@ -326,7 +344,8 @@ function showGame(v) {
 // top of them and stays.
 function autoPlay(v, ui) {
   const o = v.options;
-  if (!o || state.busy || ui.autoKey === ui.optKey) return;
+  // the coin is always the player's own call
+  if (!o || o.kind === 'coin' || state.busy || ui.autoKey === ui.optKey) return;
   const act = (action) => {
     ui.autoKey = ui.optKey;
     send(action);
@@ -484,6 +503,7 @@ function portraitsHTML(v) {
       p.riichi ? '<i class="tag riichi">Riichi</i>' : '',
       streakTag(p),
       fluidTag(v, abs),
+      bloodTag(v, abs),
       v.partner && v.partner.seat === abs ? '<i class="tag mate">compañero</i>' : '',
       p.abandoned ? '<i class="tag off">abandonó</i>' : !p.online ? '<i class="tag off">sin conexión</i>' : '',
       turn ? '<i class="tag turn">su turno</i>' : '',
@@ -503,7 +523,7 @@ function roundInfoHTML(v) {
     <span>Depósitos ${v.kyoutaku} · Quedan ${v.wallLeft}</span>
     <span>Tú: <b class="${v.seat === v.dealer ? 'oya' : ''}">${WIND_ES[me.wind]}</b> · ${me.score}${streakTag(me) ? ` ${streakTag(me)}` : ''}</span>${v.wallMode === 'yakuman' ? `
     <span>Muro fluido${fluidTag(v, v.seat) ? ` ${fluidTag(v, v.seat)}` : ''}</span>` : ''}${v.tiles === 'washizu' ? `
-    <span>Washizu · se ven tus fichas de vidrio</span>` : ''}`;
+    <span>Washizu · se ven tus fichas de vidrio</span>` : ''}${roundBloodHTML(v)}`;
 }
 
 // The table's scores as seen from my seat: me at the bottom, the others in
@@ -724,7 +744,7 @@ $('#join').addEventListener('click', async () => {
   store.set('mj.room', room);
   if (!practice) $('#room').value = room;
   state.lastHb = 0;
-  await api('join', { name, mode, levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, character: state.character });
+  await api('join', { name, mode, levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, blood: state.blood, character: state.character });
   pollLoop();
 });
 
@@ -816,6 +836,21 @@ document.addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea, select') || $('#game').classList.contains('hidden')) return;
   e.preventDefault();
   table3d.then((t) => t.toggleView());
+});
+
+// the blood duel's effects (paleness, hallucinations, heartbeat): on by
+// default, never with reduced motion
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// how far gone I am (shared/blood.js bloodStage), for the 3D table
+function stageOf(v) {
+  if (!v.blood || !v.blood.duelists.includes(v.seat)) return 0;
+  return v.blood.dead.includes(v.seat) ? 3 : bloodStage(v.blood.lost[v.seat]);
+}
+$('#s-bloodfx').checked = state.ui.bloodFx;
+$('#s-bloodfx').addEventListener('change', (e) => {
+  state.ui.bloodFx = e.target.checked;
+  store.set('mj.bloodFx', state.ui.bloodFx ? '1' : '0');
+  if (state.view) showGame(state.view);
 });
 
 $('#oneclick').checked = state.ui.oneClick;
@@ -998,6 +1033,23 @@ $('#w-tiles').addEventListener('click', (e) => {
 });
 showTiles();
 
+// The blood duel: sent like the tiles; in the waiting room the host changes it.
+function showBlood() {
+  setIfChanged($('#blood-opts'), bloodButtons(state.blood));
+}
+$('#blood-opts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-blood]');
+  if (!b) return;
+  state.blood = b.dataset.blood;
+  store.set('mj.blood', state.blood);
+  showBlood();
+});
+$('#w-blood').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-blood]');
+  if (b && b.getAttribute('aria-pressed') !== 'true') api('blood', { blood: b.dataset.blood });
+});
+showBlood();
+
 // My character: sent when joining; in the waiting room a click changes it
 // for everyone to see.
 function showCharacter() {
@@ -1136,7 +1188,7 @@ async function sitDown(table, where) {
   state.lastHb = 0;
   let data;
   try {
-    data = await api('join', { name: state.name || 'Jugador', mode: 'classic', levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, character: where.character });
+    data = await api('join', { name: state.name || 'Jugador', mode: 'classic', levels: botLevels(), timing: state.timing, wall: state.wall, tiles: state.tiles, blood: state.blood, character: where.character });
   } catch {
     data = { error: true };
     toast('Sin conexión: no se pudo empezar la partida');

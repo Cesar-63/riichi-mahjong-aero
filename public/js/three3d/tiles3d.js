@@ -276,5 +276,30 @@ export function createTileKit(renderer) {
     return changed;
   }
 
-  return { makeTile, style, dispose, setWashizu, faceTexture: (id) => faceTexture(id).t, washizu: () => washizu, glowColor: () => look.glow };
+  // Blood duel hallucinations (hallucinate.js): a tile's design alone, on
+  // a see-through face, so it can leave the tile; and the empty face it
+  // leaves behind (ivory or glass)
+  const designs = new Map();
+  function designTexture(id) {
+    const key = imageName(id);
+    if (designs.has(key)) return designs.get(key).t;
+    const f = canvasTex(240, 320);
+    Object.assign(f, { key, id, img: null });
+    const paint = () => {
+      f.g.clearRect(0, 0, 240, 320);
+      drawDesign(f.g, f);
+      f.t.needsUpdate = true;
+    };
+    if (tileset.mode === 'img') {
+      f.img = new Image();
+      f.img.onload = paint;
+      f.img.src = `${tileset.dir}${key}.${tileset.ext}`;
+    }
+    paint();
+    designs.set(key, f);
+    return f.t;
+  }
+  const blankFace = (glass) => (glass ? glassTexture(null, false).t : faceTexture(null).t);
+
+  return { makeTile, style, dispose, setWashizu, faceTexture: (id) => faceTexture(id).t, designTexture, blankFace, washizu: () => washizu, glowColor: () => look.glow };
 }

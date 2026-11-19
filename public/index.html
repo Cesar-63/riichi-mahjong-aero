@@ -76,6 +76,10 @@
           <span class="chalk" id="tiles-label">Fichas <small>(Washizu: los rivales ven tus fichas de vidrio y no hay muro, se roba de un agujero)</small></span>
           <div class="chalk-opts" id="tiles-opts"></div>
         </div>
+        <div class="timing-field" role="group" aria-labelledby="blood-label">
+          <span class="chalk" id="blood-label">Sangre <small>(duelo de sangre: lo que pagas se saca en cc; más de 2000 cc y te desangras)</small></span>
+          <div class="chalk-opts" id="blood-opts"></div>
+        </div>
       </div>
       <div class="board-foot">
         <span class="foot-links">
@@ -144,6 +148,7 @@
         <div id="w-timing" role="group" aria-label="Tiempo por jugada"></div>
         <div id="w-wall" role="group" aria-label="Muro"></div>
         <div id="w-tiles" role="group" aria-label="Fichas"></div>
+        <div id="w-blood" role="group" aria-label="Sangre"></div>
         <div class="w-actions">
           <button id="ready" class="paper" type="button">Estoy listo</button>
           <button id="start" class="paper seal hidden" type="button"><span class="es">Comenzar</span><span class="jp">開始</span></button>
@@ -245,6 +250,7 @@
       <legend>Vista</legend>
       <label class="check"><input type="checkbox" id="s-chars"> Jugar con personajes (sentados a la mesa)</label>
       <label class="check"><input type="checkbox" id="viewkey"> Cambiar la vista con una tecla (no con el mouse)</label>
+      <label class="check"><input type="checkbox" id="s-bloodfx"> Duelo de sangre: efectos al perder sangre (palidez, alucinaciones, latido)</label>
       <button id="viewkey-set" class="paper" type="button" title="Clic y luego la tecla que quieras usar">Tecla de vista: <b id="viewkey-name">V</b></button>
     </fieldset>
     <fieldset>
@@ -267,6 +273,7 @@
       <li>Empates abortivos: kyuushu kyuuhai, suufon renda, suucha riichi, suukaikan.</li>
       <li>Nagashi mangan, pao en daisangen y daisuushii, sin doble yakuman.</li>
       <li>Si nadie llega a 30.000 al final de Este 4, se juega el Sur a muerte súbita.</li>
+      <li><b>Duelo de sangre</b> (opción <i>Sangre</i>): lo que pagas se saca en sangre, 10 cc (Washizu original) o 100 cc (apuesta de Akagi) por cada 1000 puntos; ganar la devuelve. Uma +30/+10/−10/−30. Entre 1500 y 2000 cc perdidos se tira una moneda: si aciertas sigues; más de 2000 cc, te desangras. Por equipos solo sangra el duelista de cada pareja, y solo por lo que se pagan entre los dos duelistas.</li>
       <li>Tiempo: lo elige quien abre la sala (el anfitrión puede cambiarlo en la sala de espera). Normal: 5 s por jugada + 10 s de reserva por mano; Rápido: 3 + 5; Lento: 10 + 20; Sin límite: no hay reloj para los jugadores conectados.</li>
     </ul>
     <form method="dialog"><button class="paper" type="submit">Cerrar</button></form>

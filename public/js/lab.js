@@ -6,6 +6,8 @@
 import { createTable3D } from './three3d/table3d.js';
 import { showCallouts } from './render.js';
 import { TUNING, TUNING_INFO, TUNING_DEFAULTS } from './three3d/tuning.js';
+import { applyBloodScreen, showCoinTosses } from './blood-ui.js';
+import { bloodStage } from './shared/blood.js';
 
 const $ = (s) => document.querySelector(s);
 const clock = window.labClock;
@@ -50,14 +52,27 @@ function start() {
   peopleReady = table.showCharacters($('#lab-people').checked, castOf(scene));
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
-  ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)) };
+  ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)), coinSeen: null, deathShown: false };
   t0 = clock.t;
   next = 0;
+  nextVision = 0;
+  applyBloodScreen(null, ui, { root: stage });
   lastView = null;
   applyCamera();
 }
 
 const elapsed = () => clock.t - t0;
+
+// Blood duel: the screen and the 3D table as my blood goes (blood-ui.js)
+let nextVision = 0;
+function showBlood(v) {
+  const b = v.blood;
+  const mine = b && b.duelists.includes(v.seat);
+  const stageNow = !mine ? 0 : b.dead.includes(v.seat) ? 3 : bloodStage(b.lost[v.seat]);
+  table.setBlood(stageNow);
+  applyBloodScreen(v, ui, { root: stage });
+  showCoinTosses(v, ui);
+}
 
 // jump to a moment: replay from the start, fast
 function seek(ms) {
@@ -73,8 +88,15 @@ function frame() {
       const v = scene.steps[next].view;
       table.update(v, ui);
       showCallouts(stage, v, ui);
+      showBlood(v);
       lastView = v;
       next++;
+    }
+    // blood duel scenes: hallucinations at given moments, on a tile type
+    const visions = scene.hallucinate || [];
+    while (nextVision < visions.length && visions[nextVision].at <= e) {
+      const h = visions[nextVision++];
+      table.hallucinate(h.type ?? null, h.kind ?? null);
     }
     if (seeking && clock.ff <= 0) seeking = false;
     if (!seeking && !clock.paused && e >= scene.length && $('#lab-loop').checked) start();

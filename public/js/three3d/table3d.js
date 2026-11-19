@@ -9,6 +9,7 @@ import { createCharacters } from './characters.js';
 import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
+import { createHallucinations } from './hallucinate.js';
 import { TUNING } from './tuning.js';
 import { CLIMATES } from './climate.js';
 import { climateOf } from '../shared/streak.js';
@@ -51,6 +52,22 @@ export function createTable3D(container, { onPick, signal } = {}) {
   const kit = createTileKit(renderer);
   const makeTile = kit.makeTile;
   const hand = createHand3D({ world, kit, onPick: (id) => onPick && onPick(id) });
+  // Blood duel (setBlood): the tiles in sight that may hallucinate. Not
+  // during the deal or a win, not a tile on its way, not the last discard
+  // (it may be waiting for a call); my hand without its drawn tile.
+  const visions = createHallucinations({
+    kit,
+    onTick: world.onTick,
+    sources: () => {
+      if (intro || win) return [];
+      const out = [];
+      for (const o of objects.values()) {
+        if (o.obj.userData.id === null || o.path || (o.flags && o.flags.last)) continue;
+        out.push({ id: o.obj.userData.id, mesh: o.obj });
+      }
+      return out.concat(hand.calmTiles());
+    },
+  });
 
   // -------------------------------------------------------------- transforms
   const Y_AXIS = new THREE.Vector3(0, 1, 0);
@@ -1703,6 +1720,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
       else characters.setCast(fallbackCast || [null, null, null, null]);
       return characters.ready;
     },
+    // blood duel: how far gone the player is (shared/blood.js bloodStage);
+    // from 2 the tiles hallucinate
+    setBlood: visions.setStage,
+    // lab: a hallucination now, on a tile of this type (any if null)
+    hallucinate: visions.now,
     // play with the characters sitting at the table, or without them
     setCharacters(on) {
       showPeople(!!on);

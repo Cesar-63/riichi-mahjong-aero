@@ -4,6 +4,7 @@ import {
   tileType, isAka, suitOf, numOf, imageName, HONOR_KANJI, SUIT_KANJI,
   YAKU_NAMES, DRAW_NAMES,
 } from './shared/tiles.js';
+import { resultBloodHTML, finalBloodCell } from './blood-ui.js';
 import { climateOf } from './shared/streak.js';
 
 // Tile art: FluffyStuff/riichi-mahjong-tiles layout in /tiles if present
@@ -120,7 +121,8 @@ const choice = (action, tiles) => `<button class="paper act choice" type="button
 
 export function actionsHTML(v, ui) {
   const o = v.options;
-  if (!o) return '';
+  // the coin (blood duel) has its own sheet (blood-ui.js)
+  if (!o || o.kind === 'coin') return '';
   if (o.kind === 'turn') {
     if (ui.riichiMode) return `<span class="hint">Elige el descarte de riichi</span>${btn('Cancelar', '取消', { ui: 'riichiOff' }, 'pass')}`;
     if (ui.kanSelect) {
@@ -274,7 +276,7 @@ export function resultHTML(v) {
       <div class="r-glow" aria-hidden="true"></div>
       ${body}
     </div>
-    <div class="r-bottom">${plaquesHTML(v, r, winners)}${acceptHTML(v, r)}</div>`;
+    <div class="r-bottom">${resultBloodHTML(v)}${plaquesHTML(v, r, winners)}${acceptHTML(v, r)}</div>`;
 }
 
 // Teammate's hand: docked at the side of the screen next to the teammate's
@@ -285,7 +287,7 @@ export function renderPartner(v, ui) {
   // shown once the deal is over and the dealer can make the first discard,
   // and only while the hand is being played
   const dealing = ui.introActive || Date.now() < (ui.introUntil || 0);
-  const shown = !!p && v.phase !== 'end' && v.phase !== 'result' && !dealing;
+  const shown = !!p && !['end', 'result', 'coin'].includes(v.phase) && !dealing;
   panel.classList.toggle('hidden', !shown);
   document.getElementById('game').classList.toggle('with-partner', shown);
   if (!shown) return;
@@ -314,10 +316,14 @@ export function renderPartner(v, ui) {
 // back: what the button that leaves the sheet says (the town has its own)
 export function finalHTML(v, room, back = ['Volver al lobby', '退出']) {
   const fmt = (x) => `${x > 0 ? '+' : x < 0 ? '−' : '±'}${Math.abs(Math.round(x * 10) / 10).toFixed(1)}`;
+  // blood duel: a column with each one's blood
+  const blood = v.final.some((f) => f.blood !== undefined) && !!v.blood;
   const rows = v.final.map((f) => `<span class="rank">${f.rank}.º</span>
       <span class="who">${esc(f.name)}${f.seat === v.seat ? ' <small>(tú)</small>' : ''}</span>
       <span class="num">${f.score}</span>
-      <span class="num ${f.points >= 0 ? 'pos' : 'neg'}">${fmt(f.points)}</span>`).join('');
+      <span class="num ${f.points >= 0 ? 'pos' : 'neg'}">${fmt(f.points)}</span>${blood ? finalBloodCell(f) : ''}`).join('');
+  const uma = (v.config && v.config.uma) || [20, 10, -10, -20];
+  const umaText = uma.map((x) => `${x > 0 ? '+' : '−'}${Math.abs(x)}`).join('/');
   let teams = '';
   if (v.players.every((p) => p.team)) {
     const sum = { N: 0, S: 0 };
@@ -339,11 +345,11 @@ export function finalHTML(v, room, back = ['Volver al lobby', '退出']) {
       <span class="f-iou" aria-hidden="true"><b>Vale</b> · ${esc(last.name)} paga<i class="thumb"></i></span>
       <div class="f-head"><span class="f-title">Resultados <span class="jp">成績表</span></span><span class="f-where">Fin de la partida · al Este${where}</span></div>
       ${teams}
-      <div class="f-grid">
-        <span class="th">Puesto</span><span class="th">Jugador</span><span class="th num">Puntos</span><span class="th num">Resultado</span>
+      <div class="f-grid${blood ? ' with-blood' : ''}">
+        <span class="th">Puesto</span><span class="th">Jugador</span><span class="th num">Puntos</span><span class="th num">Resultado</span>${blood ? '<span class="th num">Sangre</span>' : ''}
         ${rows}
       </div>
-      <p class="f-note">Uma +20/+10/−10/−20 · oka +20 al primero · retorno 30.000 · resultado en miles</p>
+      <p class="f-note">Uma ${umaText} · oka +20 al primero · retorno 30.000 · resultado en miles${blood ? ` · sangre: ${v.blood.rate} cc por cada 1000 (los resultados negativos se pagan en sangre)` : ''}</p>
     </div>
     <div class="f-actions"><button class="paper" type="button" data-ui="lobby"><span class="es">${back[0]}</span><span class="jp">${back[1]}</span></button></div>`;
 }

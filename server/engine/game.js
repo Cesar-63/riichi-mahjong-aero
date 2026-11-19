@@ -8,6 +8,9 @@ import { waits, isAgari, isKokushi, decompose } from './hand.js';
 import { evaluate, ronValue, tsumoValues, limitName } from './score.js';
 import { mjaiTile, mjaiWind } from './mjai.js';
 import { nearestYakuman, yakumanPlan } from './fluid.js';
+import {
+  BLOOD_LIMIT, BLOOD_UMA, COIN_FACES, bloodRate, ccLost, bloodFate,
+} from '../../public/js/shared/blood.js';
 
 export const DEFAULT_CONFIG = {
   startScore: 25000,
@@ -19,6 +22,12 @@ export const DEFAULT_CONFIG = {
   // Washizu mode: three of every four copies are glass (isGlass), so the
   // others see them in a hand; only the opaque copy stays hidden
   washizu: false,
+  // Blood duel: null, 'washizu' (1000 points = 10 cc) or 'akagi' (100 cc).
+  // The duelists bleed; it plays with the uma of the manga (BLOOD_UMA).
+  blood: null,
+  // the seats that bleed: null = all four (each on their own). By teams,
+  // one per team, and the blood only moves between those two (a duel).
+  duelists: null,
 };
 
 function cryptoRandom() {
@@ -39,6 +48,8 @@ export class Game {
 
   static create(names, config = {}, rng = cryptoRandom) {
     const cfg = { ...DEFAULT_CONFIG, ...config };
+    if (!bloodRate(cfg.blood)) cfg.blood = null;
+    if (cfg.blood && !config.uma) cfg.uma = BLOOD_UMA.slice();
     const s = {
       config: cfg,
       players: names.map((name) => ({ name, score: cfg.startScore })),
@@ -52,6 +63,18 @@ export class Game {
       k: null,
       result: null,
       final: null,
+      // blood duel: checked = the cc lost at each duelist's last check;
+      // duel = by teams, the points each duelist won (+) or paid (-) to the
+      // rival duelist; settled = the final balances once the game is over
+      blood: cfg.blood ? {
+        duelists: cfg.duelists ? cfg.duelists.slice() : SEATS.slice(),
+        checked: [0, 0, 0, 0],
+        duel: [0, 0, 0, 0],
+        dead: [],
+        tosses: [],
+        settled: null,
+      } : null,
+      coin: null,
       seq: 0,
       events: [],
     };
@@ -315,7 +338,7 @@ export class Game {
     if (isAgari(c) && evaluate(this.buildCtx(seat, k.drawn, true))) opts.tsumo = true;
     opts.discard = r ? [k.drawn] : hand.slice();
 
-    if (!r && this.isClosed(seat) && this.s.players[seat].score >= 1000 && k.wall.length >= 4) {
+    if (!r && this.isClosed(seat) && this.s.players[seat].score >= 1000 && k.wall.length >= 4 && this.riichiBloodOk(seat)) {
       const byType = new Map();
       for (const id of hand) {
         const t = tileType(id);
@@ -432,6 +455,7 @@ export class Game {
       return Object.keys(p.opts).map(Number).filter((x) => !p.resp[x]);
     }
     if (s.phase === 'result') return SEATS.filter((x) => !s.result.ready[x]);
+    if (s.phase === 'coin') return s.coin.seats.filter((x) => !s.coin.tosses[x]);
     return [];
   }
 
@@ -492,6 +516,11 @@ export class Game {
       if (s.result.ready.every(Boolean)) this.proceed();
       return;
     }
+    if (s.phase === 'coin') {
+      if (!s.coin.seats.includes(seat) || s.coin.tosses[seat]) throw new Error('no decision pending');
+      if (a.type !== 'coin' || !COIN_FACES.includes(a.call)) throw new Error('bad action');
+      return this.toss(seat, a.call);
+    }
     throw new Error('game over');
   }
 
@@ -504,6 +533,7 @@ export class Game {
     }
     if (s.phase === 'response') return this.act(seat, { type: 'pass' });
     if (s.phase === 'result') return this.act(seat, { type: 'ok' });
+    if (s.phase === 'coin') return this.act(seat, { type: 'coin', call: COIN_FACES[Math.floor(this.rng() * 2)] });
   }
 
   discard(seat, id, riichi) {
@@ -718,6 +748,7 @@ export class Game {
         }
       }
       const gain = pay.reduce((a, b) => a + b, 0);
+      this.duelPay(w, pay);
       const own = pay.map((p) => -p);
       own[w] += gain + (i === 0 ? s.kyoutaku * 1000 : 0);
       SEATS.forEach((x) => { deltas[x] += own[x]; });
@@ -793,8 +824,10 @@ export class Game {
     this.endKyoku({ type: 'draw', reason, abortive: true, deltas: [0, 0, 0, 0], tenpai: [], ...extra }, true);
   }
 
+  // by score; in a blood duel the dead go last
   ranking() {
-    return SEATS.slice().sort((a, b) => this.s.players[b].score - this.s.players[a].score || a - b);
+    const dead = (x) => (this.s.blood && this.s.blood.dead.includes(x) ? 1 : 0);
+    return SEATS.slice().sort((a, b) => dead(a) - dead(b) || this.s.players[b].score - this.s.players[a].score || a - b);
   }
 
   // The streak, apart from honba. Only one player holds it at a time
@@ -861,9 +894,12 @@ export class Game {
       if (!renchan) end = top >= cfg.targetScore;
       else end = dealerIsTop && top >= cfg.targetScore; // agari-yame / tenpai-yame
     }
+    const blood = s.blood ? this.bloodCheck() : null;
+    if (blood && blood.dead.length) end = true;
 
     s.result = {
       ...result,
+      blood,
       dora: s.k.dead.slice(4, 4 + s.k.doraCount),
       scores: s.players.map((p) => p.score),
       renchan,
@@ -876,7 +912,9 @@ export class Game {
 
   proceed() {
     const s = this.s;
-    if (s.result.gameEnds) return this.finish();
+    const b = s.result.blood;
+    if (b && b.coins.length && !b.tosses) return this.startCoins(b.coins, 'kyoku');
+    if (s.result.gameEnds || (s.blood && s.blood.dead.length)) return this.finish();
     Object.assign(s, s.next);
     s.next = null;
     this.startKyoku();
@@ -894,8 +932,134 @@ export class Game {
       const pts = (score - cfg.targetScore) / 1000 + cfg.uma[rank] + (rank === 0 ? oka : 0);
       return { seat, name: s.players[seat].name, score, rank: rank + 1, points: Math.round(pts * 10) / 10 };
     });
-    s.phase = 'end';
+    if (s.blood) {
+      this.settleBlood();
+      const b = this.bloodCheck();
+      this.markFinalBlood();
+      if (b.coins.length) return this.startCoins(b.coins, 'end');
+    }
+    this.end();
+  }
+
+  end() {
+    this.s.phase = 'end';
     this.event({ type: 'end' });
+  }
+
+  // ---------------------------------------------------------------- blood
+
+  isDuelist(seat) {
+    return !!this.s.blood && this.s.blood.duelists.includes(seat);
+  }
+
+  // the rival duelist in a duel by teams (two duelists), or -1
+  rivalOf(seat) {
+    const d = this.s.blood ? this.s.blood.duelists : [];
+    return d.length === 2 && d.includes(seat) ? d.find((x) => x !== seat) : -1;
+  }
+
+  // By teams only a payment between the two duelists draws blood (a direct
+  // hit or the rival's share of a self draw), as between Akagi and Washizu.
+  duelPay(winner, pay) {
+    const b = this.s.blood;
+    const rival = this.rivalOf(winner);
+    if (!b || rival < 0 || !pay[rival]) return;
+    b.duel[winner] += pay[rival];
+    b.duel[rival] -= pay[rival];
+  }
+
+  // A duelist's balance in points: on their own, the score against the
+  // starting one; in a duel, what they won or paid to the rival duelist.
+  // Once the game is over, the final settlement (settleBlood).
+  bloodBalance(seat) {
+    const s = this.s;
+    const b = s.blood;
+    if (b.settled) return b.settled[seat];
+    if (this.rivalOf(seat) >= 0) return b.duel[seat];
+    return s.players[seat].score - s.config.startScore;
+  }
+
+  // cc a seat has lost so far (null for whoever does not bleed)
+  bloodLost(seat) {
+    if (!this.isDuelist(seat)) return null;
+    return ccLost(this.bloodBalance(seat), bloodRate(this.s.config.blood));
+  }
+
+  // The final settlement, with uma and oka: on their own, the final points
+  // (negative ones are paid in blood); in a duel, what was paid between the
+  // duelists plus the difference of their final points.
+  settleBlood() {
+    const s = this.s;
+    const b = s.blood;
+    const pts = [0, 0, 0, 0];
+    for (const f of s.final) pts[f.seat] = Math.round(f.points * 1000);
+    b.settled = SEATS.map((x) => {
+      const rival = this.rivalOf(x);
+      return rival >= 0 ? b.duel[x] + pts[x] - pts[rival] : pts[x];
+    });
+  }
+
+  // After a payment: who dies (over the limit) and who tosses the coin (in
+  // the coin zone, having bled more since their last check). The dead are
+  // marked at once. Returns what everybody sees on the result screen.
+  bloodCheck() {
+    const b = this.s.blood;
+    const lost = SEATS.map((x) => this.bloodLost(x));
+    const coins = [];
+    const dead = [];
+    for (const x of b.duelists) {
+      if (b.dead.includes(x)) continue;
+      const fate = bloodFate(lost[x], b.checked[x]);
+      b.checked[x] = lost[x];
+      if (fate === 'dead') dead.push(x);
+      if (fate === 'coin') coins.push(x);
+    }
+    b.dead.push(...dead);
+    return { lost, coins, dead, tosses: null };
+  }
+
+  // A riichi stick is paid in blood too (when the score is the balance):
+  // it is not allowed when it would take the duelist over the limit.
+  riichiBloodOk(seat) {
+    const s = this.s;
+    if (!this.isDuelist(seat) || this.rivalOf(seat) >= 0) return true;
+    const after = s.players[seat].score - 1000 - s.config.startScore;
+    return ccLost(after, bloodRate(s.config.blood)) <= BLOOD_LIMIT;
+  }
+
+  startCoins(seats, after) {
+    const s = this.s;
+    s.coin = { seats: seats.slice(), after, tosses: {} };
+    s.phase = 'coin';
+    this.event({ type: 'coin-start', seats: seats.slice() });
+  }
+
+  // Heads or tails: the engine tosses the coin; a wrong call kills.
+  toss(seat, call) {
+    const s = this.s;
+    const face = COIN_FACES[Math.floor(this.rng() * 2)];
+    const ok = face === call;
+    s.coin.tosses[seat] = { call, face, ok };
+    s.blood.tosses.push({ seat, call, face, ok, lost: this.bloodLost(seat) });
+    if (!ok) s.blood.dead.push(seat);
+    this.event({ type: 'coin', seat, call, face, ok });
+    if (this.pendingSeats().length) return;
+    const { after, tosses } = s.coin;
+    s.coin = null;
+    if (after === 'end') {
+      this.markFinalBlood();
+      return this.end();
+    }
+    s.result.blood.tosses = tosses;
+    this.proceed();
+  }
+
+  // the blood of each final line: cc lost and whether they died
+  markFinalBlood() {
+    const b = this.s.blood;
+    for (const f of this.s.final) {
+      f.blood = this.isDuelist(f.seat) ? { lost: this.bloodLost(f.seat), dead: b.dead.includes(f.seat) } : null;
+    }
   }
 
   // ----------------------------------------------------------------- view
@@ -921,6 +1085,7 @@ export class Game {
     if (s.phase === 'response' && k.pending.opts[seat] && !k.pending.resp[seat]) {
       options = { kind: 'response', tile: k.pending.tile, from: k.pending.from, ...k.pending.opts[seat] };
     }
+    if (s.phase === 'coin' && this.pendingSeats().includes(seat)) options = { kind: 'coin', faces: COIN_FACES };
     const mine = k.hands[seat];
     const drawn = k.turn === seat && k.drawn !== null ? k.drawn : null;
     return {
@@ -964,6 +1129,16 @@ export class Game {
       options,
       result: s.result,
       final: s.final,
+      // blood duel: what everybody sees (each duelist's cc lost, who died,
+      // the coin being tossed); null outside the mode
+      blood: s.blood ? {
+        mode: s.config.blood,
+        rate: bloodRate(s.config.blood),
+        duelists: s.blood.duelists,
+        lost: SEATS.map((x) => this.bloodLost(x)),
+        dead: s.blood.dead,
+        coin: s.coin ? { seats: s.coin.seats, tosses: s.coin.tosses } : null,
+      } : null,
       events: s.events,
       config: s.config,
     };
