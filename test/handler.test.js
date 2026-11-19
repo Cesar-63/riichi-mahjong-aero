@@ -465,3 +465,45 @@ test('washizu tiles: the opener picks them, the host can change them, and every 
   const usual = await call({ op: 'join', token: tokens[2], name: 'P2', hb: true, room: 'wz2' }, 'wz2');
   assert.equal(usual.tiles, 'normal');
 });
+
+test('blood duel: the opener picks it, the host can change it, and the game bleeds at its rate', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 73_000_000;
+  const call = async (body, room = 'bl1') => (await handle({ room, ...body }, store, now)).body;
+  assert.equal((await call({ op: 'join', token: tokens[0], name: 'P0' })).blood, 'none');
+  assert.equal((await call({ op: 'join', token: tokens[1], name: 'P1', blood: 'akagi' })).blood, 'none', 'a later player does not change it');
+  assert.ok((await call({ op: 'blood', token: tokens[1], blood: 'akagi' })).error, 'only the host');
+  assert.ok((await call({ op: 'blood', token: tokens[0], blood: 'mucha' })).error, 'unknown mode');
+  assert.equal((await call({ op: 'blood', token: tokens[0], blood: 'akagi' })).blood, 'akagi');
+  await call({ op: 'fill', token: tokens[0] });
+  const { game } = await call({ op: 'poll', token: tokens[0] });
+  assert.equal(game.bloodMode, 'akagi');
+  assert.equal(game.blood.rate, 100);
+  assert.deepEqual(game.blood.duelists, [0, 1, 2, 3], 'on their own, everybody bleeds');
+  // without asking: no blood
+  const usual = await call({ op: 'join', token: tokens[2], name: 'P2', room: 'bl2' }, 'bl2');
+  assert.equal(usual.blood, 'none');
+});
+
+test('blood duel by teams: one duelist per team, the one who came first', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  let now = 74_000_000;
+  const call = async (body, room = 'bl3') => (await handle({ room, ...body }, store, now)).body;
+  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true, mode: 'teams', blood: 'washizu' });
+  for (let i = 0; i < 4; i++) {
+    await call({ op: 'team', token: tokens[i], team: i < 2 ? 'N' : 'S' });
+    await call({ op: 'ready', token: tokens[i], ready: true });
+  }
+  const { game } = await call({ op: 'start', token: tokens[0] });
+  const names = game.blood.duelists.map((x) => game.players[x].name).sort();
+  assert.deepEqual(names, ['P0', 'P2']);
+  assert.ok(game.blood.duelists.includes(0) || game.blood.duelists.includes(1));
+  assert.ok(game.blood.duelists.includes(2) || game.blood.duelists.includes(3));
+  // practice by teams: the player is the duelist, Bot 1 the support
+  const practice = await call({ op: 'join', token: tokens[0], name: 'Yo', mode: 'teams', blood: 'akagi' }, 'bots-bl4');
+  const me = practice.game.seat;
+  assert.ok(practice.game.blood.duelists.includes(me));
+  assert.ok(!practice.game.blood.duelists.includes(practice.game.partner.seat));
+});

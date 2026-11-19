@@ -3,6 +3,7 @@
 import { Game } from './engine/game.js';
 import { botAction, LEVELS } from './engine/bot.js';
 import { CHARACTERS, characterId, isCharacter, fillCharacters } from '../public/js/shared/characters.js';
+import { BLOOD_MODES } from '../public/js/shared/blood.js';
 
 const env = (typeof process !== 'undefined' && process.env) || {};
 export const TIMING = {
@@ -37,6 +38,10 @@ const wallId = (id) => (WALLS.includes(id) ? id : 'normal');
 // three of every four copies are glass and the others see them in a hand.
 export const TILE_SETS = ['normal', 'washizu'];
 const tilesId = (id) => (TILE_SETS.includes(id) ? id : 'normal');
+// The blood duel, chosen per room like the tiles: 'none', 'washizu'
+// (1000 points = 10 cc) or 'akagi' (100 cc): see engine/game.js.
+export { BLOOD_MODES };
+const bloodId = (id) => (BLOOD_MODES.includes(id) ? id : 'none');
 const ROOM_TTL = 6 * 3600 * 1000;
 const LOCK_MS = 5000;
 
@@ -51,7 +56,7 @@ const keys = (code) => ({
 
 function newRoom(code) {
   // mode: 'classic' (ranked, 4 individual players) or 'teams' (2 vs 2); set by whoever opens the room
-  return { code, version: 0, status: 'lobby', mode: null, timing: 'normal', wall: 'normal', tiles: 'normal', queue: [], seats: null, game: null, clock: null, deadline: null };
+  return { code, version: 0, status: 'lobby', mode: null, timing: 'normal', wall: 'normal', tiles: 'normal', blood: 'none', queue: [], seats: null, game: null, clock: null, deadline: null };
 }
 
 function cleanName(n) {
@@ -92,7 +97,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'tiles', 'character'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'tiles', 'blood', 'character'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -175,6 +180,7 @@ function apply(room, op, token, body, now, seen) {
       room.timing = timingId(body.timing);
       room.wall = wallId(body.wall);
       room.tiles = tilesId(body.tiles);
+      room.blood = bloodId(body.blood);
       const bots = [1, 2, 3].map((n) => newBot(n, body.levels));
       room.queue = [{ token, name, character }, ...bots];
       if (mode === 'teams') room.queue.forEach((q, i) => { q.team = i < 2 ? 'N' : 'S'; });
@@ -187,6 +193,7 @@ function apply(room, op, token, body, now, seen) {
       room.timing = timingId(body.timing);
       room.wall = wallId(body.wall);
       room.tiles = tilesId(body.tiles);
+      room.blood = bloodId(body.blood);
     } else if (room.mode !== mode) {
       throw new Error(`La sala "${room.code}" es de modo ${MODE_NAME[room.mode]}: elige ese modo o usa otra sala`);
     }
@@ -264,6 +271,16 @@ function apply(room, op, token, body, now, seen) {
     if (!TILE_SETS.includes(body.tiles)) throw new Error('Fichas desconocidas');
     if (tilesId(room.tiles) === body.tiles) return false;
     room.tiles = body.tiles;
+    for (const q of room.queue) if ('ready' in q) q.ready = false;
+    return true;
+  }
+  if (op === 'blood') {
+    // The host picks the blood duel before the game starts, as with the tiles.
+    if (room.status !== 'lobby') return false;
+    if (!room.queue.length || room.queue[0].token !== token) throw new Error('Solo el anfitrión puede cambiar la sangre');
+    if (!BLOOD_MODES.includes(body.blood)) throw new Error('Modo de sangre desconocido');
+    if (bloodId(room.blood) === body.blood) return false;
+    room.blood = body.blood;
     for (const q of room.queue) if ('ready' in q) q.ready = false;
     return true;
   }
@@ -365,15 +382,31 @@ function startGame(room, now, seen) {
   // the bots sit as characters nobody at the table picked
   const cast = fillCharacters(players.map((p) => (p.bot ? null : characterId(p.character))), shuffled(CHARACTERS.map((c) => c.id)));
   players.forEach((p, i) => { p.character = cast[i]; });
+  const blood = bloodId(room.blood);
+  const duelists = blood !== 'none' && room.mode === 'teams' ? duelistsOf(players, room.queue) : null;
+  players.forEach((p, i) => { if (duelists) p.duelist = duelists.includes(i); });
   room.seats = players;
   room.requests = {};
   room.noRiichi = {};
   room.queue = [];
   room.status = 'playing';
-  room.game = Game.create(players.map((p) => p.name), { wall: wallId(room.wall), washizu: tilesId(room.tiles) === 'washizu' }).s;
+  room.game = Game.create(players.map((p) => p.name), {
+    wall: wallId(room.wall),
+    washizu: tilesId(room.tiles) === 'washizu',
+    blood: blood === 'none' ? null : blood,
+    duelists,
+  }).s;
   room.clock = { bank: [0, 0, 0, 0], decisions: {}, kyokuKey: null };
   afterChange(room, new Game(room.game), now);
   schedule(room, now, seen);
+}
+
+// Blood duel by teams: one duelist per team (seats 0-1 and 2-3), the other
+// one is the support. The duelist is the team's person who came into the
+// room first; a team of bots sends its first bot.
+function duelistsOf(players, queue) {
+  const order = (p) => (p.bot ? 100 : 0) + Math.max(0, queue.findIndex((q) => q.token === p.token));
+  return [[0, 1], [2, 3]].map((pair) => pair.reduce((a, b) => (order(players[b]) < order(players[a]) ? b : a)));
 }
 
 function afterChange(room, g, now) {
@@ -489,6 +522,7 @@ function viewFor(room, token, seen, now) {
       timing: timingId(room.timing),
       wall: wallId(room.wall),
       tiles: tilesId(room.tiles),
+      blood: bloodId(room.blood),
       inQueue: room.queue.some((q) => q.token === token),
     };
   }
@@ -525,6 +559,7 @@ function viewFor(room, token, seen, now) {
   view.timing = timingId(room.timing);
   view.wallMode = wallId(room.wall);
   view.tiles = tilesId(room.tiles);
+  view.bloodMode = bloodId(room.blood);
   view.clock = dec
     ? {
       // The grace period is hidden from the displayed countdown; no limit: null

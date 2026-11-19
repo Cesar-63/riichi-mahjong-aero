@@ -6,6 +6,7 @@
 // safe move if the AI ever answers something illegal.
 import { majiangAction } from './majiang-bot.js';
 import { spareTile } from './fluid.js';
+import { COIN_FACES } from '../../public/js/shared/blood.js';
 
 export const LEVELS = ['normal', 'hard'];
 
@@ -22,6 +23,8 @@ async function hardAction(game, seat) {
 export async function botAction(game, seat, requested = null, level = 'normal', noRiichi = false) {
   const s = game.s;
   if (s.phase === 'result') return { type: 'ok' };
+  // blood duel: a bot calls the coin at random
+  if (s.phase === 'coin') return { type: 'coin', call: COIN_FACES[Math.floor(Math.random() * 2)] };
   const v = game.view(seat);
   const o = v.options;
   if (!o) return null;
