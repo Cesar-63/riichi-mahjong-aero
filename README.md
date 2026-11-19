@@ -19,7 +19,7 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
 | | |
 | --- | --- |
 | Duración | Tonpuusen (東風戦). Si nadie llega a 30.000 al final de 東4, se juega 南 a muerte súbita (termina apenas alguien tenga ≥30.000; como máximo hasta 南4). |
-| Puntos | 25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20, oka +20 al 1º. Los depósitos de riichi que queden en mesa van al 1º. Empates por orden de asiento inicial. |
+| Puntos | 25.000 iniciales, 30.000 de retorno, uma +20/+10/−10/−20 (con [duelo de sangre](#modo-duelo-de-sangre), +30/+10/−10/−30), oka +20 al 1º. Los depósitos de riichi que queden en mesa van al 1º. Empates por orden de asiento inicial. |
 | Fin anticipado | Bancarrota (<0). Agari-yame / tenpai-yame automático del oya en el último kyoku si va 1º y tiene ≥30.000. |
 | Yaku | Todos los estándar más yakuman (kokushi, suuankou, daisangen, shou/daisuushii, tsuuiisou, chinroutou, ryuuiisou, chuuren, suukantsu, tenhou, chiihou). Kuitan permitido. Kazoe yakuman con 13 han. Sin doble yakuman (sí se suman yakuman distintos). Sin kiriage mangan. |
 | Dora | Dora, kan-dora (ankan al momento; minkan/kakan tras el descarte), ura-dora con riichi, **3 akadora** (un 5 rojo por palo). |
@@ -45,6 +45,10 @@ servidor. Es una prueba de concepto comunitaria y sin fines de lucro.
    - **Fichas** (Normales, o **Washizu · tres de cada cuatro, de vidrio**:
      ver [Modo Washizu](#modo-washizu)): se elige igual que el muro, y el
      anfitrión puede cambiarlas en la sala de espera.
+   - **Sangre** (Sin sangre, **Washizu original · 1000 puntos = 10 cc** o
+     **Apuesta de Akagi · 1000 puntos = 100 cc**: ver
+     [Modo duelo de sangre](#modo-duelo-de-sangre)): se elige igual que las
+     fichas, y el anfitrión puede cambiarla en la sala de espera.
    - **Jugar con personajes** (opcional, en cualquier modo): los jugadores
      se sientan a la mesa en 3D y eliges **tu personaje** (ver
      [Personajes](#personajes)).
@@ -249,6 +253,60 @@ elige en **Fichas** al abrir la sala o la práctica.
 - El servidor solo envía, de cada rival, sus fichas de vidrio (nunca las
   opacas). Los bots (majiang-ai y Mortal) no usan esa información: juegan
   como en una partida normal.
+
+## Modo duelo de sangre
+
+Un homenaje a la apuesta de sangre del Washizu mahjong, apagado por defecto:
+se elige en **Sangre** al abrir la sala o la práctica. Va con cualquier
+juego de fichas (normales o de vidrio).
+
+- **La tasa.** **Washizu original**: 1000 puntos = 10 cc. **Apuesta de
+  Akagi**: 1000 puntos = 100 cc (20.000 puntos son la dosis letal). Con
+  sangre se juega con el **uma del manga**: +30/+10/−10/−30 (oka +20 al 1º,
+  como siempre).
+- **Quién sangra.** En **Clásico** y en la práctica individual, los cuatro:
+  cada uno pierde la sangre de lo que va abajo de los 25.000 iniciales. Te
+  hacen ron, pagas tu parte de un tsumo, pagas por noten o un pao: es
+  sangre. El palito de riichi también son 10 o 100 cc. **Ganar la devuelve**
+  (nunca más de la que te sacaron), y no hay transfusiones.
+- **Por equipos**, como en el manga: cada pareja tiene un **duelista** y un
+  **apoyo**. Solo los duelistas sangran, y solo por lo que se pagan **entre
+  ellos dos**: un ron directo o la parte de un tsumo. Lo que pase con los
+  apoyos solo cuenta para los puestos. El duelista es el primero de la
+  pareja que entró a la sala (una persona antes que un bot); en la práctica
+  por equipos eres tú, y Bot 1 tu apoyo.
+- **La moneda.** Si un pago te deja **entre 1500 y 2000 cc** perdidos (los
+  dos incluidos), al cerrar la mano tiras una moneda: eliges **cara** o
+  **sello**. Si aciertas sigues; si no, te desangras. Se vuelve a tirar cada
+  vez que pierdes más sangre dentro de esa zona o vuelves a entrar en ella.
+  La moneda la sortea el servidor; si se acaba el tiempo se elige al azar, y
+  los bots eligen al azar.
+- **La muerte.** Con **más de 2000 cc** perdidos te desangras al cerrar la
+  mano. La partida termina ahí y quien murió queda último. El riichi no se
+  puede declarar si el palito te llevaría más allá del límite.
+- **El ajuste final.** Al terminar, la sangre se ajusta a los resultados con
+  uma y oka: los resultados negativos se pagan en sangre (por equipos, la
+  diferencia entre los resultados de los dos duelistas, más lo que se
+  pagaron durante la partida). Puede llevar a una última moneda. La hoja de
+  resultados tiene una columna **Sangre**.
+- **Lo que se ve.** Junto al nombre de cada rival, su sangre desde 500 cc
+  (por equipos, quién es el duelista); en el papel de la ronda, tu bolsa de
+  sangre. Al bajar:
+  - **desde 500 cc** la mesa pierde color y los bordes se oscurecen;
+  - **desde 1000 cc** (te quedan menos de 1000) las fichas que ves
+    **alucinan**, de a una: el pájaro del 1 de sou sale de la ficha, da una
+    vuelta y vuelve; los círculos de los pin giran; el 1 de pin gira y
+    parpadea como un ojo; las cañas de los sou se mecen; los man tiemblan;
+    el chun gotea sangre; una sombra cruza el haku; los demás honores flotan
+    y vuelven; y las fichas de vidrio se empañan;
+  - **desde 1500 cc** la mesa late con el corazón, la vista se cierra en
+    túnel y a ratos se ve doble, y las alucinaciones son más seguidas;
+  - **al desangrarte**, la pantalla se va a rojo y después a negro.
+
+  Nada de eso tapa lo que hay que decidir: la ficha robada y el último
+  descarte nunca alucinan, y tu mano queda fuera de los bordes oscuros. Los
+  efectos se apagan en **Configuración** (*Duelo de sangre: efectos*), y con
+  *movimiento reducido* en el sistema no hay alucinaciones ni latido.
 
 ## Muro y robos
 
@@ -704,7 +762,9 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   tsumo, tu tsumo con tres kan, empate, kan y muro muerto, doble ron, racha
   (cielo, mar y fuego, con el brillo de las manos), y el modo Washizu (el
   inicio de mano con el agujero, una mano con fichas de vidrio, y riichi y
-  ron con los ura saliendo del agujero). Salen de
+  ron con los ura saliendo del agujero), y el duelo de sangre (600 cc, 1200 cc
+  con una alucinación de cada tipo, 1600 cc al borde, la moneda y la
+  muerte). Salen de
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Partida de exhibición**: las 13 manos de la partida entre bots elegida
@@ -773,8 +833,9 @@ public/models/personajes/  Personajes de la mesa (glTF con esqueleto)
 public/img/personajes/   Retratos de los personajes para el lobby
 scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos.mjs)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
-public/js/shared/        Modelo de fichas, lista de personajes y niveles de la racha (streak.js)
-public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha
+public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js) y reglas del duelo de sangre (blood.js)
+public/js/blood-ui.js    Duelo de sangre en pantalla: opción, medidor, moneda, efectos
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
