@@ -10,6 +10,7 @@ import { createTileKit, W, H, D, GAP } from './tiles3d.js';
 import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { createHallucinations } from './hallucinate.js';
+import { createBloodMachines } from './bloodmachine.js';
 import { TUNING } from './tuning.js';
 import { CLIMATES } from './climate.js';
 import { climateOf } from '../shared/streak.js';
@@ -135,6 +136,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const q = qSeat[rel].clone().multiply(qLocal[pose]);
     return { p, q };
   }
+
+  // Blood duel: a blood drawing machine beside every duelist (bloodmachine.js)
+  const machines = createBloodMachines({ scene, onTick: world.onTick, place });
 
   // ------------------------------------------------------------- motion
   // Tiles travel at a steady speed along straight segments, no easing. A
@@ -1649,6 +1653,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
   return {
     update(v, ui) {
       relOf = (abs) => (abs - v.seat + 4) % 4;
+      machines.update(v, relOf);
       // glass tiles or not: the tiles made the other way go
       if (kit.setWashizu(isWashizu(v))) {
         dropObjects();

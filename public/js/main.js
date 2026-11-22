@@ -6,7 +6,7 @@ import { climateOf } from './shared/streak.js';
 import { CHARACTERS, characterId } from './shared/characters.js';
 import { bloodStage } from './shared/blood.js';
 import {
-  BLOOD_OPTIONS, bloodButtons, bloodLabel, bloodTag, roundBloodHTML, coinHTML, showCoinTosses, applyBloodScreen,
+  BLOOD_OPTIONS, bloodButtons, bloodLabel, bloodTag, roundBloodHTML, coinHTML, showCoinTosses, applyBloodScreen, machineHTML,
 } from './blood-ui.js';
 
 const $ = (s) => document.querySelector(s);
@@ -512,6 +512,7 @@ function portraitsHTML(v) {
     return `<div class="seatcard ${pos}${turn ? ' turn' : ''}">
       <div class="frame" style="--a:${a};--b:${b}">${SILHOUETTE}${p.bot ? `<span class="bot">${p.level === 'hard' ? 'bot difícil' : 'bot'}</span>` : ''}</div>
       <div class="plaque"><span class="wind${abs === v.dealer ? ' oya' : ''}">${WIND_ES[p.wind]}</span><b>${escapeHTML(p.name)}</b>${tags}<span class="score">${p.score}</span></div>
+      ${machineHTML(v, abs)}
     </div>`;
   }).join('');
 }

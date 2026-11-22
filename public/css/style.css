@@ -2011,3 +2011,39 @@ body:has(#modal.coin) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { visib
   #coin-fx.sello .coin { transform: rotateY(180deg); }
   #coin-fx p { animation-delay: 0s; }
 }
+
+/* the blood drawing machines on the screen (blood-ui.js machineHTML): a
+   graduated glass tank on a metal base, filling from the bottom */
+.bm { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; width: calc(34 * var(--px)); min-width: 26px; pointer-events: auto; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .7)); }
+/* in the portrait, beside the player: on the side the plaque leaves free
+   (and clear of the "bot" note in the right one's corner) */
+.seatcard .bm { right: calc(30 * var(--px)); top: calc(18 * var(--px)); }
+.seatcard.right .bm { right: auto; left: calc(74 * var(--px)); }
+.seatcard .bm .bm-tank { height: calc(86 * var(--px)); min-height: 60px; }
+#game.chars .seatcard .bm { top: calc(100% + 6px); left: 50%; right: auto; translate: -50% 0; }
+.bm-lid { width: 90%; height: calc(6 * var(--px)); min-height: 4px; border-radius: 2px 2px 0 0; background: linear-gradient(90deg, #4c463e, #a49b8c 45%, #4c463e); }
+.bm-tank { position: relative; width: 78%; height: calc(110 * var(--px)); min-height: 80px; overflow: hidden; border: 1px solid rgba(220, 240, 245, .55); border-top: 0; border-radius: 0 0 4px 4px; background: linear-gradient(90deg, rgba(200, 230, 240, .16), rgba(255, 255, 255, .32) 30%, rgba(200, 230, 240, .1) 55%, rgba(200, 230, 240, .22)); }
+.bm-fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--fill) * 100%); background: linear-gradient(90deg, #4d0302, #a3100a 35%, #6d0503); box-shadow: inset 0 3px 0 rgba(255, 120, 100, .35); animation: bm-rise 2.4s ease-out; }
+.bm-fill::before { content: ""; position: absolute; inset: 0 auto 0 25%; width: 14%; background: rgba(255, 190, 180, .16); }
+@keyframes bm-rise { from { height: calc(var(--from) * 100%); } }
+.bm-stream { position: absolute; left: 58%; top: 0; width: 2px; height: calc((1 - var(--fill, 0)) * 100%); background: #a3100a; opacity: 0; }
+.bm.filling .bm-stream { opacity: 1; animation: bm-stream 2.4s ease-out forwards; }
+@keyframes bm-stream { 85% { opacity: 1; } 100% { opacity: 0; } }
+/* a mark every 250 cc, longer every 500 */
+.bm-marks { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0, transparent calc(25% - 1px), rgba(245, 238, 220, .85) calc(25% - 1px), rgba(245, 238, 220, .85) 25%) left / 45% 100% no-repeat, repeating-linear-gradient(to top, transparent 0, transparent calc(12.5% - 1px), rgba(245, 238, 220, .55) calc(12.5% - 1px), rgba(245, 238, 220, .55) 12.5%) left / 25% 100% no-repeat; }
+/* the coin zone, a red band from 1500 cc up */
+.bm-marks::after { content: ""; position: absolute; right: 0; top: 0; width: 3px; height: 25%; background: rgba(220, 30, 20, .7); }
+.bm-base { display: flex; flex-direction: column; align-items: center; min-width: 120%; padding: 1px 3px 2px; text-align: center; font-family: var(--f-hand); font-size: max(12px, calc(15 * var(--px))); line-height: 1; color: #3a0806; background: linear-gradient(#d9cfb6, #b7ab8f); border: 1px solid #3a3128; border-radius: 1px; font-variant-numeric: tabular-nums; }
+.bm-base i { font-family: var(--f-body); font-style: normal; font-weight: 700; font-size: max(7px, calc(8 * var(--px))); letter-spacing: 1px; color: #7a120c; }
+.bm.s3 .bm-base { color: #fff; background: linear-gradient(#b3170f, #7a0d08); }
+.bm.s3 .bm-base i { color: #ffd4cc; }
+.bm.dead .bm-fill { background: #2a0302; }
+.bm.dead .bm-base { color: #e8b3ad; background: #111; }
+/* mine, under the paper chit with the round: over the rail, clear of the walls */
+#hud3d .roundinfo .bm.mine { left: 14px; top: calc(100% + 10px); transform: rotate(.8deg); }
+@media (max-width: 760px), (max-height: 420px) {
+  .seatcard .bm { display: none; }
+  #hud3d .roundinfo .bm.mine { width: 24px; min-width: 0; }
+  #hud3d .roundinfo .bm.mine .bm-tank { height: 64px; min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .bm-fill, .bm.filling .bm-stream { animation: none; } }
