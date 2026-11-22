@@ -416,6 +416,8 @@ function ensure3d() {
       t.setViewByKey(state.ui.viewByKey);
       t.setAutoSort(state.ui.autoSort);
       t.onIntro(({ active }) => {
+        // a new hand: nothing of the last one's reveal stays on screen
+        if (active) hideDoraBanner();
         $('#hud3d').classList.toggle('intro', active);
         state.ui.introActive = active;
         if (state.view) renderPartner(state.view, state.ui);
@@ -432,7 +434,10 @@ function ensure3d() {
       });
       t.onWin(({ phase, result }) => {
         if (phase === 'dora') showDoraBanner(result);
-        if (phase === 'done' && state.ui.winFinish) state.ui.winFinish();
+        if (phase !== 'done') return;
+        // the banner belongs to the reveal only, even one that was replayed
+        hideDoraBanner();
+        if (state.ui.winFinish) state.ui.winFinish();
       });
       return t;
     });
