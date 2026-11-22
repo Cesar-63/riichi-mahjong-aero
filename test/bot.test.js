@@ -105,8 +105,11 @@ test('told "no riichi" by its teammate, the bot discards the same tile quietly',
 });
 
 test('blood duel: a bot in the coin zone calls heads or tails', async () => {
-  const g = Game.create(['A', 'B', 'C', 'D'], { blood: 'akagi' });
-  g.s.players.forEach((p, i) => { p.score = [40000, 30000, 20000, 10000][i]; });
+  // a fixed coin, and the others out of the coin zone in the final
+  // settlement should the bot bleed out (the game would toss again)
+  let n = 0;
+  const g = Game.create(['A', 'B', 'C', 'D'], { blood: 'akagi' }, () => ((n++ * 0.618) % 1));
+  g.s.players.forEach((p, i) => { p.score = [35000, 29000, 26000, 10000][i]; });
   g.endKyoku({ type: 'draw', reason: 'exhaustive', deltas: [0, 0, 0, 0], tenpai: [] }, false);
   for (const x of g.pendingSeats()) g.act(x, await botAction(g, x));
   assert.equal(g.s.phase, 'coin');
