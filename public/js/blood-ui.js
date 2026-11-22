@@ -40,6 +40,33 @@ function bagHTML(lost) {
   return `<i class="blood-bag s${bloodStage(lost)}" aria-hidden="true"><i style="--left:${left.toFixed(3)}"></i></i>`;
 }
 
+// A blood drawing machine on the screen, as in the manga: a graduated
+// glass tank (marks every 500 cc up to 2000) that fills with the blood the
+// duelist has lost. Inside each rival's portrait, beside the player, and
+// mine beside the paper chit with the round (the 3D table has its own, three3d/bloodmachine.js).
+// When it has just gone up, a stream runs into the tank and the level
+// rises from where it was.
+const lastFill = new Map(); // seat -> { lost, from, at }
+const FILLING_MS = 2600;
+export function machineHTML(v, abs, extra = '') {
+  if (!v.blood || !isDuelist(v, abs)) return '';
+  const lost = v.blood.lost[abs];
+  const now = Date.now();
+  let m = lastFill.get(abs);
+  if (!m || lost !== m.lost) {
+    m = { lost, from: m ? m.lost : lost, at: m && lost > m.lost ? now : 0 };
+    lastFill.set(abs, m);
+  }
+  const filling = now - m.at < FILLING_MS;
+  const share = (cc) => Math.min(1, cc / BLOOD_LIMIT).toFixed(3);
+  const dead = isDead(v, abs);
+  return `<div class="bm s${bloodStage(lost)}${filling ? ' filling' : ''}${dead ? ' dead' : ''} ${extra}" style="--fill:${share(lost)};--from:${share(filling ? m.from : lost)}" role="img" aria-label="Sangre perdida: ${cc(lost)}" title="Sangre perdida: ${cc(lost)}">
+      <i class="bm-lid" aria-hidden="true"></i>
+      <span class="bm-tank" aria-hidden="true"><i class="bm-fill"></i><i class="bm-stream"></i><i class="bm-marks"></i></span>
+      <span class="bm-base"><i aria-hidden="true">採血</i>${dead ? '†' : lost}</span>
+    </div>`;
+}
+
 // On the paper chit: my own blood, always (or that I am the support)
 export function roundBloodHTML(v) {
   if (!v.blood) return '';
@@ -49,7 +76,7 @@ export function roundBloodHTML(v) {
     return `<span class="blood-line">${mode} · eres el apoyo de <b>${esc(v.players[mine] ? v.players[mine].name : '')}</b></span>`;
   }
   const lost = v.blood.lost[v.seat];
-  return `<span class="blood-line">${bagHTML(lost)} Sangre: <b>${cc(lost)}</b> de ${cc(BLOOD_LIMIT)}${lost >= COIN_FROM ? ' · <em>zona de la moneda</em>' : ''}</span>`;
+  return `<span class="blood-line">${bagHTML(lost)} Sangre: <b>${cc(lost)}</b> de ${cc(BLOOD_LIMIT)}${lost >= COIN_FROM ? ' · <em>zona de la moneda</em>' : ''}</span>${machineHTML(v, v.seat, 'mine')}`;
 }
 
 // The result sheet: each duelist's blood and what comes next (coin, death)

@@ -391,7 +391,7 @@ function bloodPlay(g, rec, rounds, gap) {
   const rec = recorder();
   rec.add(g, 1500);
   bloodPlay(g, rec, 2, 1100);
-  scenes.push({ id: 'blood-500', name: 'Sangre: 600 cc', note: 'Duelo de sangre, apuesta de Akagi: vas 6000 puntos abajo, 600 cc perdidos. La mesa pierde color y los bordes se oscurecen; las fichas todavía no alucinan.', steps: rec.steps, length: rec.end });
+  scenes.push({ id: 'blood-500', name: 'Sangre: 600 cc', note: 'Duelo de sangre, apuesta de Akagi: vas 6000 puntos abajo, 600 cc perdidos. La mesa pierde color y los bordes se oscurecen; las fichas todavía no alucinan. Cada duelista tiene su máquina de sangre al lado (con la cámara Mesa completa se ven todas).', steps: rec.steps, length: rec.end });
 }
 {
   const g = bloodScene(13000);

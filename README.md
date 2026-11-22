@@ -289,6 +289,13 @@ juego de fichas (normales o de vidrio).
   diferencia entre los resultados de los dos duelistas, más lo que se
   pagaron durante la partida). Puede llevar a una última moneda. La hoja de
   resultados tiene una columna **Sangre**.
+- **Las máquinas de sangre.** Como en el manga, cada duelista tiene al lado
+  una máquina de extracción: un depósito de vidrio graduado hasta 2000 cc
+  (una marca cada 500, la zona de la moneda en rojo) que se llena con la
+  sangre que pierde y se vacía cuando la recupera; al subir se ve el chorro
+  que entra. Están en el retrato de cada rival, junto al jugador; la tuya,
+  al lado del papel de la ronda. En la mesa 3D también hay una al lado de
+  cada duelista, con su tubo hasta el brazo (se ven con la mesa completa).
 - **Lo que se ve.** Junto al nombre de cada rival, su sangre desde 500 cc
   (por equipos, quién es el duelista); en el papel de la ronda, tu bolsa de
   sangre. Al bajar:
@@ -835,7 +842,7 @@ scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
 public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js) y reglas del duelo de sangre (blood.js)
 public/js/blood-ui.js    Duelo de sangre en pantalla: opción, medidor, moneda, efectos
-public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre; bloodmachine.js: sus máquinas de sangre
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
