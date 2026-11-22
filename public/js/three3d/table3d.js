@@ -1660,6 +1660,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
         hand.clear();
       }
       const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+      // always the latest view, also during the deal: closing the points
+      // drawer redraws it, and a stale one would replay the last hand's win
+      lastView = [v, ui];
       if (v.intro && v.intro.left > 400 && v.wall && key !== introKey) {
         introKey = key;
         if (intro) endIntro();
@@ -1671,7 +1674,6 @@ export function createTable3D(container, { onPick, signal } = {}) {
         return;
       }
       introKey = key;
-      lastView = [v, ui];
       update(v, ui);
     },
     onIntro(cb) {
