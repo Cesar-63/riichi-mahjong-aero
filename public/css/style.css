@@ -1425,7 +1425,10 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 #dora3d b { margin-left: 8px; font-family: var(--f-hand); font-weight: 400; font-size: 30px; color: var(--gold); }
 
 /* points drawer: my plaque right above it, the others at their edges */
-#scores3d { position: absolute; inset: 0; pointer-events: auto; cursor: pointer; }
+/* the scores lie around the open drawer; the sticks in it can be arranged
+   (a tap on the table or on a score closes it) */
+#scores3d { position: absolute; inset: 0; pointer-events: none; }
+#scores3d .sc { pointer-events: auto; cursor: pointer; }
 #scores3d .sc {
   position: absolute;
   display: flex;

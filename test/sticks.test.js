@@ -44,3 +44,44 @@ test('every stick lies inside its compartment and shows a strip', () => {
     });
   }
 });
+
+test('the tray arranged by the player keeps every stick and stays tidy', async () => {
+  const { trayLayout, trayOrder, moveGroup, compartmentAt, trayCompartments, snapToTray, TRAY_W } = await import('../public/js/three3d/sticks.js');
+  const sum = (sticks) => sticks.reduce((a, s) => a + s.value, 0);
+  assert.deepEqual(trayOrder(null), VALUES);
+  assert.deepEqual(trayOrder([100, 100, 1000, 5000]), VALUES, 'not an order');
+  // the groups trade places, and the widths go with them
+  const order = moveGroup(VALUES, 100, 0);
+  assert.deepEqual(order, [100, 5000, 1000, 10000]);
+  const comps = trayCompartments(order);
+  assert.equal(comps[0].right - comps[0].left, COMPARTMENTS[3]);
+  assert.ok(Math.abs(comps[3].right - TRAY_W / 2) < 1e-9);
+  assert.equal(compartmentAt(order, -TRAY_W / 2 + 0.5), 0);
+  assert.equal(compartmentAt(order, 99), 3);
+  // a stick put down on a wall between compartments goes to one side
+  const wall = comps[0].right;
+  const snapped = snapToTray(order, wall, 1);
+  assert.ok(Math.abs(snapped.x - wall) >= STICK.wide / 2, 'clear of the wall');
+  assert.equal(snapped.z, 0.1);
+  // all the score is there, whatever the arrangement
+  const moved = [{ value: 1000, x: -2, z: 0, yaw: 0.1 }, { value: 100, x: 3, z: 0 }, { value: 100, x: 3, z: 0 }];
+  for (let score = 0; score <= 60000; score += 700) {
+    const sticks = trayLayout(score, { order, moved }, 7);
+    assert.equal(sum(sticks), score - (score % 100), `score ${score}`);
+    for (const s of sticks) {
+      assert.ok(Math.abs(s.x) <= TRAY_W / 2, 'inside the tray');
+      assert.ok(s.y > 0);
+    }
+  }
+  // moved by hand: kept while the score changes, and two in the same place
+  // lie one on the other
+  const before = trayLayout(25000, { order, moved }, 7).filter((s) => s.moved >= 0);
+  const after = trayLayout(24000, { order, moved }, 7).filter((s) => s.moved >= 0);
+  assert.deepEqual(after.map((s) => s.x), before.map((s) => s.x), 'paying a riichi stick takes it from the heaps');
+  const [, a, b] = before;
+  assert.equal(a.x, b.x);
+  assert.ok(b.y >= a.y + STICK.thick - 1e-9, 'the second one lies on the first');
+  // fewer sticks of that value than were moved: the first ones moved stay
+  const poor = trayLayout(100, { order, moved }, 7).filter((s) => s.moved >= 0);
+  assert.deepEqual(poor.map((s) => s.moved), [1]);
+});

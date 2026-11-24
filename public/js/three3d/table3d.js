@@ -14,7 +14,7 @@ import { createBloodMachines } from './bloodmachine.js';
 import { TUNING } from './tuning.js';
 import { CLIMATES } from './climate.js';
 import { climateOf } from '../shared/streak.js';
-import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore, carriedDeposits } from './sticks.js';
+import { STICK, trayScore, carriedDeposits, TRAY_W, TRAY_WALL, trayOrder, trayCompartments, compartmentAt, moveGroup, snapToTray, trayLayout } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -24,6 +24,20 @@ const fz = (y) => (y - 50) * S;
 // tables leave plenty of felt round the ponds): everything beyond the
 // ponds (walls, hands, calls) sits this much further out.
 const OUT = 2;
+
+// the order of the groups in the player's tray, kept in the browser (#30)
+function readStickOrder() {
+  try {
+    return JSON.parse(localStorage.getItem('mj.stickOrder'));
+  } catch {
+    return null;
+  }
+}
+function writeStickOrder(order) {
+  try {
+    localStorage.setItem('mj.stickOrder', JSON.stringify(order));
+  } catch { /* storage unavailable */ }
+}
 const fzo = (y) => fz(y) + OUT;
 const STACKS = 17;
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
@@ -932,7 +946,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: COMPARTMENTS.reduce((a, b) => a + b), d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
+  const DRAWER = { w: TRAY_W, d: 3, h: 0.8, wall: TRAY_WALL, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -948,10 +962,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
     box(wall, h, d, w / 2 - wall / 2, 0, 0);
     box(w, h, wall, 0, 0, -d / 2 + wall / 2);
     box(w, h * 1.15, wall * 1.6, 0, 0.04, d / 2 - wall * 0.8); // front, a little taller
-    // compartments
-    let x = -w / 2;
-    for (const cw of COMPARTMENTS.slice(0, -1)) box(0.06, h * 0.7, d - 2 * wall, (x += cw), -0.08, 0);
   }
+  // the walls between compartments move with the player's order of groups
+  const dividers = new THREE.Group();
+  drawer.add(dividers);
+  const dividerGeo = new THREE.BoxGeometry(0.06, DRAWER.h * 0.7, DRAWER.d - 2 * DRAWER.wall);
   drawer.position.set(0, DRAWER.y, DRAWER.closedZ);
   drawer.visible = false;
   scene.add(drawer);
@@ -961,32 +976,43 @@ export function createTable3D(container, { onPick, signal } = {}) {
   let drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
   let pointsListener = () => {};
 
+  // The player's own arrangement of the tray (#30): the order of the groups
+  // is a preference kept in the browser, the sticks moved by hand last the
+  // hand (sticks.js trayLayout).
+  const arrangement = { order: trayOrder(readStickOrder()), moved: [], key: null };
+  let drawerScore = null;
   // every stick of the score, in small heaps that lean on each other so
-  // each one shows (sticks.js); the same score always lies the same way
+  // each one shows (sticks.js), with the player's arrangement; the same
+  // score always lies the same way
   function fillDrawer(score) {
+    drawerScore = score;
     drawerSticks.clear();
-    const counts = stickCounts(score);
-    const floor = -DRAWER.h / 2 + DRAWER.wall;
-    let left = -DRAWER.w / 2;
-    VALUES.forEach((value, c) => {
-      const cw = COMPARTMENTS[c];
-      const cx = left + cw / 2;
-      left += cw;
-      for (const s of pileLayout(counts[c], cw - DRAWER.wall, Math.round(score / 100) * 4 + c)) {
-        const m = new THREE.Mesh(drawerStickGeo, stickMats[value]);
-        m.rotation.order = 'YXZ';
-        m.rotation.set(s.roll, Math.PI / 2 + s.yaw, 0);
-        m.position.set(cx + s.x, floor + s.y, s.z);
-        m.castShadow = m.receiveShadow = true;
-        drawerSticks.add(m);
-      }
+    dividers.clear();
+    trayCompartments(arrangement.order).slice(0, -1).forEach((c) => {
+      const m = new THREE.Mesh(dividerGeo, drawerMat);
+      m.position.set(c.right, -0.08, 0);
+      m.castShadow = m.receiveShadow = true;
+      dividers.add(m);
     });
+    const floor = -DRAWER.h / 2 + DRAWER.wall;
+    for (const s of trayLayout(score, arrangement, Math.round(score / 100))) {
+      const m = new THREE.Mesh(drawerStickGeo, stickMats[s.value]);
+      m.rotation.order = 'YXZ';
+      m.rotation.set(s.roll, Math.PI / 2 + s.yaw, 0);
+      m.position.set(s.x, floor + s.y, s.z);
+      m.castShadow = m.receiveShadow = true;
+      m.userData = { value: s.value, moved: s.moved, home: m.position.clone() };
+      drawerSticks.add(m);
+    }
   }
+  const trayScoreOf = (v) => trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0);
   // onShown: called once the drawer is out and the camera is on it
   function openPoints(v, onShown) {
     if (intro || win || !v) return false;
+    const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+    if (arrangement.key !== key) Object.assign(arrangement, { key, moved: [] });
     // as dealer, the honba sticks on the table came out of this tray
-    fillDrawer(trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0));
+    fillDrawer(trayScoreOf(v));
     drawer.visible = true;
     drawerState = { open: true, goal: DRAWER.openZ, shown: onShown };
     world.forceView('drawer');
@@ -994,8 +1020,99 @@ export function createTable3D(container, { onPick, signal } = {}) {
     hand.layout(v, {}, 0);
     return true;
   }
+  // Arranging the tray while it is open: a stick dragged with the mouse or
+  // a finger goes where it is let go; held still for a moment first, the
+  // whole group goes with it and trades compartments with the one where it
+  // is let go. A tap outside the sticks closes the drawer.
+  const trayRay = new THREE.Raycaster();
+  const trayNdc = new THREE.Vector2();
+  const trayPlane = new THREE.Plane();
+  const trayHit = new THREE.Vector3();
+  let press = null;
+  const pointerRay = (ev) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    trayNdc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+    trayRay.setFromCamera(trayNdc, camera);
+    return trayRay;
+  };
+  // the pointer on a level plane just over the sticks, in tray coordinates
+  const pointerInTray = (ev) => {
+    const lift = -DRAWER.h / 2 + DRAWER.wall + 0.55;
+    trayPlane.set(new THREE.Vector3(0, 1, 0), -(drawer.position.y + lift));
+    if (!pointerRay(ev).ray.intersectPlane(trayPlane, trayHit)) return null;
+    return drawer.worldToLocal(trayHit.clone());
+  };
+  const trayReady = () => drawerState.open && drawer.visible && drawer.position.z === DRAWER.openZ;
+  const groupOf = (value) => drawerSticks.children.filter((m) => m.userData.value === value && m.userData.moved < 0);
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
+    if (!trayReady() || ev.button !== 0) return;
+    const hit = pointerRay(ev).intersectObjects(drawerSticks.children, false)[0];
+    const at = pointerInTray(ev);
+    press = { id: ev.pointerId, sx: ev.clientX, sy: ev.clientY, mesh: hit ? hit.object : null, from: at, mode: null, timer: null };
+    if (!hit) return;
+    renderer.domElement.setPointerCapture(ev.pointerId);
+    // held still: the whole group
+    press.timer = setTimeout(() => {
+      if (press && !press.mode && press.mesh.userData.moved < 0) {
+        press.mode = 'group';
+        press.group = groupOf(press.mesh.userData.value);
+        renderer.domElement.style.cursor = 'grabbing';
+      }
+    }, 380);
+  }, { signal });
+  renderer.domElement.addEventListener('pointermove', (ev) => {
+    if (!press || ev.pointerId !== press.id) {
+      if (trayReady()) renderer.domElement.style.cursor = pointerRay(ev).intersectObjects(drawerSticks.children, false).length ? 'grab' : '';
+      return;
+    }
+    if (!press.mesh) return;
+    if (!press.mode && Math.hypot(ev.clientX - press.sx, ev.clientY - press.sy) > 6) {
+      press.mode = 'stick';
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+    const at = pointerInTray(ev);
+    if (!press.mode || !at || !press.from) return;
+    const dx = at.x - press.from.x;
+    const dz = at.z - press.from.z;
+    // carried over the others, a little above them
+    for (const m of press.mode === 'group' ? press.group : [press.mesh]) {
+      const h = m.userData.home;
+      m.position.set(Math.max(-DRAWER.w / 2, Math.min(DRAWER.w / 2, h.x + dx)), h.y + 0.45, h.z + dz * 0.3);
+    }
+  }, { signal });
+  const release = (ev) => {
+    if (!press || (ev && ev.pointerId !== press.id)) return;
+    const p = press;
+    press = null;
+    clearTimeout(p.timer);
+    renderer.domElement.style.cursor = '';
+    if (!p.mesh) {
+      // a tap outside the sticks closes the drawer
+      if (ev && Math.hypot(ev.clientX - p.sx, ev.clientY - p.sy) < 8) closePoints();
+      return;
+    }
+    const { value, moved } = p.mesh.userData;
+    if (p.mode === 'group') {
+      const to = compartmentAt(arrangement.order, p.mesh.position.x);
+      arrangement.order = moveGroup(arrangement.order, value, to);
+      writeStickOrder(arrangement.order);
+    } else if (p.mode === 'stick') {
+      const { x, z } = snapToTray(arrangement.order, p.mesh.position.x, p.mesh.position.z);
+      const yaw = (Math.random() * 2 - 1) * 0.06;
+      // the last one put down lies on top
+      if (moved >= 0) arrangement.moved.splice(moved, 1);
+      arrangement.moved.push({ value, x, z, yaw });
+    }
+    if (drawerScore !== null) fillDrawer(drawerScore);
+  };
+  renderer.domElement.addEventListener('pointerup', release, { signal });
+  renderer.domElement.addEventListener('pointercancel', () => release(null), { signal });
   function closePoints() {
     if (!drawerState.open) return;
+    if (press) {
+      clearTimeout(press.timer);
+      press = null;
+    }
     drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
     world.forceView(intro || win ? 'overview' : null);
     if (lastView && !intro && !win) update(...lastView);
@@ -1082,6 +1199,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
   function update(v, ui) {
     me = v.seat;
     const rel = (abs) => (abs - me + 4) % 4;
+    // points paid or taken while the drawer is open: the same arrangement,
+    // the heaps give and take (sticks.js trayLayout)
+    if (drawerState.open && !press && trayScoreOf(v) !== drawerScore) fillDrawer(trayScoreOf(v));
     seatCharacters(v);
     showStreaks(v, rel);
     const desired = new Map();

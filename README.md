@@ -502,7 +502,17 @@ primera partida.
   uno negro grande hacia cada extremo. Encima del cajón aparece tu tablilla
   con tu puntaje y alrededor las de los demás en su posición (izquierda =
   kamicha, arriba = toimen, derecha = shimocha), con la diferencia con el
-  tuyo. Un toque lo cierra.
+  tuyo. Un toque fuera de los palitos (o en una tablilla) lo cierra.
+  **Acomodar los palitos**, como en una mesa real: con el cajón abierto,
+  arrastra un palito (con el mouse o el dedo) y queda donde lo sueltas,
+  acostado sobre lo que haya debajo y sin quedar cruzado sobre una
+  separación. Si lo mantienes presionado un momento antes de moverlo, se
+  levanta todo su grupo: suéltalo sobre otro compartimento y los dos grupos
+  cambian de lugar (cada compartimento conserva el ancho de su grupo). El
+  orden de los grupos queda guardado en el navegador para las próximas
+  partidas; los palitos movidos a mano duran la mano, aunque en medio pagues
+  o cobres (los montoncitos dan y reciben primero). Los demás no ven cómo los
+  acomodas.
 - Botones, menú, resultados y el panel del compañero son HTML encima del
   canvas.
 

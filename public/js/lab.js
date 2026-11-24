@@ -142,13 +142,20 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'r' || e.key === 'R') start();
 });
 
+// optionally another score for my seat, to check how the sticks lie
+function drawerView() {
+  const score = $('#lab-score').value;
+  return score === '' ? lastView : { ...lastView, players: lastView.players.map((p, i) => (i === lastView.seat ? { ...p, score: Number(score) } : p)) };
+}
 $('#lab-drawer').addEventListener('click', () => {
   if (!table || !lastView) return;
   if (table.pointsOpen()) return table.closePoints();
-  // optionally another score for my seat, to check how the sticks lie
-  const score = $('#lab-score').value;
-  const v = score === '' ? lastView : { ...lastView, players: lastView.players.map((p, i) => (i === lastView.seat ? { ...p, score: Number(score) } : p)) };
-  table.openPoints(v);
+  table.openPoints(drawerView());
+});
+// another score with the drawer open: as if points were paid or taken, the
+// sticks arranged by hand stay where they are (#30)
+$('#lab-score').addEventListener('change', () => {
+  if (table && lastView && table.pointsOpen()) table.update(drawerView(), ui);
 });
 
 // --------------------------------------------------------------- camera

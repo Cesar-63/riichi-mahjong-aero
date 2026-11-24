@@ -124,3 +124,91 @@ export function pileLayout(n, width, seed) {
   const shift = -x / 2;
   return out.map(({ first, ...s }) => ({ ...s, x: s.x + shift }));
 }
+
+// ------------------------------------------------------ the player's tray
+// The player may arrange their own tray (#30): which compartment holds each
+// group of sticks (the order, remembered as a preference) and single sticks
+// moved by hand (they last the hand). The widths travel with the groups.
+export const TRAY_WALL = 0.12;
+const WIDTH = Object.fromEntries(VALUES.map((v, i) => [v, COMPARTMENTS[i]]));
+export const TRAY_W = COMPARTMENTS.reduce((a, b) => a + b);
+// how far from the middle (front to back) a stick may lie in the tray
+export const TRAY_Z = 0.1;
+
+// The order if it is one (every value once), otherwise the usual one.
+export function trayOrder(order) {
+  return Array.isArray(order) && order.length === VALUES.length && VALUES.every((v) => order.includes(v)) ? order.slice() : VALUES.slice();
+}
+
+// The compartments left to right for an order: [{ value, left, right, centre }].
+export function trayCompartments(order) {
+  let left = -TRAY_W / 2;
+  return trayOrder(order).map((value) => {
+    const c = { value, left, right: left + WIDTH[value] };
+    c.centre = (c.left + c.right) / 2;
+    left = c.right;
+    return c;
+  });
+}
+
+// The index of the compartment under x (the nearest one when outside).
+export function compartmentAt(order, x) {
+  const comps = trayCompartments(order);
+  const i = comps.findIndex((c) => x < c.right);
+  return i < 0 ? comps.length - 1 : i;
+}
+
+// A group taken to compartment `to`: it trades places with the one there.
+export function moveGroup(order, value, to) {
+  const out = trayOrder(order);
+  const from = out.indexOf(value);
+  if (from < 0 || to < 0 || to >= out.length) return out;
+  [out[from], out[to]] = [out[to], out[from]];
+  return out;
+}
+
+// Where a stick put down by hand at x ends up: inside a compartment, clear of
+// the walls between them (it never lies across one).
+export function snapToTray(order, x, z = 0) {
+  const c = trayCompartments(order)[compartmentAt(order, x)];
+  const lo = c.left + TRAY_WALL + STICK.wide / 2;
+  const hi = c.right - TRAY_WALL - STICK.wide / 2;
+  return { x: Math.min(hi, Math.max(lo, x)), z: Math.min(TRAY_Z, Math.max(-TRAY_Z, z)) };
+}
+
+// Every stick of the score in the arranged tray: [{ value, x, y, z, yaw,
+// roll, moved }] in tray coordinates (y from its floor). `moved` is the
+// index in arrangement.moved of a stick put down by hand, -1 for the ones in
+// the heaps. When the score changes, the heaps give and take first; a group
+// with fewer sticks than were moved by hand keeps the first ones moved.
+// A stick put down by hand lies flat on whatever is under it.
+export function trayLayout(score, arrangement = {}, seed = 0) {
+  const order = trayOrder(arrangement.order);
+  const counts = stickCounts(score);
+  const left = Object.fromEntries(VALUES.map((v, i) => [v, counts[i]]));
+  const moved = [];
+  (arrangement.moved || []).forEach((m, i) => {
+    if (left[m.value] > 0) {
+      left[m.value]--;
+      moved.push({ ...m, i });
+    }
+  });
+  const out = [];
+  for (const c of trayCompartments(order)) {
+    const k = VALUES.indexOf(c.value);
+    for (const s of pileLayout(left[c.value], c.right - c.left - TRAY_WALL, seed * 4 + k)) {
+      out.push({ value: c.value, ...s, x: s.x + c.centre, moved: -1 });
+    }
+  }
+  const { wide, thick } = STICK;
+  // the top and half width (seen from above) of a stick as it lies
+  const top = (s) => s.y + (wide / 2) * Math.abs(Math.sin(s.roll)) + (thick / 2) * Math.cos(s.roll);
+  const half = (s) => (wide / 2) * Math.cos(s.roll) + (thick / 2) * Math.abs(Math.sin(s.roll));
+  for (const m of moved) {
+    const { x, z } = snapToTray(order, m.x, m.z);
+    const under = out.filter((s) => Math.abs(s.x - x) < half(s) + wide / 2 - 0.01);
+    const floor = under.length ? Math.max(...under.map(top)) : 0;
+    out.push({ value: m.value, x, z, y: floor + thick / 2 + 0.002, yaw: m.yaw || 0, roll: 0, moved: m.i });
+  }
+  return out;
+}

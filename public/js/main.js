@@ -551,7 +551,7 @@ function scoresHTML(v) {
       <em class="${abs === v.dealer ? 'oya' : ''}">${WIND_ES[p.wind]}</em>
       <b>${escapeHTML(p.name)}</b><span>${p.score}</span>${gap}</div>`;
   }).join('');
-  return `${cards}<div class="sc mid">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}<small>Honba ${v.honba} · Depósitos ${v.kyoutaku} · toca para cerrar</small></div>`;
+  return `${cards}<div class="sc mid">${WIND_ES[v.round] || '?'} ${v.kyokuNum + 1}<small>Honba ${v.honba} · Depósitos ${v.kyoutaku} · arrastra un palito para moverlo; mantenlo presionado para mover su grupo · toca fuera para cerrar</small></div>`;
 }
 
 function togglePoints() {
