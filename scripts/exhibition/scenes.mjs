@@ -8,7 +8,8 @@
 //   --asiento   whose seat the table is seen from (default: the base
 //               style's, Momo in the chosen match)
 // Writes public/lab/exhibicion.json (not in git: it is big and can always
-// be made again), which /lab.html loads next to its own scenes.
+// be made again), which /lab.html loads next to its own scenes. The scenes
+// carry the four hands and open in the broadcast view (#87).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { CHARACTERS } from '../../public/js/shared/characters.js';
 import { CAST, play, seating } from './match.js';
@@ -29,13 +30,16 @@ function view(g) {
   v.players.forEach((p, i) => Object.assign(p, { online: true, bot: i !== seat, abandoned: false, team: null }));
   v.clock = null;
   v.intro = null;
+  // the four hands, for the broadcast view (#87)
+  v.broadcast = { hands: [0, 1, 2, 3].map((i) => g.handOf(i)) };
   return v;
 }
 
 // How long the table rests after each kind of move (ms)
 const INTRO = 8500;
 const GAP = { discard: 700, riichi: 1600, pon: 1000, chi: 1000, minkan: 1100, ankan: 1100, kakan: 1100, pass: 500 };
-const RESULT = 7000;
+// (the hand, the dora and the payment with sticks, #98)
+const RESULT = 11000;
 
 const hands = [];
 let rec = null;
@@ -92,6 +96,8 @@ const scenes = hands.map((h, i) => {
     name: `Exhibición · ${title(k)}`,
     note: `Partida de exhibición (semilla ${SEED}), mano ${i + 1} de ${hands.length}, vista desde ${names[seat]}. ${note(k)}`,
     cast: order,
+    // seen as a broadcast: the four players and their hands open (#87)
+    broadcast: true,
     steps: h.steps,
     length: h.t,
   };

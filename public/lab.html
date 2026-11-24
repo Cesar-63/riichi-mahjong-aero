@@ -92,6 +92,32 @@
     body.capture #lab-panel { display: none; }
     body.capture #lab-stage { right: 0; bottom: 0; }
     body.capture.no-callouts #lab-stage .callouts { display: none; }
+    /* the broadcast view's play-by-play (#87), on the picture like a TV caption */
+    #lab-log {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 6;
+      width: min(380px, calc(100% - 32px));
+      margin: 0;
+      padding: 10px 14px 10px 16px;
+      list-style: none;
+      color: var(--cream);
+      background: linear-gradient(90deg, rgba(8, 7, 6, .86), rgba(8, 7, 6, .62));
+      border-left: 3px solid var(--gold);
+      font-family: var(--f-body);
+      font-size: 14px;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+    #lab-log:empty { display: none; }
+    #lab-log li { opacity: .62; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #lab-log li:last-child { opacity: 1; }
+    #lab-log li.hand { color: var(--gold); font-family: var(--f-title); font-size: 16px; opacity: 1; }
+    #lab-log li.riichi { color: #ff8d7e; }
+    #lab-log li.call { color: #9fc3ff; }
+    #lab-log li.win { color: var(--gold); font-weight: 700; opacity: 1; }
+    #lab-log li.draw { color: var(--cream); font-weight: 700; opacity: 1; }
     @media (max-width: 800px) {
       #lab-stage { right: 0; bottom: 45vh; }
       #lab-panel { top: auto; width: 100%; height: 45vh; border-left: 0; border-top: 1px solid var(--navy-rim); }
@@ -104,6 +130,7 @@
       <div class="callout" data-seat="0"></div><div class="callout" data-seat="1"></div>
       <div class="callout" data-seat="2"></div><div class="callout" data-seat="3"></div>
     </div>
+    <ol id="lab-log" class="hidden" aria-label="Registro de jugadas"></ol>
   </div>
   <aside id="lab-panel">
     <h1>Laboratorio de animaciones</h1>
@@ -138,6 +165,10 @@
       <button class="paper" type="button" id="lab-copycam">Copiar cámara</button>
       <label class="check"><input type="checkbox" id="lab-hand" checked> Tu mano de frente</label>
       <label class="check"><input type="checkbox" id="lab-people"> Personajes en la mesa</label>
+    </div>
+    <div class="lab-row">
+      <label class="check" title="Los cuatro personajes en la mesa, también el tuyo, y las cuatro manos abiertas"><input type="checkbox" id="lab-broadcast"> Vista de transmisión</label>
+      <label class="check" title="Quién descarta, llama, declara riichi y gana, sobre la imagen"><input type="checkbox" id="lab-playlog" checked> Registro de jugadas</label>
     </div>
     <div id="lab-cam"></div>
 

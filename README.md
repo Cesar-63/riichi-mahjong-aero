@@ -803,9 +803,10 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Partida de exhibición**: las 13 manos de la partida entre bots elegida
-  para la exhibición, cada una desde el inicio hasta el resultado, vistas
-  desde el asiento de Momo y con el elenco de la exhibición en la mesa (Momo,
-  Kaito, Michihime y Shiro). Aparecen después de correr
+  para la exhibición, cada una desde el inicio hasta el resultado (con el
+  pago con palitos), con el elenco de la exhibición en la mesa (Momo,
+  Kaito, Michihime y Shiro) y en la **vista de transmisión** (ver abajo).
+  Aparecen después de correr
   `node scripts/exhibition/scenes.mjs`, que vuelve a jugar la partida con el
   motor, comprueba que sale igual al registro guardado y escribe
   `public/lab/exhibicion.json` (fuera del repositorio).
@@ -823,6 +824,22 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   [Personajes](#personajes)), con un reparto fijo (las escenas de la
   exhibición traen el suyo), para afinar sus animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
   **Rival de enfrente, de cerca** los muestran.
+- **Vista de transmisión** (para grabar una partida como la vería un
+  espectador): los cuatro personajes sentados a la mesa, también el del
+  asiento desde el que se arma la escena, y las **cuatro manos abiertas**:
+  paradas en su lugar, con las caras hacia el centro de la mesa y bien
+  echadas hacia atrás, para que desde arriba se lean las cuatro (también las
+  del lado de la cámara); el personaje queda detrás de su mano, sin que lo
+  tape. Las cámaras **Transmisión: esquina** y **Transmisión: esquina baja**
+  miran la mesa entera desde una esquina del salón, sin la silla de nadie, y
+  al encender la vista se pasa a la primera. Encima de la imagen va el
+  **registro de jugadas**, como un rótulo de televisión: la mano que empieza
+  y quién reparte, cada descarte (y si fue la ficha que robó), riichi, chi,
+  pon y kan, y quién gana, a quién y cuánto, o el empate y quién quedó en
+  tenpai (`public/js/shared/playlog.js`); se puede apagar. Las escenas de la
+  exhibición se abren en esta vista; cualquier otra escena se puede ver así
+  con la casilla **Vista de transmisión**. La vista normal del juego no
+  cambia.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
   fichas y de tu mano, tiempos de la victoria, del empate, de los dados, del
   cajón y del pago con palitos (gravedad, rebote, vuelo y cuánto esperan
@@ -836,7 +853,11 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   dos guías para modelos de IA de video a video:
   `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
   sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
-  llamada. `--rivales` graba con los personajes en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  llamada. `--rivales` graba con los personajes en la mesa, y
+  `--transmision` en la vista de transmisión, con su registro de jugadas
+  (`--sin-registro` lo quita), por ejemplo
+  `npm run lab:capture -- --escena p600-08 --camara "Transmisión: esquina" --transmision`.
+  `npm run lab:capture -- --lista` muestra escenas y cámaras; las
   opciones están al principio de `scripts/lab-capture.mjs` y el plan en
   [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
   `capturas/` (fuera del repositorio).
@@ -869,9 +890,9 @@ public/models/personajes/  Personajes de la mesa (glTF con esqueleto)
 public/img/personajes/   Retratos de los personajes para el lobby
 scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos.mjs)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
-public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js) y reglas del duelo de sangre (blood.js)
+public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js), reglas del duelo de sangre (blood.js) y registro de jugadas de la vista de transmisión (playlog.js)
 public/js/blood-ui.js    Duelo de sangre en pantalla: opción, medidor, moneda, efectos
-public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre; bloodmachine.js: sus máquinas de sangre
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre; bloodmachine.js: sus máquinas de sangre; payments.js: pago con palitos (física); sticks.js: palitos del cajón y quién le paga a quién
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)

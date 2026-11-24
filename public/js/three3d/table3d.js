@@ -95,6 +95,13 @@ export function createTable3D(container, { onPick, signal } = {}) {
   };
   // lying sideways (riichi / called tile): face up, turned a quarter to the left
   qLocal.side = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2).multiply(qLocal.up);
+  // the broadcast view (#87): a hand standing open, its faces turned away
+  // from its owner towards the table and leaning well back (57 degrees),
+  // so a camera above the table reads all four, the near ones too
+  const OPEN_LEAN = 1;
+  qLocal.open = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -OPEN_LEAN));
+  let broadcast = false;
 
   // ----------------------------------------------------------------- streak
   // The player on a streak (one at a time; climate.js): the room turns into
@@ -927,8 +934,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
       // a win: close on the hand, from behind its owner (the score sheet
       // covers the top of the screen); a draw keeps the whole table
       world.forceView(win.frame || 'overview');
-      // the camera goes behind the winner's seat: their character steps out of its way
-      if (win.frame) characters.reveal(true, win.frameSeat);
+      // the camera goes behind the winner's seat: their character steps out
+      // of its way (not in the broadcast view, whose camera is its own)
+      if (win.frame && !broadcast) characters.reveal(true, win.frameSeat);
       // my own standing hand leaves the screen to the score sheet
       if (lastView) hand.layout(lastView[0], {}, 0);
       winListener({ phase: 'done' });
@@ -1303,9 +1311,23 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     v.players.forEach((p, abs) => {
       const r = rel(abs);
+      // the broadcast view: every hand open on the table, mine too
+      const open = broadcast && v.broadcast ? v.broadcast.hands[abs] : null;
+      if (open && !laid.has(abs)) {
+        const kind = climateOf(p.streak);
+        const lit = kind ? { aura: CLIMATES[kind].glow } : null;
+        const y = (H / 2) * Math.cos(OPEN_LEAN) + (D / 2) * Math.sin(OPEN_LEAN);
+        const z = fzo(95) + (H / 2) * Math.sin(OPEN_LEAN) - (D / 2) * Math.cos(OPEN_LEAN);
+        open.hand.forEach((id, i) => put(`t${id}`, id, place(r, rowX(12, i), y, z, 'open'), { ...lit, hand: true }));
+        if (open.drawn !== null) {
+          const key = `t${open.drawn}`;
+          put(key, open.drawn, place(r, rowX(12, open.hand.length) + 0.35, y, z, 'open'), { ...lit, hand: true }, 'draw', null, r);
+          if (drawSlot && drawSlot.seat === abs) spawns.set(key, drawFrom(v, drawSlot.slot, rel));
+        }
+      }
       // opponents' hands (the player's own hand is the screen overlay);
       // a winner's concealed hand is replaced by the face-up reveal
-      if (r !== 0 && !laid.has(abs)) {
+      if (r !== 0 && !open && !laid.has(abs)) {
         // on a streak the tiles themselves glow too (the wall hides the felt under a far hand)
         const kind = climateOf(p.streak);
         const lit = kind ? { aura: CLIMATES[kind].glow } : null;
@@ -1902,6 +1924,17 @@ export function createTable3D(container, { onPick, signal } = {}) {
     setBlood: visions.setStage,
     // lab: a hallucination now, on a tile of this type (any if null)
     hallucinate: visions.now,
+    // The broadcast view (#87; lab and video capture): the four players at
+    // the table, the player's own character too, and the four hands open
+    // (views carry them in v.broadcast); the hand overlay goes. Off: the
+    // game's own view, as always.
+    setBroadcast(on) {
+      broadcast = !!on;
+      world.showOverlays(!broadcast);
+      const done = characters.setWholeSelf(broadcast);
+      if (lastView && !intro) update(...lastView);
+      return done;
+    },
     // play with the characters sitting at the table, or without them
     setCharacters(on) {
       showPeople(!!on);

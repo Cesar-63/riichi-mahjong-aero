@@ -8,6 +8,7 @@ import { showCallouts } from './render.js';
 import { TUNING, TUNING_INFO, TUNING_DEFAULTS } from './three3d/tuning.js';
 import { applyBloodScreen, showCoinTosses } from './blood-ui.js';
 import { bloodStage } from './shared/blood.js';
+import { describeStep } from './shared/playlog.js';
 
 const $ = (s) => document.querySelector(s);
 const clock = window.labClock;
@@ -47,9 +48,13 @@ function start() {
   abort = new AbortController();
   table = createTable3D(stage, { signal: abort.signal, onPick: () => {} });
   table.setCallouts([...stage.querySelectorAll('.callout')]);
-  table.showHand($('#lab-hand').checked);
   table.setPass(pass);
-  peopleReady = table.showCharacters($('#lab-people').checked, castOf(scene));
+  // the broadcast view (#87): everybody at the table and every hand open
+  table.setBroadcast(broadcastOn());
+  table.showHand($('#lab-hand').checked && !broadcastOn());
+  peopleReady = table.showCharacters($('#lab-people').checked || broadcastOn(), castOf(scene));
+  $('#lab-log').innerHTML = '';
+  $('#lab-log').classList.toggle('hidden', !(broadcastOn() && $('#lab-playlog').checked));
   // calls already made before the scene starts are not shouted
   const first = scene.steps[0].view;
   ui = { lastEvent: Math.max(0, ...first.events.map((e) => e.id)), coinSeen: null, deathShown: false };
@@ -86,6 +91,7 @@ function frame() {
     const e = elapsed();
     while (next < scene.steps.length && scene.steps[next].at <= e) {
       const v = scene.steps[next].view;
+      logStep(lastView, v);
       table.update(v, ui);
       showCallouts(stage, v, ui);
       showBlood(v);
@@ -107,8 +113,28 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+// The broadcast view: on for the scenes made for it (the exhibition), and
+// whenever it is ticked. Its play-by-play keeps the last lines.
+const broadcastOn = () => $('#lab-broadcast').checked;
+const LOG_LINES = 8;
+function logStep(prev, v) {
+  const box = $('#lab-log');
+  for (const line of describeStep(prev, v)) {
+    const li = document.createElement('li');
+    li.className = line.kind;
+    li.textContent = line.text;
+    box.append(li);
+  }
+  while (box.children.length > LOG_LINES) box.firstElementChild.remove();
+}
+
 function chooseScene(id) {
   scene = scenes.find((s) => s.id === id) || scenes[0];
+  if (scene.broadcast) {
+    $('#lab-broadcast').checked = true;
+    // a broadcast is never seen from a player's chair
+    if (!cam) cam = orbitFrom(PRESETS.find(([n]) => n === BROADCAST_CAM)[1], PRESETS.find(([n]) => n === BROADCAST_CAM)[2]);
+  }
   store.set('lab.scene', scene.id);
   $('#lab-scene').value = scene.id;
   $('#lab-note').textContent = scene.note;
@@ -177,7 +203,12 @@ const PRESETS = [
   // the players at the table ("Personajes en la mesa")
   ['Rivales desde tu silla', [0, 14, 31], [0, 7, -16]],
   ['Rival de enfrente, de cerca', [3, 13, 2], [0, 12, -24]],
+  // the broadcast view: neutral, from a corner of the room (nobody's chair),
+  // the whole table and the four players
+  ['Transmisión: esquina', [30, 50, 30], [0, -1, 0]],
+  ['Transmisión: esquina baja', [38, 30, 38], [0, 2, 0]],
 ];
+const BROADCAST_CAM = 'Transmisión: esquina';
 let cam = null; // { target: [x, y, z], yaw, pitch, dist }
 function orbitFrom(pos, target) {
   const d = pos.map((p, i) => p - target[i]);
@@ -212,7 +243,21 @@ for (const [name, pos, target] of PRESETS) {
   });
   $('#lab-presets').append(b);
 }
-$('#lab-hand').addEventListener('change', (e) => table && table.showHand(e.target.checked));
+$('#lab-hand').addEventListener('change', (e) => table && table.showHand(e.target.checked && !broadcastOn()));
+$('#lab-broadcast').addEventListener('change', (e) => {
+  store.set('lab.broadcast', e.target.checked ? '1' : '');
+  if (e.target.checked && !cam) {
+    const [, pos, target] = PRESETS.find(([n]) => n === BROADCAST_CAM);
+    cam = orbitFrom(pos, target);
+  }
+  if (scene) start();
+});
+$('#lab-playlog').addEventListener('change', (e) => {
+  store.set('lab.playlog', e.target.checked ? '' : '0');
+  $('#lab-log').classList.toggle('hidden', !(broadcastOn() && e.target.checked));
+});
+$('#lab-broadcast').checked = store.get('lab.broadcast') === '1';
+$('#lab-playlog').checked = store.get('lab.playlog') !== '0';
 $('#lab-people').addEventListener('change', (e) => {
   store.set('lab.people', e.target.checked ? '1' : '');
   if (table) table.showCharacters(e.target.checked, castOf(scene));
@@ -355,6 +400,9 @@ if (new URLSearchParams(location.search).has('captura')) {
       else if (o.camera) throw new Error(`no hay cámara "${o.camera}"`);
       $('#lab-hand').checked = o.hand !== false;
       $('#lab-people').checked = !!o.people;
+      // the broadcast view and its play-by-play (#87)
+      $('#lab-broadcast').checked = !!o.broadcast;
+      $('#lab-playlog').checked = o.log !== false;
       pass = o.pass || 'color';
       // the guides go without the calls: they are added later from the color take
       document.body.classList.toggle('no-callouts', o.callouts === false || pass !== 'color');

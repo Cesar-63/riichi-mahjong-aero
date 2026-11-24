@@ -42,6 +42,8 @@ function view(g, seat = 0) {
   v.players.forEach((p, i) => Object.assign(p, { online: true, bot: i !== seat, abandoned: false, team: null }));
   v.clock = null;
   v.intro = null;
+  // the four hands, for the lab's broadcast view (#87; the game never sends them)
+  v.broadcast = { hands: [0, 1, 2, 3].map((i) => g.handOf(i)) };
   return v;
 }
 
@@ -246,6 +248,7 @@ function myTsumo() {
     v.hand = keep;
     v.players[0].melds = melds;
     v.players[0].handCount = keep.length;
+    v.broadcast.hands[0] = { hand: keep, drawn: v.drawn };
     if (v.result) {
       const w = v.result.wins[0];
       w.hand = keep;
