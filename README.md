@@ -272,9 +272,12 @@ juego de fichas (normales o de vidrio).
 - **Por equipos**, como en el manga: cada pareja tiene un **duelista** y un
   **apoyo**. Solo los duelistas sangran, y solo por lo que se pagan **entre
   ellos dos**: un ron directo o la parte de un tsumo. Lo que pase con los
-  apoyos solo cuenta para los puestos. El duelista es el primero de la
-  pareja que entró a la sala (una persona antes que un bot); en la práctica
-  por equipos eres tú, y Bot 1 tu apoyo.
+  apoyos solo cuenta para los puestos. En la sala de espera se ve quién es
+  el duelista de cada equipo (**血 duelista**), y cualquiera puede pulsar
+  **Ser el duelista** en su equipo, como Akagi: se lo quita a su compañero y
+  los dos pierden el "listo". Si nadie lo pide, es el primero de la pareja
+  que entró a la sala (una persona antes que un bot); en la práctica por
+  equipos eres tú, y Bot 1 tu apoyo.
 - **La moneda.** Si un pago te deja **entre 1500 y 2000 cc** perdidos (los
   dos incluidos), al cerrar la mano tiras una moneda: eliges **cara** o
   **sello**. Si aciertas sigues; si no, te desangras. Se vuelve a tirar cada

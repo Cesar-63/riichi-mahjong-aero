@@ -866,6 +866,10 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
 .team .paper { margin-top: 6px; padding: 7px 8px; font-size: 16px; }
 .team .here { display: none; margin-top: 6px; padding: 6px 0; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-yellow); }
 .team.mine .here { display: block; }
+.team .duel-tag { font-size: 15px; color: var(--chalk-red); }
+.team .duel-tag::before { content: "血 "; }
+.w-seat .tags { display: flex; align-items: center; gap: 6px; font-style: normal; }
+.w-seat .duel { font-size: 12px; font-weight: 700; color: var(--red-ink); }
 .badge { font-size: 15px; color: var(--chalk-yellow); }
 #unassigned { margin: 0; padding: 6px 18px 4px; font-family: var(--f-hand); font-size: 19px; color: var(--chalk-soft); border-top: 2px solid rgba(236, 232, 220, .14); }
 #unassigned:empty { display: none; }

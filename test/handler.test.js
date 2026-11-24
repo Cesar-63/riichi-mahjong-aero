@@ -507,3 +507,39 @@ test('blood duel by teams: one duelist per team, the one who came first', async 
   assert.ok(practice.game.blood.duelists.includes(me));
   assert.ok(!practice.game.blood.duelists.includes(practice.game.partner.seat));
 });
+
+test('blood duel by teams: a player asks to be the duelist in the waiting room', async () => {
+  globalThis.__mjStore = new Map();
+  const store = createStore({});
+  const now = 75_000_000;
+  const call = async (body, room = 'bl5') => (await handle({ room, ...body }, store, now)).body;
+  for (let i = 0; i < 4; i++) await call({ op: 'join', token: tokens[i], name: `P${i}`, hb: true, mode: 'teams' });
+  for (let i = 0; i < 4; i++) {
+    await call({ op: 'team', token: tokens[i], team: i < 2 ? 'N' : 'S' });
+    await call({ op: 'ready', token: tokens[i], ready: true });
+  }
+  const who = (view) => view.queue.filter((q) => q.duelist).map((q) => q.name).sort();
+  // without blood there is no duelist to show, and nobody can ask
+  let view = await call({ op: 'poll', token: tokens[0] });
+  assert.deepEqual(who(view), []);
+  assert.ok((await call({ op: 'duelist', token: tokens[1] })).error);
+  view = await call({ op: 'blood', token: tokens[0], blood: 'washizu' });
+  // nobody chose: the first of each team who came in
+  assert.deepEqual(who(view), ['P0', 'P2']);
+  for (let i = 0; i < 4; i++) await call({ op: 'ready', token: tokens[i], ready: true });
+  // P1 asks: P0 stops being the duelist and both lose "ready"
+  view = await call({ op: 'duelist', token: tokens[1] });
+  assert.deepEqual(who(view), ['P1', 'P2']);
+  assert.deepEqual(view.queue.map((q) => q.ready), [false, false, true, true]);
+  assert.equal((await call({ op: 'duelist', token: tokens[1] })).version, view.version, 'asking again changes nothing');
+  // changing team leaves the old team with its first player again
+  view = await call({ op: 'team', token: tokens[1], team: null });
+  assert.deepEqual(who(view), ['P0', 'P2']);
+  assert.ok((await call({ op: 'duelist', token: tokens[1] })).error, 'without a team');
+  await call({ op: 'team', token: tokens[1], team: 'N' });
+  await call({ op: 'duelist', token: tokens[1] });
+  await call({ op: 'duelist', token: tokens[3] });
+  for (let i = 0; i < 4; i++) await call({ op: 'ready', token: tokens[i], ready: true });
+  const { game } = await call({ op: 'start', token: tokens[0] });
+  assert.deepEqual(game.blood.duelists.map((x) => game.players[x].name).sort(), ['P1', 'P3']);
+});

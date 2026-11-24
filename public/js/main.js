@@ -209,8 +209,9 @@ function showLobby(data) {
   const plate = (p, team) => {
     if (!p) return `<span class="free">Asiento libre${team ? ` · ${TEAM_NAME[team]}` : ''}</span>`;
     const status = teams ? (p.ready ? '<i class="ok">listo</i>' : '<i>esperando</i>') : '';
+    const duel = p.duelist ? '<small class="duel">血 duelista</small>' : '';
     const face = p.character && state.ui.characters ? `<img src="img/personajes/${characterId(p.character)}.png" alt="">` : '';
-    return `${face}<span class="who">${team ? `<b>${TEAM_NAME[team]}</b>` : ''}<span>${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}</span></span>${status}`;
+    return `${face}<span class="who">${team ? `<em class="tags"><b>${TEAM_NAME[team]}</b>${duel}</em>` : ''}<span>${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}</span></span>${status}`;
   };
   if (teams) {
     const n = players.filter((p) => p.team === 'N');
@@ -241,7 +242,9 @@ function showLobby(data) {
       : 'La partida empieza sola al llegar el cuarto jugador; los asientos se sortean.';
     return;
   }
-  const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}${p.host ? ' <span class="badge">anfitrión</span>' : ''}</li>`;
+  const row = (p) => `<li class="${p.ready ? 'ready' : ''}">${escapeHTML(p.name)}${p.you ? ' <small>(tú)</small>' : ''}${p.host ? ' <span class="badge">anfitrión</span>' : ''}${p.duelist ? ' <span class="duel-tag" title="Sangra por el equipo">duelista</span>' : ''}</li>`;
+  // blood duel: each team says who bleeds for it (the other one supports)
+  const bloodOn = (BLOOD_OPTIONS[data.blood] ? data.blood : 'none') !== 'none';
   for (const team of ['N', 'S']) {
     const box = document.querySelector(`.team[data-team="${team}"]`);
     const members = players.filter((p) => p.team === team);
@@ -249,6 +252,7 @@ function showLobby(data) {
     const btn = box.querySelector('button');
     btn.classList.toggle('hidden', me.team === team || members.length >= 2);
     box.classList.toggle('mine', me.team === team);
+    box.querySelector('[data-duelist]').classList.toggle('hidden', !(bloodOn && me.team === team && !me.duelist));
   }
   const loose = players.filter((p) => !p.team);
   $('#unassigned').innerHTML = loose.length ? `Sin equipo: ${loose.map((p) => escapeHTML(p.name) + (p.you ? ' (tú)' : '')).join(', ')}` : '';
@@ -758,6 +762,7 @@ $('#leave').addEventListener('click', () => api('leave'));
 
 document.querySelectorAll('[data-join-team]').forEach((b) => b.addEventListener('click', () => api('team', { team: b.dataset.joinTeam })));
 $('#ready').addEventListener('click', () => api('ready', { ready: $('#ready').textContent === 'Estoy listo' }));
+document.querySelectorAll('[data-duelist]').forEach((b) => b.addEventListener('click', () => api('duelist')));
 $('#start').addEventListener('click', () => api('start'));
 $('#fill').addEventListener('click', () => api('fill', { levels: botLevels() }));
 
