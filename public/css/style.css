@@ -21,6 +21,11 @@
   --paper-sheet: #e0d6ba;
   --paper-plain: #cfc8b3;
   --paper-hi: #fffaea;
+  /* years under the lamp: the edges yellowed and a few tea stains */
+  --paper-age:
+    radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgba(140, 105, 45, .28) 100%),
+    radial-gradient(circle at 82% 18%, rgba(150, 110, 50, .12), transparent 18%),
+    radial-gradient(circle at 14% 86%, rgba(150, 110, 50, .1), transparent 22%);
   --paper-grain:
     repeating-linear-gradient(17deg, rgba(120, 100, 60, .07) 0 1px, transparent 1px 6px),
     repeating-linear-gradient(-28deg, rgba(255, 255, 255, .25) 0 1px, transparent 1px 9px);
@@ -921,8 +926,6 @@ label.check input:focus-visible { outline: 2px solid var(--gold); outline-offset
   --ring-x: 30%;
   --ring-y: 96%;
   transform: rotate(.5deg);
-  /* opaque paper even while .sheet's background is broken (#57) */
-  background-color: var(--paper-sheet);
 }
 #settings-dialog::backdrop { background: radial-gradient(ellipse 70% 80% at 50% 35%, rgba(8, 7, 6, .55), rgba(8, 7, 6, .9)); }
 #settings-dialog fieldset { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0 0 12px; padding: 0; border: 0; }
