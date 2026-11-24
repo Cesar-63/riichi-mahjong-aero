@@ -538,7 +538,8 @@ primera partida.
   muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
-  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
+  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después viene el
+  **pago con palitos** (ver abajo), la cámara
   baja detrás del ganador a su mano y se abre la hoja de resultado. Su número
   grande es el valor de la mano, sin honba: en ron lo que paga quien
   descartó (7700), en tsumo lo que paga cada uno, "no oya/oya" (2000/3900) o
@@ -550,9 +551,23 @@ primera partida.
   tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
   resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
-  estaban, así no chocan en las esquinas con la mano del vecino. Después se
-  abre la pantalla de resultado. Los empates abortivos van directo al
-  resultado.
+  estaban, así no chocan en las esquinas con la mano del vecino. Después los
+  noten les pagan a los tenpai con palitos (ver abajo) y se abre la pantalla
+  de resultado. Los empates abortivos van directo al resultado.
+- **Pago con palitos**: cada uno que paga le **arroja** sus palitos al que
+  cobra (lo que paga en palitos de 10000, 5000, 1000 y 100, uno tras otro;
+  como mucho 12 por pago, los más grandes primero). Son objetos físicos: giran
+  en el aire, rebotan en el paño, en las fichas y entre ellos, y quedan como
+  caigan, sin salir de la mesa. Cuando se quedan quietos, **quien cobra se
+  los lleva**: cada palito vuela hacia su borde de la mesa y desaparece en su
+  cajón. El ganador se lleva igual los palitos de riichi y los depósitos que
+  había en la mesa. En un tsumo pagan los tres; en un doble ron, cada ganador
+  se lleva lo suyo; en un empate, los noten se reparten el pago entre los
+  tenpai en palitos de 100 (1500 entre dos son 800 y 700). La física es
+  [cannon-es](https://github.com/pmndrs/cannon-es), que se descarga solo
+  para esto; sin ella la mano termina como antes, sin palitos. Una misma mano
+  se arroja siempre igual (`public/js/three3d/payments.js`; quién le paga a
+  quién y cuánto, en `sticks.js`).
 
 ### Animación de inicio de cada mano
 
@@ -748,7 +763,7 @@ invocación puede caer en una instancia distinta): Redis es obligatorio en
 producción.
 
 Variables opcionales: `TURN_SECONDS` (5), `BANK_SECONDS` (10),
-`RESULT_SECONDS` (16, tiempo para cerrar la pantalla de resultado).
+`RESULT_SECONDS` (20, tiempo para cerrar la pantalla de resultado; cuenta desde que termina la mano, antes de la revelación y el pago con palitos).
 
 ### Costo aproximado
 
@@ -809,8 +824,9 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   exhibición traen el suyo), para afinar sus animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
   **Rival de enfrente, de cerca** los muestran.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
-  fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
-  cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
+  fichas y de tu mano, tiempos de la victoria, del empate, de los dados, del
+  cajón y del pago con palitos (gravedad, rebote, vuelo y cuánto esperan
+  quietos), y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
   con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
   de una animación ya empezada) se ven al volver al comienzo.
 - **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
@@ -931,6 +947,7 @@ Componentes de terceros:
 | majiang-ai y majiang-core | MIT |
 | onnxruntime-web | MIT |
 | three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
+| cannon-es 0.20 (`public/vendor/cannon-es/`, minificado) | MIT |
 | Fichas FluffyStuff | CC0 |
 | Personajes (`public/models/personajes/`, fuentes en `scripts/personajes/fuentes/`) | Propios del proyecto |
 

@@ -326,7 +326,7 @@ function showGame(v) {
       if (state.view) showGame(state.view);
     };
     // safety net in case the reveal never reports back
-    setTimeout(finish, 13000);
+    setTimeout(finish, 17000);
     ui.winFinish = finish;
   }
   const holdModal = winKey && ui.winDone !== winKey;

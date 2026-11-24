@@ -12,9 +12,10 @@ import { createHand3D } from './hand3d.js';
 import { createHallucinations } from './hallucinate.js';
 import { createBloodMachines } from './bloodmachine.js';
 import { TUNING } from './tuning.js';
+import { createPayments, loadPhysics } from './payments.js';
 import { CLIMATES } from './climate.js';
 import { climateOf } from '../shared/streak.js';
-import { STICK, trayScore, carriedDeposits, TRAY_W, TRAY_WALL, trayOrder, trayCompartments, compartmentAt, moveGroup, snapToTray, trayLayout } from './sticks.js';
+import { STICK, trayScore, carriedDeposits, paymentFlows, TRAY_W, TRAY_WALL, trayOrder, trayCompartments, compartmentAt, moveGroup, snapToTray, trayLayout } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -564,6 +565,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
   }
 
   function clearWin() {
+    payments.clear();
     if (!win) return;
     for (const it of [...win.items, ...win.flyers]) {
       scene.remove(it.mesh);
@@ -784,7 +786,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       ...first.w.melds.flatMap((m) => m.tiles).map((id) => objects.get(`t${id}`)).filter(Boolean).map((o) => o.target.p),
     ];
     const frame = handFrame(first.r, framed);
-    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame, frameSeat: first.r };
+    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame, frameSeat: first.r, pay: payPlan(v, rel, t + 300) };
     characters.reveal(true);
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
@@ -811,15 +813,55 @@ export function createTable3D(container, { onPick, signal } = {}) {
       addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs + WIN.dropMs);
     });
     const last = Math.max(0, ...items.map((it) => it.fallAt));
-    win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
+    win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora', pay: payPlan(v, rel, last + WIN.dropMs + 500) };
     characters.reveal(true);
     hand.layout(v, ui, 0);
     world.forceView('overview');
   }
 
+  // The hand's payments (#98), thrown once the hands and the dora are down:
+  // flows between relative seats, and the winner takes the riichi sticks
+  // and deposits on the table.
+  function payPlan(v, rel, at) {
+    const { flows, pot } = paymentFlows(v);
+    if (!flows.length && !pot) return null;
+    loadPhysics(); // usually here already
+    return { at, started: false, key: resultKey(v), flows: flows.map((f) => ({ ...f, from: rel(f.from), to: rel(f.to) })), potTo: pot ? rel(pot.to) : null };
+  }
+  function startPay() {
+    const pay = win.pay;
+    pay.started = true;
+    const key = win.key;
+    if (!payments.ready()) {
+      // the physics is still on its way: the score sheet waits for it, and
+      // without it the hand ends as before
+      win.doneAt = Infinity;
+      loadPhysics().then((ok) => {
+        if (!win || win.key !== key) return;
+        if (ok) startPay();
+        else win.doneAt = performance.now() - win.t0;
+      });
+      return;
+    }
+    const pot = pay.potTo === null ? [] : [...[...sticks.values()].map((st) => st.mesh), ...deposits.meshes].filter((m) => m.visible).map((mesh) => ({ mesh, to: pay.potTo }));
+    const colliders = [
+      ...[...objects.values()].map((o) => o.obj),
+      ...win.items.map((it) => it.mesh),
+      ...win.flyers.map((it) => it.mesh),
+      ...restDice.meshes,
+      ...(pay.potTo === null ? [...sticks.values()].map((st) => st.mesh) : []),
+    ];
+    const started = payments.start({ flows: pay.flows, pot, colliders, key: pay.key }, () => {
+      if (win && win.key === key) win.doneAt = performance.now() - win.t0 + TUNING.pay.afterMs;
+    });
+    // the score sheet waits for the sticks
+    if (started) win.doneAt = Infinity;
+  }
+
   function stepWin() {
     if (!win) return;
     const e = performance.now() - win.t0;
+    if (win.pay && !win.pay.started && e >= win.pay.at) startPay();
     for (const it of win.items) {
       let done;
       // a double ron's tile, passed on to the other winner
@@ -946,6 +988,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
+  const payments = createPayments({ THREE, scene, half: TABLE / 2, seatFrame: (r) => qSeat[r], stickGeo, stickMats, stickSize: { len: 3.1, thick: 0.1, wide: 0.38 } });
+  // the physics for the payments, fetched while nothing else is going on
+  setTimeout(loadPhysics, 2500);
   const DRAWER = { w: TRAY_W, d: 3, h: 0.8, wall: TRAY_WALL, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
@@ -1171,7 +1216,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
       }
       updateBlob(o);
     }
+    payments.tick(dt);
     for (const st of sticks.values()) {
+      // paid to the winner (payments.js): gone until the next hand
+      if (st.mesh.userData.taken) continue;
       if (st.wait > 0) {
         st.wait -= dt * 1000;
         continue;
@@ -1496,6 +1544,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // their players and are not counted here.
   let deposits = { key: '', meshes: [] };
   function syncDeposits(v) {
+    // a win takes the deposits: they stay on the table until it does (#98)
+    if (isAgari(v) && deposits.meshes.length && deposits.key.startsWith(`${resultKey(v)}:`)) return;
     const n = carriedDeposits(v);
     const key = n ? `${resultKey(v)}:${n}:${v.seat}:${isWashizu(v)}` : '';
     if (key === deposits.key) return;

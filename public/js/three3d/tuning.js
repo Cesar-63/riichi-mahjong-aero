@@ -9,6 +9,7 @@ export const TUNING = {
   draw: { startMs: 900, tileMs: 40, holdMs: 3000 },
   dice: { landed: 0.6, pickUp: 0.7 },
   drawer: { speed: 7 },
+  pay: { gravity: 60, flightMs: 650, gap: 90, bounce: 0.3, most: 12, restMs: 350, settleMs: 2200, absorbMs: 650, absorbGap: 45, afterMs: 600 },
   light: { exposure: 0.95, lamp: 820, hemi: 0.26, ambient: 0.08, environment: 0.35, handAmbient: 0.55, handKey: 1.7, people: 0.2 },
 };
 
@@ -59,6 +60,19 @@ export const TUNING_INFO = {
   drawer: {
     _: 'Cajón de puntos',
     speed: ['Velocidad al abrir y cerrar', 1, 40, 0.5],
+  },
+  pay: {
+    _: 'Pago con palitos (#98)',
+    gravity: ['Gravedad (anchos de ficha / s²)', 5, 400, 1],
+    flightMs: ['Vuelo de cada palito arrojado (ms)', 150, 2000, 10],
+    gap: ['Entre palitos de un mismo pago (ms)', 0, 500, 5],
+    bounce: ['Rebote', 0, 0.9, 0.01],
+    most: ['Palitos por pago, como máximo', 1, 30, 1],
+    restMs: ['Quietos antes de llevárselos (ms)', 0, 2000, 10],
+    settleMs: ['Tiempo máximo rodando (ms)', 300, 6000, 50],
+    absorbMs: ['Vuelo hacia el cajón (ms)', 100, 2000, 10],
+    absorbGap: ['Entre palitos al llevárselos (ms)', 0, 300, 5],
+    afterMs: ['Pausa antes de la hoja de resultado (ms)', 0, 3000, 50],
   },
   light: {
     _: 'Luz',

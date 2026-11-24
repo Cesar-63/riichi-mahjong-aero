@@ -193,12 +193,13 @@ function riichiRonScene(config) {
   rec.add(g, 500);
   g.act(1, { type: 'ron' });
   passAll(g);
-  rec.add(g, 7000);
+  // the hand, the dora and then the payment with sticks (#98)
+  rec.add(g, 11000);
   return rec;
 }
 {
   const rec = riichiRonScene();
-  scenes.push({ id: 'riichi-ron', name: 'Riichi y ron de un rival', note: 'El rival de la derecha declara riichi (palito) y te hace ron: la mano cae, la ficha del ron vuela y llegan dora y ura.', steps: rec.steps, length: rec.end });
+  scenes.push({ id: 'riichi-ron', name: 'Riichi y ron de un rival', note: 'El rival de la derecha declara riichi (palito) y te hace ron: la mano cae, la ficha del ron vuela y llegan dora y ura. Después le arrojas tus palitos y él se los lleva, con el de su riichi.', steps: rec.steps, length: rec.end });
 }
 
 // ------------------------------------------------------------- my tsumo
@@ -213,12 +214,12 @@ function myTsumo() {
   }
   // my draw is 4m: tsumo
   g.act(0, { type: 'tsumo' });
-  steps.add(g, 7000);
+  steps.add(g, 10500);
   return steps;
 }
 {
   const rec = myTsumo();
-  scenes.push({ id: 'my-tsumo', name: 'Tu tsumo', note: 'Ganas robando: tu mano se apoya parada en la mesa y cae, y llegan los dora.', steps: rec.steps, length: rec.end });
+  scenes.push({ id: 'my-tsumo', name: 'Tu tsumo', note: 'Ganas robando: tu mano se apoya parada en la mesa y cae, y llegan los dora. Después los tres rivales te arrojan sus palitos y te los llevas.', steps: rec.steps, length: rec.end });
 }
 
 // -------------------------------------------- my tsumo with an open hand
@@ -272,8 +273,8 @@ function myTsumo() {
       rec.add(g, 600);
     }
   }
-  rec.add(g, 6000);
-  scenes.push({ id: 'exhaustive', name: 'Empate', note: 'Se acaba la pared: las manos quedan paradas y caen, tenpai boca arriba y noten boca abajo.', steps: rec.steps, length: rec.end });
+  rec.add(g, 9500);
+  scenes.push({ id: 'exhaustive', name: 'Empate', note: 'Se acaba la pared: las manos quedan paradas y caen, tenpai boca arriba y noten boca abajo. Los noten les arrojan sus palitos a los tenpai.', steps: rec.steps, length: rec.end });
 }
 
 // ------------------------------------------------- a kan and the dead wall
@@ -306,8 +307,8 @@ function myTsumo() {
   g.act(1, { type: 'ron' });
   g.act(2, { type: 'ron' });
   passAll(g);
-  rec.add(g, 11000);
-  scenes.push({ id: 'double-ron', name: 'Doble ron', note: 'Dos rivales te hacen ron a la vez: la única ficha del ron vuela a una mano y después pasa a la otra (no se duplica).', steps: rec.steps, length: rec.end });
+  rec.add(g, 13000);
+  scenes.push({ id: 'double-ron', name: 'Doble ron', note: 'Dos rivales te hacen ron a la vez: la única ficha del ron vuela a una mano y después pasa a la otra (no se duplica). Después pagas a cada uno lo suyo con palitos.', steps: rec.steps, length: rec.end });
 }
 
 // --------------------------------------------------------------- streaks

@@ -212,3 +212,79 @@ export function trayLayout(score, arrangement = {}, seed = 0) {
   }
   return out;
 }
+
+// ------------------------------------------------------------ payments
+// Who pays whom at the end of a hand (#98): [{ from, to, amount }] in
+// absolute seats, from the result the engine leaves (engine/game.js agari,
+// exhaustiveDraw). The riichi deposits are apart: pot = { to, count } (the
+// first winner takes them all), or null.
+export function paymentFlows(v) {
+  const res = v && v.phase === 'result' ? v.result : null;
+  const flows = [];
+  if (!res) return { flows, pot: null };
+  const add = (from, to, amount) => {
+    if (from === to || amount <= 0) return;
+    const f = flows.find((x) => x.from === from && x.to === to);
+    if (f) f.amount += amount;
+    else flows.push({ from, to, amount });
+  };
+  if (res.type === 'agari') {
+    for (const w of res.wins) {
+      const hand = w.handPoints ?? w.points;
+      if (w.tsumo && w.pao !== null && w.pao !== undefined) add(w.pao, w.seat, w.points);
+      else if (w.tsumo) {
+        const honba = (w.honbaPoints || 0) / 3;
+        for (let x = 0; x < 4; x++) {
+          if (x === w.seat) continue;
+          const split = w.tsumoSplit || { dealer: hand / 3, other: hand / 3 };
+          add(x, w.seat, (x === v.dealer ? split.dealer : split.other) + honba);
+        }
+      } else if (w.pao !== null && w.pao !== undefined && w.pao !== w.from) {
+        add(w.pao, w.seat, hand / 2);
+        add(w.from, w.seat, w.points - hand / 2);
+      } else add(w.from, w.seat, w.points);
+    }
+    const paid = flows.reduce((a, f) => a + f.amount, 0);
+    const gained = res.deltas ? res.deltas.reduce((a, d) => a + Math.max(0, d), 0) : paid;
+    const count = Math.round((gained - paid) / 1000);
+    return { flows, pot: count > 0 ? { to: res.wins[0].seat, count } : null };
+  }
+  // a draw: every loser pays the winners in proportion to what they take,
+  // in whole 100 sticks (1500 between two is 800 and 700), every winner
+  // ending with exactly their share
+  const d = res.deltas || [0, 0, 0, 0];
+  const up = d.reduce((a, x) => a + Math.max(0, x), 0);
+  if (up > 0) {
+    const got = [0, 0, 0, 0];
+    d.forEach((lost, from) => {
+      if (lost >= 0) return;
+      const pay = d.map((won) => (won > 0 ? Math.floor((-lost * won) / up / 100) * 100 : 0));
+      let left = -lost - pay.reduce((a, x) => a + x, 0);
+      while (left >= 100) {
+        // the next 100 to whoever is furthest from their share
+        const to = d.reduce((b, won, y) => (won > 0 && (b < 0 || won - got[y] - pay[y] > d[b] - got[b] - pay[b]) ? y : b), -1);
+        pay[to] += 100;
+        left -= 100;
+      }
+      pay.forEach((amount, to) => {
+        got[to] += amount;
+        add(from, to, amount);
+      });
+    });
+  }
+  return { flows, pot: null };
+}
+
+// The sticks a payment is made of, biggest first, at most `max` of them
+// (a huge payment throws its big sticks): [value, ...].
+export function paymentSticks(amount, max = 12) {
+  const out = [];
+  let r = Math.max(0, Math.round(amount / 100) * 100);
+  for (const value of VALUES) {
+    while (r >= value && out.length < max) {
+      out.push(value);
+      r -= value;
+    }
+  }
+  return out;
+}
