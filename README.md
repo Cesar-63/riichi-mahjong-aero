@@ -272,9 +272,12 @@ juego de fichas (normales o de vidrio).
 - **Por equipos**, como en el manga: cada pareja tiene un **duelista** y un
   **apoyo**. Solo los duelistas sangran, y solo por lo que se pagan **entre
   ellos dos**: un ron directo o la parte de un tsumo. Lo que pase con los
-  apoyos solo cuenta para los puestos. El duelista es el primero de la
-  pareja que entró a la sala (una persona antes que un bot); en la práctica
-  por equipos eres tú, y Bot 1 tu apoyo.
+  apoyos solo cuenta para los puestos. En la sala de espera se ve quién es
+  el duelista de cada equipo (**血 duelista**), y cualquiera puede pulsar
+  **Ser el duelista** en su equipo, como Akagi: se lo quita a su compañero y
+  los dos pierden el "listo". Si nadie lo pide, es el primero de la pareja
+  que entró a la sala (una persona antes que un bot); en la práctica por
+  equipos eres tú, y Bot 1 tu apoyo.
 - **La moneda.** Si un pago te deja **entre 1500 y 2000 cc** perdidos (los
   dos incluidos), al cerrar la mano tiras una moneda: eliges **cara** o
   **sello**. Si aciertas sigues; si no, te desangras. Se vuelve a tirar cada
@@ -499,7 +502,17 @@ primera partida.
   uno negro grande hacia cada extremo. Encima del cajón aparece tu tablilla
   con tu puntaje y alrededor las de los demás en su posición (izquierda =
   kamicha, arriba = toimen, derecha = shimocha), con la diferencia con el
-  tuyo. Un toque lo cierra.
+  tuyo. Un toque fuera de los palitos (o en una tablilla) lo cierra.
+  **Acomodar los palitos**, como en una mesa real: con el cajón abierto,
+  arrastra un palito (con el mouse o el dedo) y queda donde lo sueltas,
+  acostado sobre lo que haya debajo y sin quedar cruzado sobre una
+  separación. Si lo mantienes presionado un momento antes de moverlo, se
+  levanta todo su grupo: suéltalo sobre otro compartimento y los dos grupos
+  cambian de lugar (cada compartimento conserva el ancho de su grupo). El
+  orden de los grupos queda guardado en el navegador para las próximas
+  partidas; los palitos movidos a mano duran la mano, aunque en medio pagues
+  o cobres (los montoncitos dan y reciben primero). Los demás no ven cómo los
+  acomodas.
 - Botones, menú, resultados y el panel del compañero son HTML encima del
   canvas.
 
@@ -525,7 +538,8 @@ primera partida.
   muerto hasta ella; con riichi sigue el cartel **Ura** y los ura dora salen
   de debajo de los indicadores, se voltean en el aire y se ponen al lado. Las
   fichas de la mano que valen dora se iluminan (dorado: dora y cincos rojos;
-  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después la cámara
+  rosado: ura dora) y un cartel cuenta dora, ura y rojas. Después viene el
+  **pago con palitos** (ver abajo), la cámara
   baja detrás del ganador a su mano y se abre la hoja de resultado. Su número
   grande es el valor de la mano, sin honba: en ron lo que paga quien
   descartó (7700), en tsumo lo que paga cada uno, "no oya/oya" (2000/3900) o
@@ -537,9 +551,23 @@ primera partida.
   tumban a la vez, ficha por ficha, y se ven 3 segundos antes de la hoja de
   resultado, para mirar quién estaba en tenpai: las que están en tenpai boca arriba con el cartel **Tenpai**, y
   las noten boca abajo con **Noten**; las fichas llamadas se quedan donde
-  estaban, así no chocan en las esquinas con la mano del vecino. Después se
-  abre la pantalla de resultado. Los empates abortivos van directo al
-  resultado.
+  estaban, así no chocan en las esquinas con la mano del vecino. Después los
+  noten les pagan a los tenpai con palitos (ver abajo) y se abre la pantalla
+  de resultado. Los empates abortivos van directo al resultado.
+- **Pago con palitos**: cada uno que paga le **arroja** sus palitos al que
+  cobra (lo que paga en palitos de 10000, 5000, 1000 y 100, uno tras otro;
+  como mucho 12 por pago, los más grandes primero). Son objetos físicos: giran
+  en el aire, rebotan en el paño, en las fichas y entre ellos, y quedan como
+  caigan, sin salir de la mesa. Cuando se quedan quietos, **quien cobra se
+  los lleva**: cada palito vuela hacia su borde de la mesa y desaparece en su
+  cajón. El ganador se lleva igual los palitos de riichi y los depósitos que
+  había en la mesa. En un tsumo pagan los tres; en un doble ron, cada ganador
+  se lleva lo suyo; en un empate, los noten se reparten el pago entre los
+  tenpai en palitos de 100 (1500 entre dos son 800 y 700). La física es
+  [cannon-es](https://github.com/pmndrs/cannon-es), que se descarga solo
+  para esto; sin ella la mano termina como antes, sin palitos. Una misma mano
+  se arroja siempre igual (`public/js/three3d/payments.js`; quién le paga a
+  quién y cuánto, en `sticks.js`).
 
 ### Animación de inicio de cada mano
 
@@ -735,7 +763,7 @@ invocación puede caer en una instancia distinta): Redis es obligatorio en
 producción.
 
 Variables opcionales: `TURN_SECONDS` (5), `BANK_SECONDS` (10),
-`RESULT_SECONDS` (16, tiempo para cerrar la pantalla de resultado).
+`RESULT_SECONDS` (20, tiempo para cerrar la pantalla de resultado; cuenta desde que termina la mano, antes de la revelación y el pago con palitos).
 
 ### Costo aproximado
 
@@ -775,9 +803,10 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   `public/lab/scenarios.json`, que arma `npm run lab:scenarios` con el motor
   del juego (manos y muros preparados, siempre iguales).
 - **Partida de exhibición**: las 13 manos de la partida entre bots elegida
-  para la exhibición, cada una desde el inicio hasta el resultado, vistas
-  desde el asiento de Momo y con el elenco de la exhibición en la mesa (Momo,
-  Kaito, Michihime y Shiro). Aparecen después de correr
+  para la exhibición, cada una desde el inicio hasta el resultado (con el
+  pago con palitos), con el elenco de la exhibición en la mesa (Momo,
+  Kaito, Michihime y Shiro) y en la **vista de transmisión** (ver abajo).
+  Aparecen después de correr
   `node scripts/exhibition/scenes.mjs`, que vuelve a jugar la partida con el
   motor, comprueba que sale igual al registro guardado y escribe
   `public/lab/exhibicion.json` (fuera del repositorio).
@@ -795,9 +824,26 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   [Personajes](#personajes)), con un reparto fijo (las escenas de la
   exhibición traen el suyo), para afinar sus animaciones; se pueden ocultar. Las cámaras **Rivales desde tu silla** y
   **Rival de enfrente, de cerca** los muestran.
+- **Vista de transmisión** (para grabar una partida como la vería un
+  espectador): los cuatro personajes sentados a la mesa, también el del
+  asiento desde el que se arma la escena, y las **cuatro manos abiertas**:
+  paradas en su lugar, con las caras hacia el centro de la mesa y bien
+  echadas hacia atrás, para que desde arriba se lean las cuatro (también las
+  del lado de la cámara); el personaje queda detrás de su mano, sin que lo
+  tape. Las cámaras **Transmisión: esquina** y **Transmisión: esquina baja**
+  miran la mesa entera desde una esquina del salón, sin la silla de nadie, y
+  al encender la vista se pasa a la primera. Encima de la imagen va el
+  **registro de jugadas**, como un rótulo de televisión: la mano que empieza
+  y quién reparte, cada descarte (y si fue la ficha que robó), riichi, chi,
+  pon y kan, y quién gana, a quién y cuánto, o el empate y quién quedó en
+  tenpai (`public/js/shared/playlog.js`); se puede apagar. Las escenas de la
+  exhibición se abren en esta vista; cualquier otra escena se puede ver así
+  con la casilla **Vista de transmisión**. La vista normal del juego no
+  cambia.
 - **Ajustes en vivo** (`public/js/three3d/tuning.js`): velocidades de las
-  fichas y de tu mano, tiempos de la victoria, del empate, de los dados y del
-  cajón, y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
+  fichas y de tu mano, tiempos de la victoria, del empate, de los dados, del
+  cajón y del pago con palitos (gravedad, rebote, vuelo y cuánto esperan
+  quietos), y la luz. Los que cambian se marcan; **Copiar cambios** da el texto
   con los valores nuevos para dejarlos fijos en el juego. Algunos (los tiempos
   de una animación ya empezada) se ven al volver al comienzo.
 - **Grabar en video** (`npm run lab:capture`, con Playwright y ffmpeg):
@@ -807,7 +853,11 @@ mesa 3D real para mirar las animaciones de cerca y afinarlas:
   dos guías para modelos de IA de video a video:
   `arcilla` (todo de un mismo barro mate, sin texturas: formas, luz y
   sombras) y `profundidad` (blanco cerca, negro lejos), sin los avisos de
-  llamada. `--rivales` graba con los personajes en la mesa. `npm run lab:capture -- --lista` muestra escenas y cámaras; las
+  llamada. `--rivales` graba con los personajes en la mesa, y
+  `--transmision` en la vista de transmisión, con su registro de jugadas
+  (`--sin-registro` lo quita), por ejemplo
+  `npm run lab:capture -- --escena p600-08 --camara "Transmisión: esquina" --transmision`.
+  `npm run lab:capture -- --lista` muestra escenas y cámaras; las
   opciones están al principio de `scripts/lab-capture.mjs` y el plan en
   [docs/animaciones-ia.md](docs/animaciones-ia.md). Los videos quedan en
   `capturas/` (fuera del repositorio).
@@ -840,9 +890,9 @@ public/models/personajes/  Personajes de la mesa (glTF con esqueleto)
 public/img/personajes/   Retratos de los personajes para el lobby
 scripts/personajes/      Arma los personajes (build.py) y sus retratos (retratos.mjs)
 public/img/              Dibujos SVG del salón (lámpara, luz, humo, pared, marco, pizarra, tiza, papel arrugado, huella, chincheta)
-public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js) y reglas del duelo de sangre (blood.js)
+public/js/shared/        Modelo de fichas, lista de personajes, niveles de la racha (streak.js), reglas del duelo de sangre (blood.js) y registro de jugadas de la vista de transmisión (playlog.js)
 public/js/blood-ui.js    Duelo de sangre en pantalla: opción, medidor, moneda, efectos
-public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre; bloodmachine.js: sus máquinas de sangre
+public/js/three3d/       Mesa 3D (three.js); tuning.js: velocidades, tiempos y luz; climate.js: climas de la racha; hallucinate.js: alucinaciones del duelo de sangre; bloodmachine.js: sus máquinas de sangre; payments.js: pago con palitos (física); sticks.js: palitos del cajón y quién le paga a quién
 public/lab.html          Laboratorio de animaciones (js/lab.js, lab/scenarios.json)
 scripts/lab-scenarios.mjs  Arma las escenas del laboratorio
 scripts/lab-capture.mjs  Graba escenas del laboratorio en video (color, arcilla, profundidad)
@@ -918,6 +968,7 @@ Componentes de terceros:
 | majiang-ai y majiang-core | MIT |
 | onnxruntime-web | MIT |
 | three.js (`public/vendor/three/`, con GLTFLoader) | MIT |
+| cannon-es 0.20 (`public/vendor/cannon-es/`, minificado) | MIT |
 | Fichas FluffyStuff | CC0 |
 | Personajes (`public/models/personajes/`, fuentes en `scripts/personajes/fuentes/`) | Propios del proyecto |
 

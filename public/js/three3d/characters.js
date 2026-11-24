@@ -344,6 +344,7 @@ function makeRig(gltf, id, rel, own) {
   return {
     root,
     id,
+    own,
     style,
     step,
     // a tile this character moves: the hand goes to it during waitMs (it
@@ -390,6 +391,9 @@ export function createCharacters(world) {
   let ready = Promise.resolve();
   let generation = 0;
   let revealing = { on: false, hide: null };
+  // the broadcast view (#87): the player's own character sits whole at the
+  // table too, not just its forearm
+  let wholeSelf = false;
 
   world.onTick((dt) => {
     if (!group.visible) return;
@@ -411,16 +415,16 @@ export function createCharacters(world) {
     // whose character only lends its forearm). Loads what changed.
     setCast(ids) {
       const next = ids.map((id) => (id ? characterId(id) : null));
-      if (next.every((id, i) => id === cast[i])) return ready;
+      if (next.every((id, i) => id === cast[i]) && !(rigs[0] && rigs[0].own !== !wholeSelf)) return ready;
       const mine = ++generation;
-      const changed = next.map((id, i) => id !== cast[i]);
+      const changed = next.map((id, i) => id !== cast[i] || (i === 0 && !!rigs[0] && rigs[0].own !== !wholeSelf));
       cast = next;
       ready = Promise.all(next.map(async (id, rel) => {
         if (!changed[rel]) return;
         const gltf = id ? await loader.loadAsync(`${DIR}${id}.glb`) : null;
         if (mine !== generation) return;
         if (rigs[rel]) rigs[rel].dispose();
-        rigs[rel] = gltf ? makeRig(gltf, id, rel, rel === 0) : null;
+        rigs[rel] = gltf ? makeRig(gltf, id, rel, rel === 0 && !wholeSelf) : null;
         if (rigs[rel]) {
           group.add(rigs[rel].root);
           rigs[rel].setClear(revealing.on, revealing.on && rel === revealing.hide);
@@ -429,6 +433,11 @@ export function createCharacters(world) {
         if (mine === generation) moveChairs(group.visible);
       });
       return ready;
+    },
+    // the broadcast view: the player's own character whole (or back to its forearm)
+    setWholeSelf(on) {
+      wholeSelf = !!on;
+      return this.setCast(cast);
     },
     setVisible(on) {
       group.visible = on;
@@ -441,7 +450,7 @@ export function createCharacters(world) {
       if (rigs[rel]) rigs[rel].play(obj, waitMs, durMs, kind);
       if (kind !== 'discard') return;
       rigs.forEach((r, i) => {
-        if (r && i !== rel && i !== 0) r.attend(obj, (waitMs + durMs) / 1000 + 0.9);
+        if (r && i !== rel && (i !== 0 || wholeSelf)) r.attend(obj, (waitMs + durMs) / 1000 + 0.9);
       });
     },
     // how fast this seat's tiles travel, against the table's speed

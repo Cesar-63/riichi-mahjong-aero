@@ -12,6 +12,10 @@
 //   --fps 30  --ancho 1280  --alto 720
 //   --sin-mano                without the player's hand facing the screen
 //   --rivales                 the characters sitting at the table (characters.js)
+//   --transmision             the broadcast view: the four players, the four
+//                             hands open and the play-by-play (with a camera
+//                             such as "Transmisión: esquina")
+//   --sin-registro            the broadcast view without the play-by-play
 //   --sin-avisos              without the big calls (¡Riichi!, ¡Ron!…); the
 //                             guides never have them
 //   --desde 0 --hasta <ms>    a part of the scene
@@ -42,6 +46,8 @@ const o = {
   height: Number(opt('alto', 720)),
   hand: !flag('sin-mano'),
   people: flag('rivales'),
+  broadcast: flag('transmision'),
+  log: !flag('sin-registro'),
   callouts: !flag('sin-avisos'),
   from: Number(opt('desde', 0)),
   to: opt('hasta', null),
@@ -86,7 +92,7 @@ try {
     await mkdir(o.out, { recursive: true });
     const cam = o.camera.replace(/[^\p{L}\d]+/gu, '-').toLowerCase();
     for (const pass of o.passes) {
-      const length = await page.evaluate((x) => window.labCapture.load(x), { scene: o.scene, camera: o.camera, hand: o.hand, people: o.people, callouts: o.callouts, pass });
+      const length = await page.evaluate((x) => window.labCapture.load(x), { scene: o.scene, camera: o.camera, hand: o.hand, people: o.people, broadcast: o.broadcast, log: o.log, callouts: o.callouts, pass });
       const end = Math.min(length, o.to === null ? length : Number(o.to));
       const step = 1000 / o.fps;
       const name = `${o.scene}-${cam}-${pass}`;

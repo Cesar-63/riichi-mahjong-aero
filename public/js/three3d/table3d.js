@@ -12,9 +12,10 @@ import { createHand3D } from './hand3d.js';
 import { createHallucinations } from './hallucinate.js';
 import { createBloodMachines } from './bloodmachine.js';
 import { TUNING } from './tuning.js';
+import { createPayments, loadPhysics } from './payments.js';
 import { CLIMATES } from './climate.js';
 import { climateOf } from '../shared/streak.js';
-import { STICK, VALUES, COMPARTMENTS, stickCounts, pileLayout, trayScore, carriedDeposits } from './sticks.js';
+import { STICK, trayScore, carriedDeposits, paymentFlows, TRAY_W, TRAY_WALL, trayOrder, trayCompartments, compartmentAt, moveGroup, snapToTray, trayLayout } from './sticks.js';
 import { deadSlot, tileType, isAka, doraFromIndicator } from '../shared/tiles.js';
 
 const S = 1 / 4.1; // world units per 2.5D board unit
@@ -24,6 +25,20 @@ const fz = (y) => (y - 50) * S;
 // tables leave plenty of felt round the ponds): everything beyond the
 // ponds (walls, hands, calls) sits this much further out.
 const OUT = 2;
+
+// the order of the groups in the player's tray, kept in the browser (#30)
+function readStickOrder() {
+  try {
+    return JSON.parse(localStorage.getItem('mj.stickOrder'));
+  } catch {
+    return null;
+  }
+}
+function writeStickOrder(order) {
+  try {
+    localStorage.setItem('mj.stickOrder', JSON.stringify(order));
+  } catch { /* storage unavailable */ }
+}
 const fzo = (y) => fz(y) + OUT;
 const STACKS = 17;
 const SEAT_ANGLE = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
@@ -80,6 +95,13 @@ export function createTable3D(container, { onPick, signal } = {}) {
   };
   // lying sideways (riichi / called tile): face up, turned a quarter to the left
   qLocal.side = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2).multiply(qLocal.up);
+  // the broadcast view (#87): a hand standing open, its faces turned away
+  // from its owner towards the table and leaning well back (57 degrees),
+  // so a camera above the table reads all four, the near ones too
+  const OPEN_LEAN = 1;
+  qLocal.open = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -OPEN_LEAN));
+  let broadcast = false;
 
   // ----------------------------------------------------------------- streak
   // The player on a streak (one at a time; climate.js): the room turns into
@@ -550,6 +572,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
   }
 
   function clearWin() {
+    payments.clear();
     if (!win) return;
     for (const it of [...win.items, ...win.flyers]) {
       scene.remove(it.mesh);
@@ -770,7 +793,7 @@ export function createTable3D(container, { onPick, signal } = {}) {
       ...first.w.melds.flatMap((m) => m.tiles).map((id) => objects.get(`t${id}`)).filter(Boolean).map((o) => o.target.p),
     ];
     const frame = handFrame(first.r, framed);
-    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame, frameSeat: first.r };
+    win = { key, t0: performance.now(), items, flyers, labels, doraAt, doneAt: t + WIN.holdMs, res, phase: 'tiles', frame, frameSeat: first.r, pay: payPlan(v, rel, t + 300) };
     characters.reveal(true);
     // the winners' concealed hands and my overlay hand make way for the reveal
     if (res.wins.some((w) => w.seat === v.seat)) hand.layout(v, ui, 0);
@@ -797,15 +820,55 @@ export function createTable3D(container, { onPick, signal } = {}) {
       addLabel(labels, r, fx(x0) + ids.length * PITCH + 1.3, z, up ? 'Tenpai' : 'Noten', up ? '#ffd75a' : '#c8d2dc', DRAW.startMs + ids.length * DRAW.tileMs + WIN.dropMs);
     });
     const last = Math.max(0, ...items.map((it) => it.fallAt));
-    win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora' };
+    win = { key, t0: performance.now(), items, flyers: [], labels, doraAt: Infinity, doneAt: last + WIN.dropMs + DRAW.holdMs, res, phase: 'dora', pay: payPlan(v, rel, last + WIN.dropMs + 500) };
     characters.reveal(true);
     hand.layout(v, ui, 0);
     world.forceView('overview');
   }
 
+  // The hand's payments (#98), thrown once the hands and the dora are down:
+  // flows between relative seats, and the winner takes the riichi sticks
+  // and deposits on the table.
+  function payPlan(v, rel, at) {
+    const { flows, pot } = paymentFlows(v);
+    if (!flows.length && !pot) return null;
+    loadPhysics(); // usually here already
+    return { at, started: false, key: resultKey(v), flows: flows.map((f) => ({ ...f, from: rel(f.from), to: rel(f.to) })), potTo: pot ? rel(pot.to) : null };
+  }
+  function startPay() {
+    const pay = win.pay;
+    pay.started = true;
+    const key = win.key;
+    if (!payments.ready()) {
+      // the physics is still on its way: the score sheet waits for it, and
+      // without it the hand ends as before
+      win.doneAt = Infinity;
+      loadPhysics().then((ok) => {
+        if (!win || win.key !== key) return;
+        if (ok) startPay();
+        else win.doneAt = performance.now() - win.t0;
+      });
+      return;
+    }
+    const pot = pay.potTo === null ? [] : [...[...sticks.values()].map((st) => st.mesh), ...deposits.meshes].filter((m) => m.visible).map((mesh) => ({ mesh, to: pay.potTo }));
+    const colliders = [
+      ...[...objects.values()].map((o) => o.obj),
+      ...win.items.map((it) => it.mesh),
+      ...win.flyers.map((it) => it.mesh),
+      ...restDice.meshes,
+      ...(pay.potTo === null ? [...sticks.values()].map((st) => st.mesh) : []),
+    ];
+    const started = payments.start({ flows: pay.flows, pot, colliders, key: pay.key }, () => {
+      if (win && win.key === key) win.doneAt = performance.now() - win.t0 + TUNING.pay.afterMs;
+    });
+    // the score sheet waits for the sticks
+    if (started) win.doneAt = Infinity;
+  }
+
   function stepWin() {
     if (!win) return;
     const e = performance.now() - win.t0;
+    if (win.pay && !win.pay.started && e >= win.pay.at) startPay();
     for (const it of win.items) {
       let done;
       // a double ron's tile, passed on to the other winner
@@ -871,8 +934,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
       // a win: close on the hand, from behind its owner (the score sheet
       // covers the top of the screen); a draw keeps the whole table
       world.forceView(win.frame || 'overview');
-      // the camera goes behind the winner's seat: their character steps out of its way
-      if (win.frame) characters.reveal(true, win.frameSeat);
+      // the camera goes behind the winner's seat: their character steps out
+      // of its way (not in the broadcast view, whose camera is its own)
+      if (win.frame && !broadcast) characters.reveal(true, win.frameSeat);
       // my own standing hand leaves the screen to the score sheet
       if (lastView) hand.layout(lastView[0], {}, 0);
       winListener({ phase: 'done' });
@@ -932,7 +996,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
     const top = new THREE.MeshPhongMaterial({ map: t, shininess: 20 });
     stickMats[value] = [stickSide, stickSide, top, stickSide, stickSide, stickSide];
   }
-  const DRAWER = { w: COMPARTMENTS.reduce((a, b) => a + b), d: 3, h: 0.8, wall: 0.12, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
+  const payments = createPayments({ THREE, scene, half: TABLE / 2, seatFrame: (r) => qSeat[r], stickGeo, stickMats, stickSize: { len: 3.1, thick: 0.1, wide: 0.38 } });
+  // the physics for the payments, fetched while nothing else is going on
+  setTimeout(loadPhysics, 2500);
+  const DRAWER = { w: TRAY_W, d: 3, h: 0.8, wall: TRAY_WALL, closedZ: 12.2 + OUT, openZ: 15.5 + OUT, y: -0.9 };
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
   const drawer = new THREE.Group();
   {
@@ -948,10 +1015,11 @@ export function createTable3D(container, { onPick, signal } = {}) {
     box(wall, h, d, w / 2 - wall / 2, 0, 0);
     box(w, h, wall, 0, 0, -d / 2 + wall / 2);
     box(w, h * 1.15, wall * 1.6, 0, 0.04, d / 2 - wall * 0.8); // front, a little taller
-    // compartments
-    let x = -w / 2;
-    for (const cw of COMPARTMENTS.slice(0, -1)) box(0.06, h * 0.7, d - 2 * wall, (x += cw), -0.08, 0);
   }
+  // the walls between compartments move with the player's order of groups
+  const dividers = new THREE.Group();
+  drawer.add(dividers);
+  const dividerGeo = new THREE.BoxGeometry(0.06, DRAWER.h * 0.7, DRAWER.d - 2 * DRAWER.wall);
   drawer.position.set(0, DRAWER.y, DRAWER.closedZ);
   drawer.visible = false;
   scene.add(drawer);
@@ -961,32 +1029,43 @@ export function createTable3D(container, { onPick, signal } = {}) {
   let drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
   let pointsListener = () => {};
 
+  // The player's own arrangement of the tray (#30): the order of the groups
+  // is a preference kept in the browser, the sticks moved by hand last the
+  // hand (sticks.js trayLayout).
+  const arrangement = { order: trayOrder(readStickOrder()), moved: [], key: null };
+  let drawerScore = null;
   // every stick of the score, in small heaps that lean on each other so
-  // each one shows (sticks.js); the same score always lies the same way
+  // each one shows (sticks.js), with the player's arrangement; the same
+  // score always lies the same way
   function fillDrawer(score) {
+    drawerScore = score;
     drawerSticks.clear();
-    const counts = stickCounts(score);
-    const floor = -DRAWER.h / 2 + DRAWER.wall;
-    let left = -DRAWER.w / 2;
-    VALUES.forEach((value, c) => {
-      const cw = COMPARTMENTS[c];
-      const cx = left + cw / 2;
-      left += cw;
-      for (const s of pileLayout(counts[c], cw - DRAWER.wall, Math.round(score / 100) * 4 + c)) {
-        const m = new THREE.Mesh(drawerStickGeo, stickMats[value]);
-        m.rotation.order = 'YXZ';
-        m.rotation.set(s.roll, Math.PI / 2 + s.yaw, 0);
-        m.position.set(cx + s.x, floor + s.y, s.z);
-        m.castShadow = m.receiveShadow = true;
-        drawerSticks.add(m);
-      }
+    dividers.clear();
+    trayCompartments(arrangement.order).slice(0, -1).forEach((c) => {
+      const m = new THREE.Mesh(dividerGeo, drawerMat);
+      m.position.set(c.right, -0.08, 0);
+      m.castShadow = m.receiveShadow = true;
+      dividers.add(m);
     });
+    const floor = -DRAWER.h / 2 + DRAWER.wall;
+    for (const s of trayLayout(score, arrangement, Math.round(score / 100))) {
+      const m = new THREE.Mesh(drawerStickGeo, stickMats[s.value]);
+      m.rotation.order = 'YXZ';
+      m.rotation.set(s.roll, Math.PI / 2 + s.yaw, 0);
+      m.position.set(s.x, floor + s.y, s.z);
+      m.castShadow = m.receiveShadow = true;
+      m.userData = { value: s.value, moved: s.moved, home: m.position.clone() };
+      drawerSticks.add(m);
+    }
   }
+  const trayScoreOf = (v) => trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0);
   // onShown: called once the drawer is out and the camera is on it
   function openPoints(v, onShown) {
     if (intro || win || !v) return false;
+    const key = `${v.round}-${v.kyokuNum}-${v.honba}`;
+    if (arrangement.key !== key) Object.assign(arrangement, { key, moved: [] });
     // as dealer, the honba sticks on the table came out of this tray
-    fillDrawer(trayScore(v.players[v.seat].score, v.dealer === v.seat ? honbaOnTable(v) : 0));
+    fillDrawer(trayScoreOf(v));
     drawer.visible = true;
     drawerState = { open: true, goal: DRAWER.openZ, shown: onShown };
     world.forceView('drawer');
@@ -994,8 +1073,99 @@ export function createTable3D(container, { onPick, signal } = {}) {
     hand.layout(v, {}, 0);
     return true;
   }
+  // Arranging the tray while it is open: a stick dragged with the mouse or
+  // a finger goes where it is let go; held still for a moment first, the
+  // whole group goes with it and trades compartments with the one where it
+  // is let go. A tap outside the sticks closes the drawer.
+  const trayRay = new THREE.Raycaster();
+  const trayNdc = new THREE.Vector2();
+  const trayPlane = new THREE.Plane();
+  const trayHit = new THREE.Vector3();
+  let press = null;
+  const pointerRay = (ev) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    trayNdc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+    trayRay.setFromCamera(trayNdc, camera);
+    return trayRay;
+  };
+  // the pointer on a level plane just over the sticks, in tray coordinates
+  const pointerInTray = (ev) => {
+    const lift = -DRAWER.h / 2 + DRAWER.wall + 0.55;
+    trayPlane.set(new THREE.Vector3(0, 1, 0), -(drawer.position.y + lift));
+    if (!pointerRay(ev).ray.intersectPlane(trayPlane, trayHit)) return null;
+    return drawer.worldToLocal(trayHit.clone());
+  };
+  const trayReady = () => drawerState.open && drawer.visible && drawer.position.z === DRAWER.openZ;
+  const groupOf = (value) => drawerSticks.children.filter((m) => m.userData.value === value && m.userData.moved < 0);
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
+    if (!trayReady() || ev.button !== 0) return;
+    const hit = pointerRay(ev).intersectObjects(drawerSticks.children, false)[0];
+    const at = pointerInTray(ev);
+    press = { id: ev.pointerId, sx: ev.clientX, sy: ev.clientY, mesh: hit ? hit.object : null, from: at, mode: null, timer: null };
+    if (!hit) return;
+    renderer.domElement.setPointerCapture(ev.pointerId);
+    // held still: the whole group
+    press.timer = setTimeout(() => {
+      if (press && !press.mode && press.mesh.userData.moved < 0) {
+        press.mode = 'group';
+        press.group = groupOf(press.mesh.userData.value);
+        renderer.domElement.style.cursor = 'grabbing';
+      }
+    }, 380);
+  }, { signal });
+  renderer.domElement.addEventListener('pointermove', (ev) => {
+    if (!press || ev.pointerId !== press.id) {
+      if (trayReady()) renderer.domElement.style.cursor = pointerRay(ev).intersectObjects(drawerSticks.children, false).length ? 'grab' : '';
+      return;
+    }
+    if (!press.mesh) return;
+    if (!press.mode && Math.hypot(ev.clientX - press.sx, ev.clientY - press.sy) > 6) {
+      press.mode = 'stick';
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+    const at = pointerInTray(ev);
+    if (!press.mode || !at || !press.from) return;
+    const dx = at.x - press.from.x;
+    const dz = at.z - press.from.z;
+    // carried over the others, a little above them
+    for (const m of press.mode === 'group' ? press.group : [press.mesh]) {
+      const h = m.userData.home;
+      m.position.set(Math.max(-DRAWER.w / 2, Math.min(DRAWER.w / 2, h.x + dx)), h.y + 0.45, h.z + dz * 0.3);
+    }
+  }, { signal });
+  const release = (ev) => {
+    if (!press || (ev && ev.pointerId !== press.id)) return;
+    const p = press;
+    press = null;
+    clearTimeout(p.timer);
+    renderer.domElement.style.cursor = '';
+    if (!p.mesh) {
+      // a tap outside the sticks closes the drawer
+      if (ev && Math.hypot(ev.clientX - p.sx, ev.clientY - p.sy) < 8) closePoints();
+      return;
+    }
+    const { value, moved } = p.mesh.userData;
+    if (p.mode === 'group') {
+      const to = compartmentAt(arrangement.order, p.mesh.position.x);
+      arrangement.order = moveGroup(arrangement.order, value, to);
+      writeStickOrder(arrangement.order);
+    } else if (p.mode === 'stick') {
+      const { x, z } = snapToTray(arrangement.order, p.mesh.position.x, p.mesh.position.z);
+      const yaw = (Math.random() * 2 - 1) * 0.06;
+      // the last one put down lies on top
+      if (moved >= 0) arrangement.moved.splice(moved, 1);
+      arrangement.moved.push({ value, x, z, yaw });
+    }
+    if (drawerScore !== null) fillDrawer(drawerScore);
+  };
+  renderer.domElement.addEventListener('pointerup', release, { signal });
+  renderer.domElement.addEventListener('pointercancel', () => release(null), { signal });
   function closePoints() {
     if (!drawerState.open) return;
+    if (press) {
+      clearTimeout(press.timer);
+      press = null;
+    }
     drawerState = { open: false, goal: DRAWER.closedZ, shown: null };
     world.forceView(intro || win ? 'overview' : null);
     if (lastView && !intro && !win) update(...lastView);
@@ -1054,7 +1224,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
       }
       updateBlob(o);
     }
+    payments.tick(dt);
     for (const st of sticks.values()) {
+      // paid to the winner (payments.js): gone until the next hand
+      if (st.mesh.userData.taken) continue;
       if (st.wait > 0) {
         st.wait -= dt * 1000;
         continue;
@@ -1082,6 +1255,9 @@ export function createTable3D(container, { onPick, signal } = {}) {
   function update(v, ui) {
     me = v.seat;
     const rel = (abs) => (abs - me + 4) % 4;
+    // points paid or taken while the drawer is open: the same arrangement,
+    // the heaps give and take (sticks.js trayLayout)
+    if (drawerState.open && !press && trayScoreOf(v) !== drawerScore) fillDrawer(trayScoreOf(v));
     seatCharacters(v);
     showStreaks(v, rel);
     const desired = new Map();
@@ -1135,9 +1311,23 @@ export function createTable3D(container, { onPick, signal } = {}) {
     }
     v.players.forEach((p, abs) => {
       const r = rel(abs);
+      // the broadcast view: every hand open on the table, mine too
+      const open = broadcast && v.broadcast ? v.broadcast.hands[abs] : null;
+      if (open && !laid.has(abs)) {
+        const kind = climateOf(p.streak);
+        const lit = kind ? { aura: CLIMATES[kind].glow } : null;
+        const y = (H / 2) * Math.cos(OPEN_LEAN) + (D / 2) * Math.sin(OPEN_LEAN);
+        const z = fzo(95) + (H / 2) * Math.sin(OPEN_LEAN) - (D / 2) * Math.cos(OPEN_LEAN);
+        open.hand.forEach((id, i) => put(`t${id}`, id, place(r, rowX(12, i), y, z, 'open'), { ...lit, hand: true }));
+        if (open.drawn !== null) {
+          const key = `t${open.drawn}`;
+          put(key, open.drawn, place(r, rowX(12, open.hand.length) + 0.35, y, z, 'open'), { ...lit, hand: true }, 'draw', null, r);
+          if (drawSlot && drawSlot.seat === abs) spawns.set(key, drawFrom(v, drawSlot.slot, rel));
+        }
+      }
       // opponents' hands (the player's own hand is the screen overlay);
       // a winner's concealed hand is replaced by the face-up reveal
-      if (r !== 0 && !laid.has(abs)) {
+      if (r !== 0 && !open && !laid.has(abs)) {
         // on a streak the tiles themselves glow too (the wall hides the felt under a far hand)
         const kind = climateOf(p.streak);
         const lit = kind ? { aura: CLIMATES[kind].glow } : null;
@@ -1376,6 +1566,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // their players and are not counted here.
   let deposits = { key: '', meshes: [] };
   function syncDeposits(v) {
+    // a win takes the deposits: they stay on the table until it does (#98)
+    if (isAgari(v) && deposits.meshes.length && deposits.key.startsWith(`${resultKey(v)}:`)) return;
     const n = carriedDeposits(v);
     const key = n ? `${resultKey(v)}:${n}:${v.seat}:${isWashizu(v)}` : '';
     if (key === deposits.key) return;
@@ -1732,6 +1924,17 @@ export function createTable3D(container, { onPick, signal } = {}) {
     setBlood: visions.setStage,
     // lab: a hallucination now, on a tile of this type (any if null)
     hallucinate: visions.now,
+    // The broadcast view (#87; lab and video capture): the four players at
+    // the table, the player's own character too, and the four hands open
+    // (views carry them in v.broadcast); the hand overlay goes. Off: the
+    // game's own view, as always.
+    setBroadcast(on) {
+      broadcast = !!on;
+      world.showOverlays(!broadcast);
+      const done = characters.setWholeSelf(broadcast);
+      if (lastView && !intro) update(...lastView);
+      return done;
+    },
     // play with the characters sitting at the table, or without them
     setCharacters(on) {
       showPeople(!!on);

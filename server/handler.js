@@ -10,7 +10,7 @@ export const TIMING = {
   turnMs: Number(env.TURN_SECONDS || 5) * 1000,
   bankMs: Number(env.BANK_SECONDS || 10) * 1000,
   graceMs: 1200, // network/polling latency allowance
-  resultMs: Number(env.RESULT_SECONDS || 16) * 1000,
+  resultMs: Number(env.RESULT_SECONDS || 20) * 1000, // the reveal and the payment in sticks come first
   autoMs: 700, // forced riichi tsumogiri
   botMs: 600, // test-mode bot thinking time
   // pause at the start of every hand for the shuffle/wall/dice/deal animation
@@ -97,7 +97,7 @@ async function route(body, store, now, op, code, token, k) {
     return { status: 200, body: viewFor(room, token, seen, now) };
   }
 
-  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'tiles', 'blood', 'character'].includes(op)) {
+  if (['join', 'leave', 'act', 'abandon', 'team', 'ready', 'start', 'fill', 'request', 'timing', 'wall', 'tiles', 'blood', 'character', 'duelist'].includes(op)) {
     let error = null;
     const r = await withRoom(store, code, now, (room, seen) => {
       try {
@@ -219,6 +219,8 @@ function apply(room, op, token, body, now, seen) {
       }
       me.team = team;
       me.ready = false;
+      // a duelist who changes team is no longer the old team's duelist
+      delete me.duelist;
       return true;
     }
     if (op === 'ready') {
@@ -231,6 +233,23 @@ function apply(room, op, token, body, now, seen) {
     if (room.queue.length !== 4 || n !== 2) throw new Error('Hacen falta 2 jugadores en cada equipo');
     if (!room.queue.every((q) => q.ready)) throw new Error('Todos tienen que estar listos');
     startGame(room, now, seen);
+    return true;
+  }
+  if (op === 'duelist') {
+    // Blood duel by teams: a player asks to be the one who bleeds for their
+    // team. Whoever was the duelist stops being it, and both lose "ready".
+    if (room.status !== 'lobby') return false;
+    if (room.mode !== 'teams') throw new Error('Esta sala no es de modo por equipos');
+    if (bloodId(room.blood) === 'none') throw new Error('La sala no juega con sangre');
+    const me = room.queue.find((q) => q.token === token);
+    if (!me) throw new Error('No estás en esta sala');
+    if (!me.team) throw new Error('Elige un equipo primero');
+    const before = lobbyDuelist(room.queue, me.team);
+    if (before === me) return false;
+    for (const q of room.queue) if (q.team === me.team) delete q.duelist;
+    me.duelist = true;
+    me.ready = false;
+    if (before) before.ready = false;
     return true;
   }
   if (op === 'character') {
@@ -384,7 +403,10 @@ function startGame(room, now, seen) {
   players.forEach((p, i) => { p.character = cast[i]; });
   const blood = bloodId(room.blood);
   const duelists = blood !== 'none' && room.mode === 'teams' ? duelistsOf(players, room.queue) : null;
-  players.forEach((p, i) => { if (duelists) p.duelist = duelists.includes(i); });
+  players.forEach((p, i) => {
+    if (duelists) p.duelist = duelists.includes(i);
+    else delete p.duelist; // asked for in the waiting room, but no blood
+  });
   room.seats = players;
   room.requests = {};
   room.noRiichi = {};
@@ -402,11 +424,19 @@ function startGame(room, now, seen) {
 }
 
 // Blood duel by teams: one duelist per team (seats 0-1 and 2-3), the other
-// one is the support. The duelist is the team's person who came into the
-// room first; a team of bots sends its first bot.
+// one is the support. The duelist is whoever asked for it in the waiting
+// room (op 'duelist'); otherwise the team's person who came into the room
+// first. A team of bots sends its first bot.
+const duelistOrder = (p, queue) => (p.duelist ? -100 : 0) + (p.bot ? 100 : 0) + Math.max(0, queue.findIndex((q) => q.token === p.token));
 function duelistsOf(players, queue) {
-  const order = (p) => (p.bot ? 100 : 0) + Math.max(0, queue.findIndex((q) => q.token === p.token));
+  const order = (p) => duelistOrder(p, queue);
   return [[0, 1], [2, 3]].map((pair) => pair.reduce((a, b) => (order(players[b]) < order(players[a]) ? b : a)));
+}
+
+// The team's duelist as things stand in the waiting room (null: nobody in it).
+function lobbyDuelist(queue, team) {
+  const members = queue.filter((q) => q.team === team);
+  return members.reduce((a, b) => (!a || duelistOrder(b, queue) < duelistOrder(a, queue) ? b : a), null);
 }
 
 function afterChange(room, g, now) {
@@ -518,7 +548,16 @@ function viewFor(room, token, seen, now) {
   if (room.status === 'lobby') {
     return {
       ...base,
-      queue: room.queue.map((q, i) => ({ name: q.name, character: q.bot ? null : characterId(q.character), team: q.team, ready: !!q.ready, host: i === 0, you: q.token === token })),
+      queue: room.queue.map((q, i) => ({
+        name: q.name,
+        character: q.bot ? null : characterId(q.character),
+        team: q.team,
+        ready: !!q.ready,
+        host: i === 0,
+        you: q.token === token,
+        // blood duel by teams: who will bleed for each team
+        duelist: room.mode === 'teams' && bloodId(room.blood) !== 'none' && !!q.team && lobbyDuelist(room.queue, q.team) === q,
+      })),
       timing: timingId(room.timing),
       wall: wallId(room.wall),
       tiles: tilesId(room.tiles),
