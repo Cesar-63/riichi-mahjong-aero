@@ -343,9 +343,13 @@ export async function createCity(root, opts) {
     player.root.visible = here;
     blob.visible = here;
     if (here) {
-      player.place(state.x, state.z, state.facing);
-      player.walk(false, dt, time);
-      player.tint(tintAt(current.zone, state.x, 1.2, state.z));
+      // the shot may move them: getting up from the bed, a few steps
+      const p = at.player || { x: state.x, z: state.z, facing: state.facing, rise: null, moving: false };
+      player.place(p.x, p.z, p.facing);
+      if (p.rise !== null) player.perch(p.rise, at.shot.player.seat, time);
+      else player.walk(p.moving, dt, time);
+      player.tint(tintAt(current.zone, p.x, 1.2, p.z));
+      blob.position.set(p.x, 0, p.z);
     }
     if (current.sky) current.sky.position.set(camPos.x, 0, camPos.z);
     for (const n of current.npcs) if (n.sits) n.actor.sit(time, n.k);

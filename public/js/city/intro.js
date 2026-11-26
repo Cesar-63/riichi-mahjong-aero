@@ -4,6 +4,10 @@
 // zone with a camera that glides from one place to another, a caption, and
 // a cut through black to the next. The last one ends on the zone's own
 // camera ("to": "play"), so the walk starts where the scene leaves off.
+// A shot in the start zone may also move the player ("player"): sitting
+// on the edge of something, getting up and walking to the start.
+
+import { blocked } from './logic.js';
 
 export const INTRO_FADE = 0.4; // seconds of black at each cut, by default
 
@@ -11,6 +15,33 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const lerp3 = (a, b, k) => a.map((v, i) => lerp(v, b[i], k));
 // slow at both ends, as a camera on a dolly
 const ease = (u) => u * u * (3 - 2 * u);
+const clamp01 = (u) => Math.min(1, Math.max(0, u));
+const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+const turnTo = (from, to, k) => from + angleDiff(to, from) * k;
+
+// Where the player is lt seconds into a shot that moves them, as
+// { x, z, facing, rise, moving }: rise goes from 0 (sitting) to 1 (on their
+// feet) while they get up, and is null once they walk. The shot's "player":
+// at (where the feet are while sitting, and the way they look), seat (the
+// height of what they sit on and how far behind the feet the hips rest),
+// rise and walk ([start, end] in seconds of the shot). The walk ends on the
+// map's start, turning to its facing.
+export function introPlayer(shot, lt, map) {
+  const pl = shot.player;
+  if (!pl) return null;
+  const { at } = pl;
+  const [r0, r1] = pl.rise;
+  if (lt < r1) return { x: at.x, z: at.z, facing: at.facing, rise: ease(clamp01((lt - r0) / (r1 - r0))), moving: false };
+  const [w0, w1] = pl.walk;
+  const s = map.start;
+  const way = Math.atan2(s.x - at.x, s.z - at.z);
+  if (lt < w0) return { x: at.x, z: at.z, facing: at.facing, rise: null, moving: false };
+  if (lt < w1) {
+    const u = (lt - w0) / (w1 - w0);
+    return { x: at.x + (s.x - at.x) * u, z: at.z + (s.z - at.z) * u, facing: turnTo(at.facing, way, clamp01((lt - w0) / 0.25)), rise: null, moving: true };
+  }
+  return { x: s.x, z: s.z, facing: turnTo(way, s.facing || 0, ease(clamp01((lt - w1) / 0.5))), rise: null, moving: false };
+}
 
 // The camera a shot ends on: its own, or the zone's camera for "play"
 export function shotEnd(shot, map) {
@@ -57,6 +88,7 @@ export function introAt(intro, map, t) {
       camera: { position, target: lerp3(shot.from.target, end.target, k), fov: lerp(shot.from.fov, end.fov, k) },
       dark: Math.min(1, dark),
       caption,
+      player: introPlayer(shot, lt, map),
     };
   }
   return null;
@@ -85,6 +117,14 @@ export function introProblems(map) {
       if (zone.camera?.type !== 'fixed') out.push(`${what}: "play" solo sirve en una zona de cámara fija`);
     } else if (!isCam(s.to)) out.push(`${what}: falta la cámara final`);
     if (s.via && !(Array.isArray(s.via) && s.via.length === 3)) out.push(`${what}: "via" no es un punto`);
+    if (s.player) {
+      const p = s.player;
+      const times = [...(p.rise || []), ...(p.walk || [])];
+      if (s.zone !== map.start?.zone) out.push(`${what}: el jugador solo se mueve en la zona del punto de inicio`);
+      else if (!p.at || !p.seat || times.length !== 4 || times.some((t, j) => !(t >= (times[j - 1] ?? 0)) || t > s.duration)) {
+        out.push(`${what}: "player" necesita at, seat, rise y walk en orden y dentro de la toma`);
+      } else if (blocked(zone, p.at.x, p.at.z)) out.push(`${what}: el jugador no cabe en (${p.at.x}, ${p.at.z})`);
+    }
   });
   const last = shots[shots.length - 1];
   if (last.zone !== map.start?.zone || last.to !== 'play') out.push('la escena de entrada tiene que terminar en la cámara del punto de inicio ("to": "play")');

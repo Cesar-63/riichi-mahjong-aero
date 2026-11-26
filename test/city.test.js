@@ -319,3 +319,26 @@ test('a broken opening scene is reported', async () => {
   const problems = mapProblems(bad);
   assert.equal(problems.length, 4, problems.join('\n'));
 });
+
+test('in the last shot the player gets up from the bed and walks to the start', async () => {
+  const { introPlayer, introProblems } = await import('../public/js/city/intro.js');
+  const shot = map.intro.shots.at(-1);
+  const { at, rise, walk } = shot.player;
+  const sitting = introPlayer(shot, 0, map);
+  assert.deepEqual([sitting.x, sitting.z, sitting.rise, sitting.moving], [at.x, at.z, 0, false]);
+  assert.ok(introPlayer(shot, (rise[0] + rise[1]) / 2, map).rise > 0.2);
+  const up = introPlayer(shot, rise[1], map);
+  assert.equal(up.rise, null);
+  const going = introPlayer(shot, (walk[0] + walk[1]) / 2, map);
+  assert.ok(going.moving);
+  assert.ok(going.x > at.x && going.x < map.start.x);
+  const there = introPlayer(shot, shot.duration - 0.01, map);
+  assert.ok(Math.abs(there.x - map.start.x) < 1e-9 && Math.abs(there.z - map.start.z) < 1e-9);
+  assert.ok(Math.abs(Math.sin(there.facing - map.start.facing)) < 1e-6);
+  assert.ok(!there.moving);
+  // a player on the bed, or walking in a zone that is not the start, is reported
+  const bad = structuredClone(map);
+  bad.intro.shots.at(-1).player.at = { x: -1.4, z: -0.7, facing: 0 };
+  bad.intro.shots[0].player = shot.player;
+  assert.equal(introProblems(bad).length, 2);
+});

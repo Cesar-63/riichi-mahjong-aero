@@ -41,9 +41,15 @@
       },
       {
         "zone": "room",
-        "duration": 4.5,
-        "from": { "position": [0.3, 1.55, 1.5], "target": [0.2, 1.45, -0.6], "fov": 26 },
+        "duration": 7.5,
+        "from": { "position": [0.85, 1.05, 1.2], "target": [-0.75, 0.6, -0.75], "fov": 38 },
         "to": "play",
+        "player": {
+          "at": { "x": -0.45, "z": -0.75, "facing": 1.5708 },
+          "seat": { "height": 0.2, "back": 0.48 },
+          "rise": [2, 3.4],
+          "walk": [3.7, 4.5]
+        },
         "text": "{name}",
         "sub": "{about}"
       }

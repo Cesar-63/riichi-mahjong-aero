@@ -34,7 +34,11 @@ radianes: 0 mira a +z y crece hacia +x.
   chico; `{name}` y `{about}` se cambian por el nombre y la descripción del
   personaje). La última toma va en la zona de `start` con `"to": "play"`:
   termina en la cámara de juego de esa zona y no funde a negro. El jugador
-  solo se ve en la zona donde empieza.
+  solo se ve en la zona donde empieza. Esa toma puede moverlo con
+  `player`: `at` (dónde tiene los pies mientras está sentado y hacia dónde
+  mira), `seat` (`height`, la altura de lo que lo sostiene, y `back`, cuánto
+  detrás de los pies quedan las caderas), `rise` y `walk` (`[inicio, fin]`
+  en segundos de la toma): se levanta y camina hasta `start`.
 - `zones`: cada zona tiene:
   - `name`, `ambient` (la luz mínima: el color de las sombras), `fog`
     (color, `near`, `far`) y `subdiv` (tamaño de la cuadrícula de vértices,
