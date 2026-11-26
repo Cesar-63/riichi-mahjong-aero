@@ -258,6 +258,14 @@ $('#lab-playlog').addEventListener('change', (e) => {
 });
 $('#lab-broadcast').checked = store.get('lab.broadcast') === '1';
 $('#lab-playlog').checked = store.get('lab.playlog') !== '0';
+// the town's cat on the table (three3d/tablecat.js), with its lines from the map
+$('#lab-cat').addEventListener('click', async () => {
+  if (!table) return;
+  // a new run of the scene makes a new table, without the cat
+  $('#lab-loop').checked = false;
+  const [{ tableLines }, map] = await Promise.all([import('./city/cat.js'), fetch('city/map.json').then((r) => r.json())]);
+  table.visitCat({ lines: tableLines(map.cat), flyLine: '¡Miaaaau! ¡Haz kaaan…!', bubble: $('#lab-stage .cat-bubble') });
+});
 $('#lab-people').addEventListener('change', (e) => {
   store.set('lab.people', e.target.checked ? '1' : '');
   if (table) table.showCharacters(e.target.checked, castOf(scene));

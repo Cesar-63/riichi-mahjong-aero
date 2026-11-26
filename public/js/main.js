@@ -424,6 +424,7 @@ function ensure3d() {
         if (active) hideDoraBanner();
         $('#hud3d').classList.toggle('intro', active);
         state.ui.introActive = active;
+        if (!active) catMayVisit(t);
         if (state.view) renderPartner(state.view, state.ui);
       });
       // the top band folds away while the camera shows the whole table
@@ -1138,8 +1139,11 @@ function showCityScreen(walking) {
 }
 // the opening scene when arriving from the menu: on unless turned off
 const cityIntro = () => store.get('mj.cityIntro') !== '0';
+// the cat's meow (it talks either way): on unless turned off
+const catSound = () => store.get('mj.catSound') !== '0';
 function showCitySelect() {
   $('#city-intro-on').checked = cityIntro();
+  $('#city-meow-on').checked = catSound();
   const mine = cityMap.characters.includes(state.character) ? state.character : cityMap.characters[0];
   const cast = CHARACTERS.filter((c) => cityMap.characters.includes(c.id));
   setIfChanged($('#city-chars'), cast.map((c) =>
@@ -1179,7 +1183,7 @@ async function walkCity(resume) {
     const { createCity, loadMap } = await import('./city/city.js');
     cityMap ||= await loadMap();
     city = await createCity($('#city'), {
-      map: cityMap, character: showCitySelect(), resume, height: cityHeight(), intro: !resume && cityIntro(), onSit: sitDown, onExit: leaveCity,
+      map: cityMap, character: showCitySelect(), resume, height: cityHeight(), intro: !resume && cityIntro(), sound: catSound(), onSit: sitDown, onExit: leaveCity,
     });
     city.start();
     if (new URLSearchParams(location.search).has('debug')) window.__city = city;
@@ -1190,9 +1194,37 @@ async function walkCity(resume) {
     $('#city-loading').classList.add('hidden');
   }
 }
+// In a game started in town the cat may climb on the table once the deal
+// is over: at most once per game, half the time each hand until it does
+// (city/cat.js tableVisit). What was rolled stays in the browser, so a
+// reload does not roll a hand again.
+async function catMayVisit(t) {
+  const v = state.view;
+  if (!citySeat() || !v || v.phase === 'end') return;
+  try {
+    const cat = await import('./city/cat.js');
+    cityMap ||= await (await import('./city/city.js')).loadMap();
+    if (!cityMap.cat) return;
+    let memo = {};
+    try { memo = JSON.parse(store.get('mj.cityCat')) || {}; } catch { /* a new game */ }
+    const go = cat.tableVisit(memo, `${v.round}-${v.kyokuNum}-${v.honba}`);
+    store.set('mj.cityCat', JSON.stringify(memo));
+    if (!go) return;
+    setTimeout(() => {
+      if (!citySeat() || state.ui.introActive || t.catVisiting()) return;
+      t.visitCat({
+        lines: cat.tableLines(cityMap.cat),
+        flyLine: '¡Miaaaau! ¡Haz kaaan…!',
+        bubble: $('#hud3d .cat-bubble'),
+        sound: catSound(),
+      });
+    }, 1500 + Math.random() * 4000);
+  } catch { /* no cat today */ }
+}
 // Sitting at a table: a game against three bots, on the usual table
 async function sitDown(table, where) {
   store.set('mj.citySeat', JSON.stringify(where));
+  store.set('mj.cityCat', '');
   state.inCity = false;
   state.room = CITY_ROOM;
   store.set('mj.room', state.room);
@@ -1252,6 +1284,7 @@ $('#city-res').addEventListener('click', (e) => {
   store.set('mj.cityRes', b.dataset.res);
   showCitySelect();
 });
+$('#city-meow-on').addEventListener('change', (e) => store.set('mj.catSound', e.target.checked ? '1' : '0'));
 $('#city-intro-on').addEventListener('change', (e) => store.set('mj.cityIntro', e.target.checked ? '1' : '0'));
 $('#city-go').addEventListener('click', () => walkCity(null));
 $('#city-back').addEventListener('click', leaveCity);

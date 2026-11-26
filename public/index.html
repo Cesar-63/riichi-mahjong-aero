@@ -168,6 +168,7 @@
     <div id="stage3d"></div>
     <div id="hud3d">
       <div class="band" aria-hidden="true"></div>
+      <div class="cat-bubble" aria-live="polite"><p></p></div>
       <div class="portraits"></div>
       <div class="roundinfo paper-chit"></div>
       <div class="bottom-left">
@@ -223,6 +224,7 @@
       <span class="city-zone paper-chit"></span>
       <button class="city-exit paper plain" type="button">Salir al menú</button>
       <button class="city-prompt paper seal" type="button"></button>
+      <div class="city-bubble" aria-live="polite"><p></p></div>
       <p class="city-hint">Camina con WASD o las flechas (o arrastrando) · E para interactuar · Esc para salir</p>
     </div>
     <section id="city-select" class="board">
@@ -232,6 +234,7 @@
         <p class="chalk" id="city-char-about"></p>
         <span class="chalk" id="city-res-label">Resolución interna <small>(más baja, más liviano)</small></span>
         <div class="chalk-opts" id="city-res" role="group" aria-labelledby="city-res-label"></div>
+        <label class="check"><input type="checkbox" id="city-meow-on"><span class="chalk">Sonido del gato <small>(maúlla cada 2 minutos)</small></span></label>
         <label class="check"><input type="checkbox" id="city-intro-on"><span class="chalk">Ver la escena de entrada <small>(se salta con un clic o una tecla)</small></span></label>
       </div>
       <div class="board-foot">
