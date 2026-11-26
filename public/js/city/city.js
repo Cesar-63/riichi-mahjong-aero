@@ -252,12 +252,45 @@ export async function createCity(root, opts) {
     el.bubble.style.top = `${clamp(y, el.bubble.offsetHeight + 8, sr.height)}px`;
     el.bubble.style.setProperty('--tail', `${clamp(x - clamp(x, half + 8, sr.width - half - 8), -half + 16, half - 16)}px`);
   }
-  function catSays(text) {
+  function catSays(text, seconds = sayFor(text)) {
     if (!el.bubble) return;
     el.bubble.querySelector('p').textContent = text;
-    saying = sayFor(text);
+    saying = seconds;
     catModel.speak();
     if (opts.sound !== false) meow();
+  }
+  // Where a point of the scene lands on the page (the picture is small and
+  // stretched over the stage, keeping its shape)
+  const onPage = (v) => {
+    const canvas = renderer.domElement;
+    const r = canvas.getBoundingClientRect();
+    const k = Math.min(r.width / canvas.width, r.height / canvas.height);
+    const w = canvas.width * k;
+    const h = canvas.height * k;
+    v.project(camera);
+    return { x: r.left + (r.width - w) / 2 + ((v.x + 1) / 2) * w, y: r.top + (r.height - h) / 2 + ((1 - v.y) / 2) * h, behind: v.z > 1 };
+  };
+  // A click (or a touch) on the cat, with some room around it: it is small
+  // on a small picture
+  const probe = new THREE.Vector3();
+  function onCat(e) {
+    if (!cat || !catModel.root.visible) return false;
+    const mid = onPage(probe.set(cat.x, 0.25, cat.z));
+    const top = onPage(probe.set(cat.x, 0.6, cat.z));
+    if (mid.behind) return false;
+    const reach = Math.max(26, Math.hypot(top.x - mid.x, top.y - mid.y) * 1.2);
+    return Math.hypot(e.clientX - mid.x, e.clientY - mid.y) < reach;
+  }
+  // petting it: a meow, and a short one in the bubble unless it is telling
+  // something longer
+  function petCat() {
+    const pet = map.cat.pet?.length ? map.cat.pet : ['¡Miau!'];
+    if (saying > 0.5 && !pet.includes(el.bubble?.textContent)) {
+      catModel.speak();
+      if (opts.sound !== false) meow();
+      return;
+    }
+    catSays(pet[Math.floor(Math.random() * pet.length)], 1.8);
   }
 
   let current = null;
@@ -333,6 +366,7 @@ export async function createCity(root, opts) {
     if (opts.sound !== false) unlockAudio();
     if (intro && running) return endIntro();
     if (!running || stick.on) return;
+    if (onCat(e)) return petCat();
     Object.assign(stick, { on: true, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: 0, y: 0 });
   };
   const onMove = (e) => {
@@ -548,6 +582,8 @@ export async function createCity(root, opts) {
       state: () => state,
       cat: () => cat && { ...cat },
       catSays: (text) => cat && catSays(text || map.cat.lines[Math.floor(Math.random() * map.cat.lines.length)]),
+      // where the cat is on the page, to click it
+      catOnPage: () => cat && onPage(new THREE.Vector3(cat.x, 0.25, cat.z)),
       intro: () => intro && { ...intro },
       skipIntro: endIntro,
       steer(dir) { steer = dir; },

@@ -116,6 +116,7 @@ export function catProblems(map) {
   else if (blocked(zone, c.start.x, c.start.z, CAT_RADIUS)) out.push(`el gato empieza en un lugar bloqueado (${c.start.x}, ${c.start.z})`);
   if (!(c.every > 0)) out.push('el gato no tiene cada cuánto hablar');
   if (!Array.isArray(c.lines) || c.lines.length < 2 || c.lines.some((l) => typeof l !== 'string' || !l.trim())) out.push('al gato le faltan frases');
+  if (c.pet && (!Array.isArray(c.pet) || c.pet.some((l) => typeof l !== 'string' || !l.trim()))) out.push('los maullidos del gato no son texto');
   if (c.table && (!Array.isArray(c.table) || c.table.some((l) => typeof l !== 'string' || !l.trim()))) out.push('las frases del gato en la mesa no son texto');
   return out;
 }

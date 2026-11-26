@@ -14,7 +14,8 @@
   "cat": {
     "start": { "x": 0.9, "z": -0.1, "facing": -2.2 },
     "first": 15,
-    "every": 120,
+    "every": 60,
+    "pet": ["¡Miau!", "Miau.", "Mrrr… miau.", "¿Miau?", "Miau. (Kan.)", "Miaaau."],
     "lines": [
       "Kan… digo, miau.",
       "Mi tío Kuro nunca hacía kan. Decía que era «arriesgado». Lo enterramos con cuatro 東 en la mano.",

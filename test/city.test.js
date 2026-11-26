@@ -373,10 +373,11 @@ test('the cat follows the player through doors without walking through walls', a
   assert.ok(Math.hypot(cat.x - s.x, cat.z - s.z) > CAT_NEAR - 0.3);
 });
 
-test('the cat speaks every two minutes, all its lines before repeating one', async () => {
+test('the cat speaks every minute, all its lines before repeating one', async () => {
   const { createChatter, tickChatter, sayFor } = await import('../public/js/city/cat.js');
   const cfg = map.cat;
-  assert.equal(cfg.every, 120);
+  assert.equal(cfg.every, 60);
+  assert.ok(cfg.pet.length > 1);
   const ch = createChatter(cfg);
   const said = [];
   for (let t = 0; t < cfg.first + cfg.every * (cfg.lines.length - 1) + 1; t += 0.5) {
