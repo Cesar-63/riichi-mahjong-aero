@@ -32,7 +32,8 @@ radianes: 0 mira a +z y crece hacia +x.
 - `start`: zona y posición donde empieza el jugador.
 - `cat` (opcional): el gato. `start` (dónde está en la zona de inicio),
   `first` y `every` (a los cuántos segundos de llegar habla por primera
-  vez y cada cuánto después), `lines` (lo que dice en el pueblo) y `table`
+  vez y cada cuánto después), `lines` (lo que dice en el pueblo), `pet`
+  (lo que dice si le hacen clic) y `table`
   (lo que dice al subirse a la mesa, seguido a veces de una de `lines`).
 - `intro` (opcional): la escena de entrada, que se ve al llegar desde el
   menú. `fade`: segundos de negro en cada corte. `shots`: las tomas, en
