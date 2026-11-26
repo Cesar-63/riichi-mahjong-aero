@@ -1898,6 +1898,26 @@ body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { vis
   left: 0; right: 0; bottom: 10px; margin: 0; text-align: center; pointer-events: none;
   font-family: var(--f-hand); font-size: 17px; color: rgba(236, 232, 220, .7); text-shadow: 0 1px 3px #000;
 }
+/* the opening scene: black bars, a caption low on the picture and a way
+   out; the walking notes stay hidden until it ends */
+#city.intro .city-hud { display: none; }
+#city .city-intro { position: absolute; inset: 0; pointer-events: none; }
+#city .city-intro::before, #city .city-intro::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 11%; background: #000;
+  animation: city-bars .8s ease-out both;
+}
+#city .city-intro::before { top: 0; transform-origin: top; }
+#city .city-intro::after { bottom: 0; transform-origin: bottom; }
+@keyframes city-bars { from { transform: scaleY(0); } }
+#city .city-caption {
+  position: absolute; left: 16px; right: 16px; bottom: calc(11% + 18px); margin: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  opacity: 0; text-shadow: 0 2px 6px #000, 0 0 2px #000;
+}
+#city .city-caption .es { font-family: var(--f-title); font-size: clamp(20px, 3.4vw, 34px); color: #ece8dc; }
+#city .city-caption .jp { font-family: var(--f-mincho); font-size: clamp(13px, 1.8vw, 18px); letter-spacing: 2px; color: rgba(236, 232, 220, .8); }
+#city .city-caption .jp:empty { display: none; }
+#city .city-skip { position: absolute; right: 14px; bottom: max(6px, calc(5.5% - 18px)); pointer-events: auto; z-index: 1; }
 #city-select {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(520px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; margin: 0;

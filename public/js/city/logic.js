@@ -6,6 +6,8 @@
 // Ground coordinates are x and z in metres; `facing` is the angle of the
 // way someone looks, 0 towards +z and growing towards +x.
 
+import { introProblems } from './intro.js';
+
 export const PLAYER_RADIUS = 0.28;
 export const SPEED = 3; // metres per second
 export const TURN = 12; // how fast the body turns to where it walks
@@ -171,5 +173,6 @@ export function mapProblems(map) {
     for (const d of zone.doors || []) free(d.to.zone, d.to, `puerta "${d.id}" de "${name}"`);
     for (const t of zone.tables || []) free(name, t.seat, `asiento de la mesa "${t.id}"`);
   }
+  out.push(...introProblems(map));
   return out;
 }

@@ -135,6 +135,14 @@ mezclan kanji y español. Es el primer corte del mundo navegable de
 2. **Elige tu personaje** (Shiro, Momo o Kaito) y la **resolución interna**
    (272p, 360p o 540p; más baja, más liviano. Queda guardada en el
    navegador, y `?res=360` en la dirección la fuerza). **Entrar al pueblo**.
+   - **Escena de entrada:** al llegar desde el menú, unos 23 segundos de
+     cámara con franjas de cine recorren el callejón, bajan la vista hacia
+     la tabla 麻雀荘, muestran la mesa del jansou donde falta uno y terminan
+     en tu habitación: tu personaje está sentado al borde de la cama, se
+     pone de pie y da unos pasos hasta donde empiezas a caminar. Se
+     salta con **Saltar**, un clic o Esc, Enter, Espacio o E. Se puede
+     apagar en la hoja del personaje (**Ver la escena de entrada**; queda
+     guardado en el navegador). Al volver de una partida no se repite.
 3. Empiezas en **tu habitación**. La puerta de la derecha da al
    **callejón**; hacia el fondo, junto a la tabla roja 麻雀荘 con la flecha
    hacia abajo, una escalera baja al **jansou**, que está en un sótano. Las

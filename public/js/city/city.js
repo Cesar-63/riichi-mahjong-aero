@@ -10,6 +10,8 @@ import { createState, restore, snapshot, step, promptFor, fadeAlpha } from './lo
 import { buildZone, bakeAt, tintAt, hexToRgb } from './bake.js';
 import { texture, spotTexture, signAtlas } from './textures.js';
 import { loadActor } from './actors.js';
+import { introAt, captionText, INTRO_FADE } from './intro.js';
+import { CHARACTERS } from '../shared/characters.js';
 
 const raw = (hex) => new THREE.Color().setRGB(...hexToRgb(hex)); // colours as written, no gamma
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -46,8 +48,9 @@ function quad(out, c, a, b, color, uv = WHOLE) {
 const arrays = () => ({ positions: [], uvs: [], colors: [], indices: [] });
 
 // root: the element of the town's screen (index.html #city). opts: map,
-// character or resume (a snapshot), height (internal resolution), onSit
-// (table, snapshot) and onExit.
+// character or resume (a snapshot), height (internal resolution), intro
+// (play the opening scene of map.intro first), onSit (table, snapshot) and
+// onExit.
 export async function createCity(root, opts) {
   const { map } = opts;
   const stage = root.querySelector('.city-stage');
@@ -55,6 +58,9 @@ export async function createCity(root, opts) {
     zone: root.querySelector('.city-zone'),
     prompt: root.querySelector('.city-prompt'),
     fade: root.querySelector('.city-fade'),
+    intro: root.querySelector('.city-intro'),
+    caption: root.querySelector('.city-caption'),
+    skip: root.querySelector('.city-skip'),
   };
   // lettering for the signs: the page's own brush font, if it arrives in time
   if (document.fonts) {
@@ -198,13 +204,17 @@ export async function createCity(root, opts) {
   let camYaw = 0;
   const camPos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
-  function enterZone(camFacing) {
+  function showZone(name) {
+    if (current === zones[name]) return;
     if (current) scene.remove(current.group);
-    current = zones[state.zone];
+    current = zones[name];
     scene.add(current.group);
     scene.fog = current.fog;
     scene.background = current.background;
     el.zone.textContent = current.zone.name;
+  }
+  function enterZone(camFacing) {
+    showZone(state.zone);
     camYaw = camFacing ?? state.facing;
     placeCamera(1);
   }
@@ -238,8 +248,17 @@ export async function createCity(root, opts) {
   let interact = false;
   let running = false;
   const MOVE = { KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
+  const SKIP = ['Escape', 'Enter', 'Space', 'KeyE'];
   const onKeyDown = (e) => {
     if (!running || e.target.closest('input, textarea, dialog')) return;
+    if (intro) {
+      // the opening scene: these keys skip it, the rest do nothing
+      if (SKIP.includes(e.code) && !e.repeat) {
+        e.preventDefault();
+        endIntro();
+      }
+      return;
+    }
     if (MOVE[e.code]) {
       keys.add(e.code);
       e.preventDefault();
@@ -250,6 +269,7 @@ export async function createCity(root, opts) {
   const onBlur = () => keys.clear();
   // touch (or mouse): drag anywhere on the picture to walk that way
   const onDown = (e) => {
+    if (intro && running) return endIntro();
     if (!running || stick.on) return;
     Object.assign(stick, { on: true, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: 0, y: 0 });
   };
@@ -272,6 +292,8 @@ export async function createCity(root, opts) {
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
   el.prompt.addEventListener('click', onPrompt);
+  const onSkip = () => { if (intro) endIntro(); };
+  el.skip?.addEventListener('click', onSkip);
 
   // --------------------------------------------------------------- loop
   let time = 0;
@@ -279,8 +301,76 @@ export async function createCity(root, opts) {
   let raf = 0;
   let promptText = null;
   let steer = null; // debug: a direction on the ground to walk in, whatever the keys say
+
+  // ------------------------------------------------------ opening scene
+  // While it plays nobody walks: the camera follows the shots of
+  // map.intro, and the player shows only in the zone where they start.
+  let intro = opts.intro && map.intro?.shots?.length ? { t: 0 } : null;
+  let unfade = 0; // after skipping: seconds left of the fade back in
+  const cast = CHARACTERS.find((c) => c.id === state.character);
+  let captionShot = -1;
+  function showIntro(on) {
+    root.classList.toggle('intro', on);
+    el.intro?.classList.toggle('hidden', !on);
+  }
+  function endIntro() {
+    if (!intro) return;
+    intro = null;
+    showIntro(false);
+    enterZone();
+    unfade = INTRO_FADE;
+  }
+  function introFrame(dt) {
+    intro.t += dt;
+    const at = introAt(map.intro, map, intro.t);
+    if (!at) {
+      intro = null;
+      showIntro(false);
+      enterZone();
+      return false;
+    }
+    showZone(at.shot.zone);
+    const c = at.camera;
+    camPos.set(...c.position);
+    camTarget.set(...c.target);
+    camera.position.copy(camPos);
+    camera.lookAt(camTarget);
+    if (camera.fov !== c.fov) {
+      camera.fov = c.fov;
+      camera.updateProjectionMatrix();
+    }
+    const here = at.shot.zone === state.zone;
+    player.root.visible = here;
+    blob.visible = here;
+    if (here) {
+      // the shot may move them: getting up from the bed, a few steps
+      const p = at.player || { x: state.x, z: state.z, facing: state.facing, rise: null, moving: false };
+      player.place(p.x, p.z, p.facing);
+      if (p.rise !== null) player.perch(p.rise, at.shot.player.seat, time);
+      else player.walk(p.moving, dt, time);
+      player.tint(tintAt(current.zone, p.x, 1.2, p.z));
+      blob.position.set(p.x, 0, p.z);
+    }
+    if (current.sky) current.sky.position.set(camPos.x, 0, camPos.z);
+    for (const n of current.npcs) if (n.sits) n.actor.sit(time, n.k);
+    if (el.caption) {
+      if (captionShot !== at.index) {
+        captionShot = at.index;
+        el.caption.querySelector('.es').textContent = captionText(at.shot.text, cast);
+        el.caption.querySelector('.jp').textContent = captionText(at.shot.sub, cast);
+      }
+      el.caption.style.opacity = at.caption;
+    }
+    el.fade.style.opacity = at.dark;
+    renderer.render(scene, camera);
+    return true;
+  }
+
   function frame(dt) {
     time += dt;
+    if (intro && introFrame(dt)) return;
+    player.root.visible = true;
+    blob.visible = true;
     // which way "forward" is on the ground, as the camera sees it
     let ix = stick.x;
     let iy = stick.y;
@@ -326,7 +416,8 @@ export async function createCity(root, opts) {
       el.prompt.textContent = text || '';
       el.prompt.classList.toggle('show', !!text);
     }
-    el.fade.style.opacity = fadeAlpha(state);
+    unfade = Math.max(0, unfade - dt);
+    el.fade.style.opacity = Math.max(fadeAlpha(state), unfade / INTRO_FADE);
     renderer.render(scene, camera);
   }
   function loop(now) {
@@ -352,6 +443,7 @@ export async function createCity(root, opts) {
   }
 
   enterZone();
+  showIntro(!!intro);
   resize();
   frame(0);
 
@@ -362,6 +454,10 @@ export async function createCity(root, opts) {
     snapshot: () => snapshot(state),
     // back in town where a snapshot says (after a game of mahjong)
     resumeAt(snap) {
+      if (intro) {
+        intro = null;
+        showIntro(false);
+      }
       state = restore(map, snap || snapshot(state));
       enterZone();
       start();
@@ -376,6 +472,8 @@ export async function createCity(root, opts) {
     debug: {
       frame,
       state: () => state,
+      intro: () => intro && { ...intro },
+      skipIntro: endIntro,
       steer(dir) { steer = dir; },
       info: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, lights: scene.children.filter((o) => o.isLight).length, size: renderer.getSize(new THREE.Vector2()).toArray() }),
     },
@@ -390,6 +488,8 @@ export async function createCity(root, opts) {
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
       el.prompt.removeEventListener('click', onPrompt);
+      el.skip?.removeEventListener('click', onSkip);
+      showIntro(false);
       for (const z of Object.values(zones)) {
         z.group.traverse((o) => o.geometry && o.geometry.dispose());
         z.npcs.forEach((n) => n.actor.dispose());
