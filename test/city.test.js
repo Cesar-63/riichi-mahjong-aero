@@ -342,3 +342,76 @@ test('in the last shot the player gets up from the bed and walks to the start', 
   bad.intro.shots[0].player = shot.player;
   assert.equal(introProblems(bad).length, 2);
 });
+
+test('the cat follows the player through doors without walking through walls', async () => {
+  const { createCat, followCat, CAT_RADIUS, CAT_NEAR, CAT_FAR } = await import('../public/js/city/cat.js');
+  const s = createState(map, 'shiro');
+  const cat = createCat(map, s);
+  assert.equal(cat.zone, 'room');
+  assert.ok(!blocked(map.zones.room, cat.x, cat.z, CAT_RADIUS));
+  // the player walks out to the street and down it; the cat keeps up
+  const ev = walkTo(s, door('room', 'salir').x, door('room', 'salir').z, 'zone');
+  assert.ok(ev);
+  for (let i = 0; i < 60; i++) {
+    step(s, map, still, DT);
+    followCat(cat, s, map, DT);
+  }
+  assert.equal(cat.zone, 'street');
+  for (let i = 0; i < 150; i++) {
+    step(s, map, { x: 1, z: 0 }, DT);
+    followCat(cat, s, map, DT);
+    assert.ok(!blocked(map.zones.street, cat.x, cat.z, CAT_RADIUS), `(${cat.x}, ${cat.z})`);
+    assert.ok(Math.hypot(cat.x - s.x, cat.z - s.z) < CAT_FAR + 1.2);
+  }
+  // the player stops: so does the cat, close by, looking at them
+  for (let i = 0; i < 90; i++) {
+    step(s, map, still, DT);
+    followCat(cat, s, map, DT);
+  }
+  assert.ok(!cat.moving);
+  assert.ok(Math.hypot(cat.x - s.x, cat.z - s.z) < CAT_FAR + 0.01);
+  assert.ok(Math.hypot(cat.x - s.x, cat.z - s.z) > CAT_NEAR - 0.3);
+});
+
+test('the cat speaks every two minutes, all its lines before repeating one', async () => {
+  const { createChatter, tickChatter, sayFor } = await import('../public/js/city/cat.js');
+  const cfg = map.cat;
+  assert.equal(cfg.every, 120);
+  const ch = createChatter(cfg);
+  const said = [];
+  for (let t = 0; t < cfg.first + cfg.every * (cfg.lines.length - 1) + 1; t += 0.5) {
+    const line = tickChatter(ch, cfg, 0.5);
+    if (line) said.push([t, line]);
+  }
+  assert.equal(said.length, cfg.lines.length);
+  assert.ok(Math.abs(said[0][0] - cfg.first) <= 0.5);
+  assert.ok(Math.abs(said[1][0] - said[0][0] - cfg.every) <= 0.5);
+  assert.equal(new Set(said.map(([, l]) => l)).size, cfg.lines.length);
+  // the next round starts with another line than the last one
+  const next = tickChatter(ch, cfg, cfg.every);
+  assert.notEqual(next, said.at(-1)[1]);
+  assert.ok(cfg.lines.some((l) => /kan/i.test(l) && /miau/i.test(l)));
+  assert.ok(sayFor('Miau.') >= 4 && sayFor(cfg.lines[1]) > sayFor('Miau.'));
+});
+
+test('on the table the cat shows up at most once a game, half the hands', async () => {
+  const { tableVisit, tableLines, catProblems } = await import('../public/js/city/cat.js');
+  const memo = {};
+  assert.equal(tableVisit(memo, '0-0-0', () => 0.7), false); // not this hand
+  assert.equal(tableVisit(memo, '0-0-0', () => 0.1), false); // the same hand is not rolled again
+  assert.equal(tableVisit(memo, '0-1-0', () => 0.1), true);
+  assert.equal(tableVisit(memo, '0-2-0', () => 0), false); // once a game
+  // over many games, about half come on the first hand
+  let first = 0;
+  for (let i = 0; i < 2000; i++) if (tableVisit({}, 'a')) first++;
+  assert.ok(first > 900 && first < 1100, `${first}`);
+  const lines = tableLines(map.cat, () => 0);
+  assert.equal(lines.length, 2);
+  assert.ok(map.cat.table.includes(lines[0]) && map.cat.lines.includes(lines[1]));
+  assert.equal(tableLines(map.cat, () => 0.9).length, 1);
+  assert.deepEqual(catProblems(map), []);
+  const bad = structuredClone(map);
+  bad.cat.start = { x: -1.4, z: -0.7 }; // on the bed
+  bad.cat.every = 0;
+  assert.equal(catProblems(bad).length, 2);
+});

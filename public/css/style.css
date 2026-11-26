@@ -1918,6 +1918,22 @@ body:has(#modal.result) #hud3d :is(.bottom-left, .actions, .ask, .autobar) { vis
 #city .city-caption .jp { font-family: var(--f-mincho); font-size: clamp(13px, 1.8vw, 18px); letter-spacing: 2px; color: rgba(236, 232, 220, .8); }
 #city .city-caption .jp:empty { display: none; }
 #city .city-skip { position: absolute; right: 14px; bottom: max(6px, calc(5.5% - 18px)); pointer-events: auto; z-index: 1; }
+/* the cat's speech bubble: a scrap of paper over its head, its tail
+   pointing down at the cat (--tail: how far off centre) */
+#city .city-hud > .city-bubble, .cat-bubble {
+  transform: translate(-50%, calc(-100% - 14px)) scale(.9); transform-origin: 50% 100%;
+  width: max-content; max-width: min(300px, calc(100vw - 32px)); padding: 9px 14px;
+  font-family: var(--f-hand); font-size: 18px; line-height: 1.25; color: var(--ink);
+  background: var(--paper-hi); border-radius: 12px; box-shadow: 0 3px 10px rgba(0, 0, 0, .55);
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s, transform .25s, visibility 0s .25s;
+}
+#city .city-hud > .city-bubble.show, .cat-bubble.show { opacity: 1; visibility: visible; transform: translate(-50%, calc(-100% - 14px)); transition: opacity .25s, transform .25s; }
+#city .city-bubble p, .cat-bubble p { margin: 0; }
+.cat-bubble { position: fixed; z-index: 5; }
+#city .city-bubble::after, .cat-bubble::after {
+  content: ""; position: absolute; top: 100%; left: calc(50% + var(--tail, 0px)); translate: -50% 0;
+  border: 10px solid transparent; border-top-color: var(--paper-hi); border-bottom: 0;
+}
 #city-select {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(520px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; margin: 0;

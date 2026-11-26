@@ -214,6 +214,8 @@ export function createWorld(container, { signal } = {}) {
   return {
     THREE, scene, camera, renderer, chairs: lights.chairs, onTick: (f) => tickers.push(f), fit, RoundedBoxGeometry, signal,
     setView: (m) => { mode = m; announce(); },
+    // where the camera is heading: { pos, target, fov } of the view in use
+    viewTarget: () => { const v = current(); return { pos: v.pos, target: v.target, fov: v.fov || FOV }; },
     setSeated: (on) => {
       if (seated === !!on) return;
       seated = !!on;

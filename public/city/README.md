@@ -9,10 +9,14 @@ El modo Ciudad separa **datos**, **lógica** y **dibujo**:
 | Geometría y horneado de la luz en los vértices | `public/js/city/bake.js` |
 | Texturas provisorias, dibujadas por código | `public/js/city/textures.js` |
 | Personajes (los modelos de `public/models/personajes/`) | `public/js/city/actors.js` |
+| El gato: seguir al jugador, cuándo habla y cuándo sube a la mesa | `public/js/city/cat.js` |
+| El gato, dibujado con cajas | `public/js/city/catmodel.js` |
+| El miau, hecho con Web Audio | `public/js/city/meow.js` |
+| El gato en la mesa de mahjong | `public/js/three3d/tablecat.js` |
 | La escena de entrada: cámara de cada toma, fundidos y textos | `public/js/city/intro.js` |
 | La escena, las cámaras y los controles | `public/js/city/city.js` |
 
-`logic.js`, `intro.js` y `bake.js` no usan three.js ni el navegador: `test/city.test.js`
+`logic.js`, `intro.js`, `cat.js` y `bake.js` no usan three.js ni el navegador: `test/city.test.js`
 los prueba en node, y revisa el mapa con `mapProblems` (puertas que llevan
 a un lugar donde se puede estar de pie, asientos libres, etc.).
 
@@ -26,6 +30,10 @@ radianes: 0 mira a +z y crece hacia +x.
 - `render`: la resolución interna por defecto (`height`, en líneas) y las
   que ofrece el menú (`options`).
 - `start`: zona y posición donde empieza el jugador.
+- `cat` (opcional): el gato. `start` (dónde está en la zona de inicio),
+  `first` y `every` (a los cuántos segundos de llegar habla por primera
+  vez y cada cuánto después), `lines` (lo que dice en el pueblo) y `table`
+  (lo que dice al subirse a la mesa, seguido a veces de una de `lines`).
 - `intro` (opcional): la escena de entrada, que se ve al llegar desde el
   menú. `fade`: segundos de negro en cada corte. `shots`: las tomas, en
   orden; cada una tiene `zone`, `duration` (segundos), `from` y `to` (cada

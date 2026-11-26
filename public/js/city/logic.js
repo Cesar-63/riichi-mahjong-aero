@@ -7,6 +7,7 @@
 // way someone looks, 0 towards +z and growing towards +x.
 
 import { introProblems } from './intro.js';
+import { catProblems } from './cat.js';
 
 export const PLAYER_RADIUS = 0.28;
 export const SPEED = 3; // metres per second
@@ -174,5 +175,6 @@ export function mapProblems(map) {
     for (const t of zone.tables || []) free(name, t.seat, `asiento de la mesa "${t.id}"`);
   }
   out.push(...introProblems(map));
+  out.push(...catProblems(map));
   return out;
 }

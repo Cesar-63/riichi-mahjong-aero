@@ -11,6 +11,7 @@ import { createShuffle } from './shuffle.js';
 import { createHand3D } from './hand3d.js';
 import { createHallucinations } from './hallucinate.js';
 import { createBloodMachines } from './bloodmachine.js';
+import { createTableCat } from './tablecat.js';
 import { TUNING } from './tuning.js';
 import { createPayments, loadPhysics } from './payments.js';
 import { CLIMATES } from './climate.js';
@@ -55,6 +56,8 @@ export function createTable3D(container, { onPick, signal } = {}) {
   // the players at the table (characters.js); a view without characters
   // (the lab's scenes) gets the fallback cast, if there is one
   const characters = createCharacters(world);
+  // the town's cat, in games started in Ciudad (tablecat.js)
+  const cat = createTableCat(world, { signal });
   let fallbackCast = null;
   // playing with characters is optional (setCharacters): without them the
   // table is as it always was, empty chairs and the classic player view
@@ -1922,6 +1925,10 @@ export function createTable3D(container, { onPick, signal } = {}) {
     // blood duel: how far gone the player is (shared/blood.js bloodStage);
     // from 2 the tiles hallucinate
     setBlood: visions.setStage,
+    // Ciudad: the black cat climbs on the table and says { lines } in the
+    // speech bubble { bubble } (a click sends it flying)
+    visitCat: cat.visit,
+    catVisiting: () => cat.visiting,
     // lab: a hallucination now, on a tile of this type (any if null)
     hallucinate: visions.now,
     // The broadcast view (#87; lab and video capture): the four players at

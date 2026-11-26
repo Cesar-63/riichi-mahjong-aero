@@ -154,6 +154,23 @@ mezclan kanji y español. Es el primer corte del mundo navegable de
 5. Al terminar, **Volver al pueblo** te deja en el jansou, donde estabas.
    Abandonar la partida (☰) también.
 
+**El gato.** Un gato negro, casi cúbico, te espera en la habitación y te
+sigue a todas partes: cruza las puertas contigo y se sienta a mirarte cuando
+te detienes. Cada 2 minutos (el primero, a los 15 segundos de llegar)
+maúlla y dice algo en una burbuja: anécdotas de por qué hay que hacer kan
+(su tío Kuro, que murió por no hacerlo; la vida, de sus nueve, que perdió
+por no decir kan), recordatorios de hacer kan o un simple "kan… digo,
+miau". No repite una frase hasta haberlas dicho todas. El miau se hace en el
+momento, sin archivos de sonido, y se puede apagar en la hoja del personaje
+(**Sonido del gato**; queda guardado en el navegador).
+
+En las partidas que empiezan en la ciudad, el gato puede subirse a la mesa:
+al terminar el reparto de cada mano hay un 50 % de probabilidad, y aparece
+**como mucho una vez por partida**. Salta desde el piso, se sienta en un
+rincón del paño que se vea entero (en la vista normal, entre los descartes
+y dentro de los muros), te dice que hagas kan o te cuenta otra anécdota y
+se baja solo. **Si le haces clic, sale volando** de la mesa.
+
 **Controles:** WASD o las flechas para caminar (el movimiento es relativo a
 la cámara), **E** o Enter para interactuar, **Esc** para volver al menú. Con
 pantalla táctil o mouse: arrastrar sobre la imagen para caminar y tocar el

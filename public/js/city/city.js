@@ -12,6 +12,9 @@ import { texture, spotTexture, signAtlas } from './textures.js';
 import { loadActor } from './actors.js';
 import { introAt, captionText, INTRO_FADE } from './intro.js';
 import { CHARACTERS } from '../shared/characters.js';
+import { createCat, followCat, createChatter, tickChatter, sayFor } from './cat.js';
+import { createCatModel } from './catmodel.js';
+import { meow, unlockAudio } from './meow.js';
 
 const raw = (hex) => new THREE.Color().setRGB(...hexToRgb(hex)); // colours as written, no gamma
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -49,8 +52,8 @@ const arrays = () => ({ positions: [], uvs: [], colors: [], indices: [] });
 
 // root: the element of the town's screen (index.html #city). opts: map,
 // character or resume (a snapshot), height (internal resolution), intro
-// (play the opening scene of map.intro first), onSit (table, snapshot) and
-// onExit.
+// (play the opening scene of map.intro first), sound (the cat may meow
+// out loud), onSit (table, snapshot) and onExit.
 export async function createCity(root, opts) {
   const { map } = opts;
   const stage = root.querySelector('.city-stage');
@@ -61,6 +64,7 @@ export async function createCity(root, opts) {
     intro: root.querySelector('.city-intro'),
     caption: root.querySelector('.city-caption'),
     skip: root.querySelector('.city-skip'),
+    bubble: root.querySelector('.city-bubble'),
   };
   // lettering for the signs: the page's own brush font, if it arrives in time
   if (document.fonts) {
@@ -200,6 +204,62 @@ export async function createCity(root, opts) {
   blob.renderOrder = 1;
   scene.add(blob);
 
+  // the cat: it keeps the player company and talks about kan
+  const cat = map.cat ? createCat(map, state) : null;
+  const catModel = cat ? createCatModel() : null;
+  const chatter = cat ? createChatter(map.cat) : null;
+  let saying = 0; // seconds left of the cat's speech bubble
+  let catBlob = null;
+  if (cat) {
+    scene.add(catModel.root);
+    catBlob = new THREE.Mesh(geometry((() => { const a = arrays(); shadowQuad(a, 0, 0, 0.3); return a; })()), shadowMat);
+    catBlob.renderOrder = 1;
+    scene.add(catBlob);
+  }
+  // draws the cat where it is, if it is in the zone on screen
+  function drawCat(dt, moving) {
+    if (!cat) return;
+    const here = zones[cat.zone] === current;
+    catModel.root.visible = here;
+    catBlob.visible = here;
+    if (!here) return;
+    catModel.place(cat.x, 0, cat.z, cat.facing);
+    catModel.pose(moving, cat.idle > 0.6, dt, time);
+    catModel.tint(tintAt(current.zone, cat.x, 0.4, cat.z));
+    catBlob.position.set(cat.x, 0, cat.z);
+  }
+  // the speech bubble, over the cat's head on the picture
+  const head = new THREE.Vector3();
+  function placeBubble(dt) {
+    if (!el.bubble) return;
+    saying = Math.max(0, saying - dt);
+    const show = saying > 0 && cat && zones[cat.zone] === current && !intro;
+    el.bubble.classList.toggle('show', show);
+    if (!show) return;
+    head.set(cat.x, 0.72, cat.z).project(camera);
+    const canvas = renderer.domElement;
+    const r = canvas.getBoundingClientRect();
+    const k = Math.min(r.width / canvas.width, r.height / canvas.height); // object-fit: contain
+    const w = canvas.width * k;
+    const h = canvas.height * k;
+    const sr = root.getBoundingClientRect();
+    const x = r.left - sr.left + (r.width - w) / 2 + ((head.x + 1) / 2) * w;
+    const y = r.top - sr.top + (r.height - h) / 2 + ((1 - head.y) / 2) * h;
+    const behind = head.z > 1;
+    el.bubble.style.visibility = behind ? 'hidden' : '';
+    const half = el.bubble.offsetWidth / 2;
+    el.bubble.style.left = `${clamp(x, half + 8, sr.width - half - 8)}px`;
+    el.bubble.style.top = `${clamp(y, el.bubble.offsetHeight + 8, sr.height)}px`;
+    el.bubble.style.setProperty('--tail', `${clamp(x - clamp(x, half + 8, sr.width - half - 8), -half + 16, half - 16)}px`);
+  }
+  function catSays(text) {
+    if (!el.bubble) return;
+    el.bubble.querySelector('p').textContent = text;
+    saying = sayFor(text);
+    catModel.speak();
+    if (opts.sound !== false) meow();
+  }
+
   let current = null;
   let camYaw = 0;
   const camPos = new THREE.Vector3();
@@ -251,6 +311,7 @@ export async function createCity(root, opts) {
   const SKIP = ['Escape', 'Enter', 'Space', 'KeyE'];
   const onKeyDown = (e) => {
     if (!running || e.target.closest('input, textarea, dialog')) return;
+    if (opts.sound !== false) unlockAudio();
     if (intro) {
       // the opening scene: these keys skip it, the rest do nothing
       if (SKIP.includes(e.code) && !e.repeat) {
@@ -269,6 +330,7 @@ export async function createCity(root, opts) {
   const onBlur = () => keys.clear();
   // touch (or mouse): drag anywhere on the picture to walk that way
   const onDown = (e) => {
+    if (opts.sound !== false) unlockAudio();
     if (intro && running) return endIntro();
     if (!running || stick.on) return;
     Object.assign(stick, { on: true, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: 0, y: 0 });
@@ -353,6 +415,8 @@ export async function createCity(root, opts) {
     }
     if (current.sky) current.sky.position.set(camPos.x, 0, camPos.z);
     for (const n of current.npcs) if (n.sits) n.actor.sit(time, n.k);
+    if (cat) cat.idle += dt;
+    drawCat(dt, false);
     if (el.caption) {
       if (captionShot !== at.index) {
         captionShot = at.index;
@@ -408,6 +472,16 @@ export async function createCity(root, opts) {
     player.tint(tintAt(current.zone, state.x, 1.2, state.z));
     if (current.sky) current.sky.position.set(camPos.x, 0, camPos.z);
     blob.position.set(state.x, 0, state.z);
+    if (cat) {
+      followCat(cat, state, map, dt);
+      drawCat(dt, cat.moving);
+      // every so often it has something to say (not while the screen is dark)
+      if (!state.fade && cat.zone === state.zone) {
+        const line = tickChatter(chatter, map.cat, dt);
+        if (line) catSays(line);
+      }
+    }
+    placeBubble(dt);
     for (const n of current.npcs) if (n.sits) n.actor.sit(time, n.k);
     const p = promptFor(state, map);
     const text = p ? p.text : null;
@@ -472,6 +546,8 @@ export async function createCity(root, opts) {
     debug: {
       frame,
       state: () => state,
+      cat: () => cat && { ...cat },
+      catSays: (text) => cat && catSays(text || map.cat.lines[Math.floor(Math.random() * map.cat.lines.length)]),
       intro: () => intro && { ...intro },
       skipIntro: endIntro,
       steer(dir) { steer = dir; },
@@ -497,6 +573,11 @@ export async function createCity(root, opts) {
       }
       player.dispose();
       blob.geometry.dispose();
+      if (cat) {
+        catModel.dispose();
+        catBlob.geometry.dispose();
+      }
+      el.bubble?.classList.remove('show');
       renderer.dispose();
       renderer.domElement.remove();
     },
