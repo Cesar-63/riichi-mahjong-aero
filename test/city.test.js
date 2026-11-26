@@ -377,7 +377,6 @@ test('the cat speaks every minute, all its lines before repeating one', async ()
   const { createChatter, tickChatter, sayFor } = await import('../public/js/city/cat.js');
   const cfg = map.cat;
   assert.equal(cfg.every, 60);
-  assert.ok(cfg.pet.length > 1);
   const ch = createChatter(cfg);
   const said = [];
   for (let t = 0; t < cfg.first + cfg.every * (cfg.lines.length - 1) + 1; t += 0.5) {
@@ -415,4 +414,20 @@ test('on the table the cat shows up at most once a game, half the hands', async 
   bad.cat.start = { x: -1.4, z: -0.7 }; // on the bed
   bad.cat.every = 0;
   assert.equal(catProblems(bad).length, 2);
+});
+
+test('a click on the cat brings its next line, and the next one on its own waits a minute', async () => {
+  const { createChatter, tickChatter, askChatter } = await import('../public/js/city/cat.js');
+  const cfg = map.cat;
+  const ch = createChatter(cfg);
+  tickChatter(ch, cfg, 5);
+  const said = [askChatter(ch, cfg)];
+  assert.ok(cfg.lines.includes(said[0]));
+  assert.equal(tickChatter(ch, cfg, cfg.every - 1), null); // not 10 s later, as it would have
+  const timed = tickChatter(ch, cfg, 1);
+  assert.ok(timed);
+  said.push(timed);
+  // clicks and the minute share one shuffled round: no repeats until all are said
+  while (said.length < cfg.lines.length) said.push(askChatter(ch, cfg));
+  assert.equal(new Set(said).size, cfg.lines.length);
 });

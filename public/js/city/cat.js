@@ -81,8 +81,9 @@ export function followCat(cat, state, map, dt) {
 
 // ---------------------------------------------------------------- talk
 // When the cat speaks: "first" seconds after arriving, then every "every"
-// seconds. It goes through all its lines in a shuffled order before
-// repeating any, and never says the same one twice in a row.
+// seconds, and whenever someone clicks it (askChatter). It goes through all
+// its lines in a shuffled order before repeating any, and never says the
+// same one twice in a row.
 export function createChatter(cfg) {
   return { t: 0, next: cfg.first ?? cfg.every, bag: [], last: -1 };
 }
@@ -91,6 +92,17 @@ export function tickChatter(ch, cfg, dt, rand = Math.random) {
   ch.t += dt;
   if (ch.t < ch.next) return null;
   ch.next += cfg.every;
+  return nextLine(ch, cfg, rand);
+}
+
+// A line now (the player clicked the cat); the next one on its own comes
+// a whole "every" later, so it does not talk over itself
+export function askChatter(ch, cfg, rand = Math.random) {
+  ch.next = ch.t + cfg.every;
+  return nextLine(ch, cfg, rand);
+}
+
+function nextLine(ch, cfg, rand) {
   if (!ch.bag.length) {
     ch.bag = cfg.lines.map((_, i) => i);
     for (let i = ch.bag.length - 1; i > 0; i--) {
@@ -116,7 +128,6 @@ export function catProblems(map) {
   else if (blocked(zone, c.start.x, c.start.z, CAT_RADIUS)) out.push(`el gato empieza en un lugar bloqueado (${c.start.x}, ${c.start.z})`);
   if (!(c.every > 0)) out.push('el gato no tiene cada cuánto hablar');
   if (!Array.isArray(c.lines) || c.lines.length < 2 || c.lines.some((l) => typeof l !== 'string' || !l.trim())) out.push('al gato le faltan frases');
-  if (c.pet && (!Array.isArray(c.pet) || c.pet.some((l) => typeof l !== 'string' || !l.trim()))) out.push('los maullidos del gato no son texto');
   if (c.table && (!Array.isArray(c.table) || c.table.some((l) => typeof l !== 'string' || !l.trim()))) out.push('las frases del gato en la mesa no son texto');
   return out;
 }

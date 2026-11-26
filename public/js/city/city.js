@@ -12,7 +12,7 @@ import { texture, spotTexture, signAtlas } from './textures.js';
 import { loadActor } from './actors.js';
 import { introAt, captionText, INTRO_FADE } from './intro.js';
 import { CHARACTERS } from '../shared/characters.js';
-import { createCat, followCat, createChatter, tickChatter, sayFor } from './cat.js';
+import { createCat, followCat, createChatter, tickChatter, askChatter, sayFor } from './cat.js';
 import { createCatModel } from './catmodel.js';
 import { meow, unlockAudio } from './meow.js';
 
@@ -281,16 +281,9 @@ export async function createCity(root, opts) {
     const reach = Math.max(26, Math.hypot(top.x - mid.x, top.y - mid.y) * 1.2);
     return Math.hypot(e.clientX - mid.x, e.clientY - mid.y) < reach;
   }
-  // petting it: a meow, and a short one in the bubble unless it is telling
-  // something longer
+  // a click on it: it meows and says its next line, whatever it was saying
   function petCat() {
-    const pet = map.cat.pet?.length ? map.cat.pet : ['¡Miau!'];
-    if (saying > 0.5 && !pet.includes(el.bubble?.textContent)) {
-      catModel.speak();
-      if (opts.sound !== false) meow();
-      return;
-    }
-    catSays(pet[Math.floor(Math.random() * pet.length)], 1.8);
+    catSays(askChatter(chatter, map.cat));
   }
 
   let current = null;
