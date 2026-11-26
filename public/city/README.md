@@ -9,9 +9,10 @@ El modo Ciudad separa **datos**, **lógica** y **dibujo**:
 | Geometría y horneado de la luz en los vértices | `public/js/city/bake.js` |
 | Texturas provisorias, dibujadas por código | `public/js/city/textures.js` |
 | Personajes (los modelos de `public/models/personajes/`) | `public/js/city/actors.js` |
+| La escena de entrada: cámara de cada toma, fundidos y textos | `public/js/city/intro.js` |
 | La escena, las cámaras y los controles | `public/js/city/city.js` |
 
-`logic.js` y `bake.js` no usan three.js ni el navegador: `test/city.test.js`
+`logic.js`, `intro.js` y `bake.js` no usan three.js ni el navegador: `test/city.test.js`
 los prueba en node, y revisa el mapa con `mapProblems` (puertas que llevan
 a un lugar donde se puede estar de pie, asientos libres, etc.).
 
@@ -25,6 +26,15 @@ radianes: 0 mira a +z y crece hacia +x.
 - `render`: la resolución interna por defecto (`height`, en líneas) y las
   que ofrece el menú (`options`).
 - `start`: zona y posición donde empieza el jugador.
+- `intro` (opcional): la escena de entrada, que se ve al llegar desde el
+  menú. `fade`: segundos de negro en cada corte. `shots`: las tomas, en
+  orden; cada una tiene `zone`, `duration` (segundos), `from` y `to` (cada
+  una `{ position, target, fov }`), opcionalmente `via` (un punto por donde
+  pasa la cámara, para una curva) y `text` y `sub` (el texto grande y el
+  chico; `{name}` y `{about}` se cambian por el nombre y la descripción del
+  personaje). La última toma va en la zona de `start` con `"to": "play"`:
+  termina en la cámara de juego de esa zona y no funde a negro. El jugador
+  solo se ve en la zona donde empieza.
 - `zones`: cada zona tiene:
   - `name`, `ambient` (la luz mínima: el color de las sombras), `fog`
     (color, `near`, `far`) y `subdiv` (tamaño de la cuadrícula de vértices,

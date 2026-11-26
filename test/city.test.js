@@ -276,3 +276,46 @@ test('the alley at noon: sun, sky, painted signs and not one neon', () => {
   // half the alley lies in the shadow of the south side
   assert.ok(tintAt(street, 0, 1.2, -2)[0] > tintAt(street, 0, 1.2, 2.5)[0]);
 });
+
+test('the opening scene: shots in the map, cuts through black, ends on the play camera', async () => {
+  const { introAt, introLength, introProblems, shotEnd, captionText } = await import('../public/js/city/intro.js');
+  const intro = map.intro;
+  assert.deepEqual(introProblems(map), []);
+  const total = introLength(intro);
+  assert.ok(total > 10 && total < 25, `${total} s`);
+  // it starts from black and the first caption is not up yet
+  const a = introAt(intro, map, 0);
+  assert.equal(a.index, 0);
+  assert.equal(a.dark, 1);
+  assert.equal(a.caption, 0);
+  assert.deepEqual(a.camera.position, intro.shots[0].from.position);
+  // mid-shot: clear picture, caption up
+  const mid = introAt(intro, map, intro.shots[0].duration / 2);
+  assert.equal(mid.dark, 0);
+  assert.equal(mid.caption, 1);
+  // a cut: black on both sides of it
+  const cut = intro.shots[0].duration;
+  assert.ok(introAt(intro, map, cut - 0.01).dark > 0.9);
+  assert.equal(introAt(intro, map, cut + 0.01).index, 1);
+  assert.ok(introAt(intro, map, cut + 0.01).dark > 0.9);
+  // the last shot lands on the start zone's own camera, without fading out
+  const last = intro.shots.at(-1);
+  const end = introAt(intro, map, total - 1e-4);
+  assert.equal(end.shot.zone, map.start.zone);
+  assert.equal(end.dark, 0);
+  const play = shotEnd(last, map);
+  assert.deepEqual(play.position, map.zones.room.camera.position);
+  end.camera.position.forEach((v, i) => assert.ok(Math.abs(v - play.position[i]) < 1e-3));
+  assert.equal(introAt(intro, map, total), null);
+  // the caption of the last shot is the character
+  assert.equal(captionText(last.text, { name: 'Momo', about: 'x' }), 'Momo');
+});
+
+test('a broken opening scene is reported', async () => {
+  const bad = structuredClone(map);
+  bad.intro.shots[0].zone = 'nowhere';
+  bad.intro.shots[1].duration = 0;
+  bad.intro.shots.push({ zone: 'street', duration: 2, from: bad.intro.shots[1].from, to: 'play' });
+  const problems = mapProblems(bad);
+  assert.equal(problems.length, 4, problems.join('\n'));
+});

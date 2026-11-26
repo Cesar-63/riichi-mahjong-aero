@@ -215,6 +215,10 @@
   <div id="city" class="screen hidden">
     <div class="city-stage"></div>
     <div class="city-fade" aria-hidden="true"></div>
+    <div class="city-intro hidden">
+      <p class="city-caption"><span class="es"></span><span class="jp"></span></p>
+      <button class="city-skip paper plain" type="button">Saltar ▸</button>
+    </div>
     <div class="city-hud hidden">
       <span class="city-zone paper-chit"></span>
       <button class="city-exit paper plain" type="button">Salir al menú</button>
@@ -228,6 +232,7 @@
         <p class="chalk" id="city-char-about"></p>
         <span class="chalk" id="city-res-label">Resolución interna <small>(más baja, más liviano)</small></span>
         <div class="chalk-opts" id="city-res" role="group" aria-labelledby="city-res-label"></div>
+        <label class="check"><input type="checkbox" id="city-intro-on"><span class="chalk">Ver la escena de entrada <small>(se salta con un clic o una tecla)</small></span></label>
       </div>
       <div class="board-foot">
         <button id="city-back" class="paper plain" type="button">Volver</button>

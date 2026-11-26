@@ -1136,7 +1136,10 @@ function showCityScreen(walking) {
   $('#city .city-hud').classList.toggle('hidden', !walking);
   hideModal();
 }
+// the opening scene when arriving from the menu: on unless turned off
+const cityIntro = () => store.get('mj.cityIntro') !== '0';
 function showCitySelect() {
+  $('#city-intro-on').checked = cityIntro();
   const mine = cityMap.characters.includes(state.character) ? state.character : cityMap.characters[0];
   const cast = CHARACTERS.filter((c) => cityMap.characters.includes(c.id));
   setIfChanged($('#city-chars'), cast.map((c) =>
@@ -1176,7 +1179,7 @@ async function walkCity(resume) {
     const { createCity, loadMap } = await import('./city/city.js');
     cityMap ||= await loadMap();
     city = await createCity($('#city'), {
-      map: cityMap, character: showCitySelect(), resume, height: cityHeight(), onSit: sitDown, onExit: leaveCity,
+      map: cityMap, character: showCitySelect(), resume, height: cityHeight(), intro: !resume && cityIntro(), onSit: sitDown, onExit: leaveCity,
     });
     city.start();
     if (new URLSearchParams(location.search).has('debug')) window.__city = city;
@@ -1249,6 +1252,7 @@ $('#city-res').addEventListener('click', (e) => {
   store.set('mj.cityRes', b.dataset.res);
   showCitySelect();
 });
+$('#city-intro-on').addEventListener('change', (e) => store.set('mj.cityIntro', e.target.checked ? '1' : '0'));
 $('#city-go').addEventListener('click', () => walkCity(null));
 $('#city-back').addEventListener('click', leaveCity);
 $('#city .city-exit').addEventListener('click', leaveCity);
