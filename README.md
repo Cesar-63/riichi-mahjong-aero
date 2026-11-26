@@ -163,9 +163,9 @@ por no decir kan), recordatorios de hacer kan o un simple "kan… digo,
 miau". No repite una frase hasta haberlas dicho todas. El miau se hace en el
 momento, sin archivos de sonido, y se puede apagar en la hoja del personaje
 (**Sonido del gato**; queda guardado en el navegador). Si le haces clic (o
-lo tocas), maúlla, da un saltito y suelta un «miau» corto en la burbuja (si
-estaba contando algo, lo deja terminar); no hace falta acertarle justo,
-porque es chico en la imagen.
+lo tocas), maúlla, da un saltito y te dice su próxima frase, aunque estuviera
+diciendo otra; la siguiente por su cuenta llega un minuto después. No hace
+falta acertarle justo, porque es chico en la imagen.
 
 En las partidas que empiezan en la ciudad, el gato puede subirse a la mesa:
 al terminar el reparto de cada mano hay un 50 % de probabilidad, y aparece
